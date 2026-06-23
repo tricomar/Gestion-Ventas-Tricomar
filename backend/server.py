@@ -279,6 +279,15 @@ async def get_products(current_user: User = Depends(get_current_user)):
         if isinstance(prod.get('created_at'), str):
             prod['created_at'] = datetime.fromisoformat(prod['created_at'])
         
+        # Generate and save 'id' if missing (legacy products)
+        if 'id' not in prod:
+            prod['id'] = str(uuid.uuid4())
+            # Update the document with the new id
+            await db.products.update_one(
+                {'name': prod['name']},
+                {'$set': {'id': prod['id']}}
+            )
+        
         # Backfill legacy products with defaults
         if 'store' not in prod:
             prod['store'] = 'A'
@@ -292,7 +301,7 @@ async def get_products(current_user: User = Depends(get_current_user)):
         # Update legacy product in DB
         if 'last_price' in prod and ('store' not in prod or 'cost_price' not in prod):
             await db.products.update_one(
-                {'id': prod.get('id')} if 'id' in prod else {'name': prod['name']},
+                {'id': prod['id']},
                 {'$set': {
                     'store': prod['store'],
                     'cost_price': prod['cost_price'],
