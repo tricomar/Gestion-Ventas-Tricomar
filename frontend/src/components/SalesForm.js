@@ -68,6 +68,16 @@ const SalesForm = ({ onSuccess }) => {
       return;
     }
     
+    if (!selectedProduct.sale_price || selectedProduct.sale_price === 0) {
+      toast.error('El producto seleccionado no tiene precio de venta configurado');
+      return;
+    }
+    
+    if (!selectedProduct.cost_price && selectedProduct.cost_price !== 0) {
+      toast.error('El producto seleccionado no tiene costo configurado');
+      return;
+    }
+    
     setLoading(true);
 
     try {
@@ -76,8 +86,8 @@ const SalesForm = ({ onSuccess }) => {
         product_name: selectedProduct.name,
         quantity: parseFloat(quantity),
         price: selectedProduct.sale_price,
-        cost_price: selectedProduct.cost_price,
-        store: selectedProduct.store,
+        cost_price: selectedProduct.cost_price || 0,
+        store: selectedProduct.store || 'A',
         has_tax: hasTax,
         customer: customer || null,
         payment_method: paymentMethod
@@ -113,7 +123,9 @@ const SalesForm = ({ onSuccess }) => {
     setShowCustomerSuggestions(false);
   };
 
-  const total = quantity && selectedProduct ? (parseFloat(quantity) * selectedProduct.sale_price).toLocaleString('es-CL') : '0';
+  const total = quantity && selectedProduct && selectedProduct.sale_price 
+    ? (parseFloat(quantity) * selectedProduct.sale_price).toLocaleString('es-CL') 
+    : '0';
 
   return (
     <div 
@@ -162,9 +174,11 @@ const SalesForm = ({ onSuccess }) => {
                   <div className="flex justify-between items-center">
                     <div>
                       <p className="font-bold">{prod.name}</p>
-                      <p className="text-xs text-slate-500">Tienda {prod.store}</p>
+                      <p className="text-xs text-slate-500">Tienda {prod.store || 'A'}</p>
                     </div>
-                    <span className="font-mono font-bold">${prod.sale_price.toLocaleString('es-CL')}</span>
+                    <span className="font-mono font-bold">
+                      ${(prod.sale_price || 0).toLocaleString('es-CL')}
+                    </span>
                   </div>
                 </button>
               ))}
@@ -176,14 +190,18 @@ const SalesForm = ({ onSuccess }) => {
             <div className="mt-2 p-3 bg-slate-100 border-2 border-slate-900 rounded-xl">
               <div className="flex justify-between items-center">
                 <div>
-                  <span className="text-xs font-bold uppercase text-slate-500">Tienda {selectedProduct.store}</span>
-                  <p className="font-mono font-bold">${selectedProduct.sale_price.toLocaleString('es-CL')}</p>
+                  <span className="text-xs font-bold uppercase text-slate-500">
+                    Tienda {selectedProduct.store || 'A'}
+                  </span>
+                  <p className="font-mono font-bold">
+                    ${(selectedProduct.sale_price || 0).toLocaleString('es-CL')}
+                  </p>
                 </div>
                 <span 
                   className="px-3 py-1 rounded-full text-xs font-bold uppercase border-2 border-slate-900"
                   style={{ backgroundColor: selectedProduct.store === 'A' ? '#D4F0A5' : '#FADBB0' }}
                 >
-                  {selectedProduct.store}
+                  {selectedProduct.store || 'A'}
                 </span>
               </div>
             </div>
