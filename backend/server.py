@@ -150,6 +150,8 @@ class RealtimeMetrics(BaseModel):
     store_b_day: Dict[str, float]
     store_a_month: Dict[str, float]
     store_b_month: Dict[str, float]
+    general_day: Dict[str, float]  # Otros Ingresos y Egresos (día)
+    general_month: Dict[str, float]  # Otros Ingresos y Egresos (mes)
 
 class DashboardStats(BaseModel):
     today_sales: float
@@ -548,46 +550,51 @@ async def get_realtime_metrics(current_user: User = Depends(get_current_user)):
         'created_at': {'$gte': month_start.isoformat(), '$lt': next_month_start.isoformat()}
     }, {'_id': 0}).to_list(100000)
     
-    def calculate_metrics(sales, income_list, expenses_list, store):
+    def calculate_metrics(sales, store):
         filtered_sales = [s for s in sales if s.get('store') == store]
         
         # Compras: sum of cost prices
         compras = sum(s.get('cost_price', 0) * s.get('quantity', 0) for s in filtered_sales)
         
-        # IVA a favor: IVA from sales WITHOUT tax (has_tax=False)
-        # IVA = sale_price / 1.19 * 0.19
+        # IVA a favor: 19% del precio de venta de productos SIN IVA (has_tax=False)
         iva_a_favor = sum(
-            (s.get('price', 0) / 1.19 * 0.19) * s.get('quantity', 0)
+            s.get('price', 0) * s.get('quantity', 0) * 0.19
             for s in filtered_sales if not s.get('has_tax', True)
         )
         
         # Utilidades: profit margin from all sales
         # Margin = total - cost - iva
-        # IVA = price / 1.19 * 0.19
+        # IVA = price * quantity * 0.19
         utilidades = sum(
-            s.get('total', 0) - (s.get('cost_price', 0) * s.get('quantity', 0)) - ((s.get('price', 0) / 1.19 * 0.19) * s.get('quantity', 0))
+            s.get('total', 0) - (s.get('cost_price', 0) * s.get('quantity', 0)) - (s.get('price', 0) * s.get('quantity', 0) * 0.19)
             for s in filtered_sales
         )
-        
-        # Otros Ingresos: sum of other income (not filtered by store)
-        otros = sum(inc.get('amount', 0) for inc in income_list)
-        
-        # Egresos: sum of expenses (not filtered by store)
-        egresos = sum(exp.get('amount', 0) for exp in expenses_list)
         
         return {
             'compras': compras,
             'iva_a_favor': iva_a_favor,
-            'utilidades': utilidades,
-            'otros_ingresos': otros,
+            'utilidades': utilidades
+        }
+    
+    def calculate_general_metrics(income_list, expenses_list):
+        # Otros Ingresos: sum of other income
+        otros_ingresos = sum(inc.get('amount', 0) for inc in income_list)
+        
+        # Egresos: sum of expenses
+        egresos = sum(exp.get('amount', 0) for exp in expenses_list)
+        
+        return {
+            'otros_ingresos': otros_ingresos,
             'egresos': egresos
         }
     
     return RealtimeMetrics(
-        store_a_day=calculate_metrics(today_sales, today_income, today_expenses, 'A'),
-        store_b_day=calculate_metrics(today_sales, today_income, today_expenses, 'B'),
-        store_a_month=calculate_metrics(month_sales, month_income, month_expenses, 'A'),
-        store_b_month=calculate_metrics(month_sales, month_income, month_expenses, 'B')
+        store_a_day=calculate_metrics(today_sales, 'A'),
+        store_b_day=calculate_metrics(today_sales, 'B'),
+        store_a_month=calculate_metrics(month_sales, 'A'),
+        store_b_month=calculate_metrics(month_sales, 'B'),
+        general_day=calculate_general_metrics(today_income, today_expenses),
+        general_month=calculate_general_metrics(month_income, month_expenses)
     )
 
 # ============= DASHBOARD ROUTES =============

@@ -45,8 +45,16 @@ const RealtimeMetrics = ({ refreshTrigger }) => {
   }
 
   const currentMetrics = showPeriod === 'day' 
-    ? { store_a: metrics.store_a_day, store_b: metrics.store_b_day }
-    : { store_a: metrics.store_a_month, store_b: metrics.store_b_month };
+    ? { 
+        store_a: metrics.store_a_day, 
+        store_b: metrics.store_b_day,
+        general: metrics.general_day
+      }
+    : { 
+        store_a: metrics.store_a_month, 
+        store_b: metrics.store_b_month,
+        general: metrics.general_month
+      };
 
   return (
     <div 
@@ -84,8 +92,8 @@ const RealtimeMetrics = ({ refreshTrigger }) => {
         </div>
       </div>
 
-      {/* Stores Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Stores Grid - 3 columns */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Tienda A */}
         <div>
           <div 
@@ -94,7 +102,7 @@ const RealtimeMetrics = ({ refreshTrigger }) => {
           >
             {settings.store_a_name.toUpperCase()}
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-3">
             <MetricCard
               title="Compras"
               value={currentMetrics.store_a.compras}
@@ -113,18 +121,6 @@ const RealtimeMetrics = ({ refreshTrigger }) => {
               icon={DollarSign}
               color="#DBEAFE"
             />
-            <MetricCard
-              title="Otros Ingresos"
-              value={currentMetrics.store_a.otros_ingresos}
-              icon={TrendingUp}
-              color="#E0E7FF"
-            />
-            <MetricCard
-              title="Egresos"
-              value={currentMetrics.store_a.egresos}
-              icon={TrendingDown}
-              color="#FEE2E2"
-            />
           </div>
         </div>
 
@@ -136,7 +132,7 @@ const RealtimeMetrics = ({ refreshTrigger }) => {
           >
             {settings.store_b_name.toUpperCase()}
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-3">
             <MetricCard
               title="Compras"
               value={currentMetrics.store_b.compras}
@@ -155,15 +151,26 @@ const RealtimeMetrics = ({ refreshTrigger }) => {
               icon={DollarSign}
               color="#DBEAFE"
             />
+          </div>
+        </div>
+
+        {/* General - Otros Ingresos y Egresos */}
+        <div>
+          <div 
+            className="mb-3 px-4 py-2 border-2 border-slate-900 rounded-lg text-center font-black text-lg bg-white"
+          >
+            GENERAL
+          </div>
+          <div className="space-y-3">
             <MetricCard
               title="Otros Ingresos"
-              value={currentMetrics.store_b.otros_ingresos}
+              value={currentMetrics.general.otros_ingresos}
               icon={TrendingUp}
               color="#E0E7FF"
             />
             <MetricCard
               title="Egresos"
-              value={currentMetrics.store_b.egresos}
+              value={currentMetrics.general.egresos}
               icon={TrendingDown}
               color="#FEE2E2"
             />
