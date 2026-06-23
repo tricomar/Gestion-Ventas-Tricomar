@@ -1,0 +1,94 @@
+{
+  "theme": "Light",
+  "archetype": "3 (Pastel & Soft with Neo-Brutalist edge)",
+  "typography": {
+    "headings_font": "Cabinet Grotesk",
+    "body_font": "Manrope",
+    "mono_font": "JetBrains Mono",
+    "hierarchy": {
+      "h1": "text-4xl sm:text-5xl font-black tracking-tighter text-slate-900",
+      "h2": "text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900",
+      "h3": "text-xl sm:text-2xl font-bold text-slate-900",
+      "h4": "text-lg font-bold text-slate-900",
+      "body": "text-base font-medium leading-relaxed text-slate-700",
+      "small": "text-xs font-bold tracking-[0.1em] uppercase text-slate-500",
+      "numbers": "font-mono font-bold"
+    }
+  },
+  "colors": {
+    "background": "bg-[#F4F4F0]",
+    "surface": "bg-white",
+    "text": {
+      "primary": "text-slate-900",
+      "secondary": "text-slate-600",
+      "accent": "text-indigo-600"
+    },
+    "brand": {
+      "primary": "bg-[#D4F0A5]", 
+      "secondary": "bg-[#FADBB0]", 
+      "expense": "bg-[#FFA8A8]", 
+      "income": "bg-[#D4F0A5]", 
+      "border": "border-slate-900"
+    }
+  },
+  "spacing_and_layout": {
+    "container_padding": "p-6 md:p-8",
+    "gap_standard": "gap-6",
+    "gap_large": "gap-12",
+    "radius": "rounded-xl",
+    "shadows": "shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]"
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-[#D4F0A5] text-slate-900 border-2 border-slate-900 hover:bg-[#C2E38D] transition-all rounded-xl px-6 py-3 font-bold hover:-translate-y-1 hover:shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] active:translate-y-0 active:shadow-none",
+      "secondary": "bg-white text-slate-900 border-2 border-slate-900 hover:bg-slate-50 transition-all rounded-xl px-6 py-3 font-bold hover:-translate-y-1 hover:shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] active:translate-y-0 active:shadow-none",
+      "danger": "bg-[#FFA8A8] text-slate-900 border-2 border-slate-900 hover:bg-[#FF9494] transition-all rounded-xl px-6 py-3 font-bold hover:-translate-y-1 hover:shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] active:translate-y-0 active:shadow-none"
+    },
+    "cards": {
+      "default": "bg-white border-2 border-slate-900 rounded-xl p-6 md:p-8 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]"
+    },
+    "inputs": {
+      "default": "bg-white border-2 border-slate-900 rounded-xl px-4 py-3 font-medium text-slate-900 focus:ring-0 focus:outline-none focus:border-indigo-500 focus:shadow-[4px_4px_0px_0px_rgba(99,102,241,1)] transition-all",
+      "select": "bg-white border-2 border-slate-900 rounded-xl px-4 py-3 font-medium text-slate-900 cursor-pointer"
+    },
+    "sidebar": "bg-white border-l-2 border-slate-900 h-screen overflow-y-auto p-6 flex flex-col gap-4",
+    "header": "bg-white border-b-2 border-slate-900 py-4 px-6 md:px-8 flex justify-between items-center sticky top-0 z-50",
+    "badges": {
+      "income": "bg-[#D4F0A5] border-2 border-slate-900 text-slate-900 px-3 py-1 rounded-full text-xs font-bold uppercase",
+      "expense": "bg-[#FFA8A8] border-2 border-slate-900 text-slate-900 px-3 py-1 rounded-full text-xs font-bold uppercase"
+    }
+  },
+  "icons": {
+    "library": "lucide-react",
+    "style": "stroke-2"
+  },
+  "pages": {
+    "layout": {
+      "description": "Grid layout. Main area for data entry and dashboard. Right sidebar for daily records (receipt tape style). Top header for Total Sold.",
+      "structure": "flex w-full min-h-screen bg-[#F4F4F0]",
+      "main_area": "flex-1 flex flex-col min-w-0",
+      "right_sidebar": "w-full md:w-80 lg:w-96 hidden md:flex border-l-2 border-slate-900 bg-white shadow-[-4px_0px_0px_0px_rgba(15,23,42,0.05)] flex-col"
+    }
+  },
+  "media": {
+    "login_background": {
+      "url": "https://images.unsplash.com/photo-1627037558426-c2d07beda3af?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2Mzl8MHwxfHNlYXJjaHwxfHxtaW5pbWFsaXN0JTIwYWJzdHJhY3QlMjBnZW9tZXRyaWMlMjBsaWdodCUyMGJhY2tncm91bmR8ZW58MHx8fHwxNzgyMTk4NTI3fDA&ixlib=rb-4.1.0&q=85",
+      "category": "background",
+      "description": "Minimalist stacked geometric shapes on soft pink background, used for the login/auth screen split view."
+    }
+  },
+  "accessibility": {
+    "contrast": "All text passes APCA/WCAG AA. Neo-brutalist borders ensure distinct boundaries for interactive elements.",
+    "testing": "All interactive and key informational elements MUST use data-testid attributes (e.g., data-testid='sales-submit-btn', data-testid='daily-total-display')."
+  },
+  "instructions_to_main_agent": [
+    "Build a robust POS layout. Keep the left/center area for operations (forms, dashboard) and the right side permanently showing the day's timeline/receipts.",
+    "Use Shadcn UI components but heavily override them with the neo-brutalist classes (borders, harsh shadows, rounded-xl).",
+    "For the daily total in the top right, make it massive. 'text-4xl sm:text-5xl font-black' using JetBrains Mono or Cabinet Grotesk.",
+    "Do not use transparent headers. The top bar should have a solid bg and a 2px bottom border.",
+    "Forms should be quick. Autocomplete inputs for 'Producto' and 'Cliente' are critical for operator speed.",
+    "Implement the 'Método de pago' as large segmented control buttons or a clear Shadcn Select.",
+    "Ensure all interactive elements have data-testid attributes for testing.",
+    "For charts, use Recharts with matching brand colors (D4F0A5 for income, FFA8A8 for expenses) and strict borders."
+  ]
+}
