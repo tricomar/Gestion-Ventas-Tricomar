@@ -7,6 +7,7 @@ import InventoryPage from './pages/InventoryPage';
 import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { SettingsProvider } from './context/SettingsContext';
 import './App.css';
 
 const ProtectedRoute = ({ children }) => {
@@ -72,9 +73,11 @@ function AppRoutes() {
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <AppRoutes />
-      </BrowserRouter>
+      <SettingsProvider>
+        <BrowserRouter>
+          <AppRoutes />
+        </BrowserRouter>
+      </SettingsProvider>
     </AuthProvider>
   );
 }

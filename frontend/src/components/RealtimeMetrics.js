@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { DollarSign, TrendingUp, TrendingDown, Wallet } from 'lucide-react';
+import { useSettings } from '../context/SettingsContext';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -19,6 +20,7 @@ const MetricCard = ({ title, value, icon: Icon, color }) => (
 );
 
 const RealtimeMetrics = ({ refreshTrigger }) => {
+  const { settings } = useSettings();
   const [metrics, setMetrics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showPeriod, setShowPeriod] = useState('day'); // day or month
@@ -90,7 +92,7 @@ const RealtimeMetrics = ({ refreshTrigger }) => {
             className="mb-3 px-4 py-2 border-2 border-slate-900 rounded-lg text-center font-black text-lg"
             style={{ backgroundColor: '#D4F0A5' }}
           >
-            TIENDA A
+            {settings.store_a_name.toUpperCase()}
           </div>
           <div className="grid grid-cols-2 gap-3">
             <MetricCard
@@ -132,7 +134,7 @@ const RealtimeMetrics = ({ refreshTrigger }) => {
             className="mb-3 px-4 py-2 border-2 border-slate-900 rounded-lg text-center font-black text-lg"
             style={{ backgroundColor: '#FADBB0' }}
           >
-            TIENDA B
+            {settings.store_b_name.toUpperCase()}
           </div>
           <div className="grid grid-cols-2 gap-3">
             <MetricCard

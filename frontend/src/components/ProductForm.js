@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { X } from 'lucide-react';
+import { useSettings } from '../context/SettingsContext';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const ProductForm = ({ product, onClose }) => {
+  const { settings } = useSettings();
   const [name, setName] = useState('');
   const [store, setStore] = useState('A');
   const [costPrice, setCostPrice] = useState('');
@@ -108,8 +110,8 @@ const ProductForm = ({ product, onClose }) => {
               className="w-full bg-white border-2 border-slate-900 rounded-xl px-4 py-3 font-medium text-slate-900 cursor-pointer focus:ring-0 focus:outline-none focus:border-indigo-500"
               data-testid="product-store-select"
             >
-              <option value="A">Tienda A</option>
-              <option value="B">Tienda B</option>
+              <option value="A">{settings.store_a_name}</option>
+              <option value="B">{settings.store_b_name}</option>
             </select>
           </div>
 

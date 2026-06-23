@@ -3,12 +3,14 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import { Home, Settings as SettingsIcon, Save } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useSettings } from '../context/SettingsContext';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const SettingsPage = () => {
   const navigate = useNavigate();
+  const { refreshSettings } = useSettings();
   const [storeAName, setStoreAName] = useState('Tienda A');
   const [storeBName, setStoreBName] = useState('Tienda B');
   const [loading, setLoading] = useState(true);
@@ -42,6 +44,7 @@ const SettingsPage = () => {
       });
 
       toast.success('Configuración guardada exitosamente');
+      refreshSettings(); // Refresh settings in context
     } catch (error) {
       toast.error('Error al guardar configuración');
       console.error('Error saving settings:', error);
