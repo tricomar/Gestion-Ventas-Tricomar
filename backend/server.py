@@ -61,9 +61,9 @@ class TokenResponse(BaseModel):
 # Product Models
 class ProductBase(BaseModel):
     name: str
-    store: str  # A or B
-    cost_price: float
-    sale_price: float
+    store: str = "A"  # Default A
+    cost_price: float = 0
+    sale_price: float = 0
 
 class ProductCreate(ProductBase):
     pass
@@ -78,11 +78,15 @@ class Product(ProductBase):
     @property
     def tax_amount(self) -> float:
         """19% IVA in Chile"""
+        if self.sale_price == 0:
+            return 0
         return self.sale_price - (self.sale_price / 1.19)
     
     @property
     def profit(self) -> float:
         """Profit without tax"""
+        if self.sale_price == 0:
+            return 0
         return (self.sale_price / 1.19) - self.cost_price
 
 # Customer Models
@@ -243,10 +247,36 @@ async def get_me(current_user: User = Depends(get_current_user)):
 @api_router.get("/products", response_model=List[Product])
 async def get_products(current_user: User = Depends(get_current_user)):
     products = await db.products.find({}, {'_id': 0}).sort('name', 1).to_list(10000)
+    
+    result = []
     for prod in products:
         if isinstance(prod.get('created_at'), str):
             prod['created_at'] = datetime.fromisoformat(prod['created_at'])
-    return products
+        
+        # Backfill legacy products with defaults
+        if 'store' not in prod:
+            prod['store'] = 'A'
+        if 'cost_price' not in prod:
+            prod['cost_price'] = prod.get('last_price', 0) * 0.6 if prod.get('last_price') else 0
+        if 'sale_price' not in prod:
+            prod['sale_price'] = prod.get('last_price', 0)
+        if 'usage_count' not in prod:
+            prod['usage_count'] = 0
+            
+        # Update legacy product in DB
+        if 'last_price' in prod and ('store' not in prod or 'cost_price' not in prod):
+            await db.products.update_one(
+                {'id': prod.get('id')} if 'id' in prod else {'name': prod['name']},
+                {'$set': {
+                    'store': prod['store'],
+                    'cost_price': prod['cost_price'],
+                    'sale_price': prod['sale_price']
+                }}
+            )
+        
+        result.append(Product(**prod))
+    
+    return result
 
 @api_router.get("/products/search")
 async def search_products(q: str, current_user: User = Depends(get_current_user)):

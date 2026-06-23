@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { Package, Plus, Edit, Trash2 } from 'lucide-react';
+import { Package, Plus, Edit, Trash2, Home } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import ProductForm from '../components/ProductForm';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const InventoryPage = () => {
+  const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -57,14 +59,24 @@ const InventoryPage = () => {
     <div className="p-6 md:p-8" style={{ backgroundColor: '#F4F4F0', minHeight: '100vh' }}>
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 
-            className="text-3xl sm:text-4xl font-black tracking-tighter text-slate-900"
-            style={{ fontFamily: 'Cabinet Grotesk, sans-serif' }}
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => navigate('/')}
+            className="p-3 bg-white border-2 border-slate-900 rounded-xl hover:bg-slate-50 transition-all"
+            style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
+            data-testid="back-to-dashboard-btn"
           >
-            Gestión de Inventario
-          </h1>
-          <p className="text-base font-medium text-slate-600">Administra tu catálogo de productos</p>
+            <Home className="w-5 h-5" />
+          </button>
+          <div>
+            <h1 
+              className="text-3xl sm:text-4xl font-black tracking-tighter text-slate-900"
+              style={{ fontFamily: 'Cabinet Grotesk, sans-serif' }}
+            >
+              Gestión de Inventario
+            </h1>
+            <p className="text-base font-medium text-slate-600">Administra tu catálogo de productos</p>
+          </div>
         </div>
         <button
           onClick={() => setShowForm(true)}
