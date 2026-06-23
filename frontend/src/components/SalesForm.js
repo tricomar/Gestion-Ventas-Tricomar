@@ -10,6 +10,7 @@ const SalesForm = ({ onSuccess }) => {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [productSearch, setProductSearch] = useState('');
   const [quantity, setQuantity] = useState('');
+  const [total, setTotal] = useState('');
   const [customer, setCustomer] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('Efectivo');
   const [hasTax, setHasTax] = useState(true);
@@ -78,6 +79,11 @@ const SalesForm = ({ onSuccess }) => {
       return;
     }
     
+    if (!total || parseFloat(total) === 0) {
+      toast.error('El total debe ser mayor a 0');
+      return;
+    }
+    
     setLoading(true);
 
     try {
@@ -86,6 +92,7 @@ const SalesForm = ({ onSuccess }) => {
         product_name: selectedProduct.name,
         quantity: parseFloat(quantity),
         price: selectedProduct.sale_price,
+        total: parseFloat(total),  // User-editable total
         cost_price: selectedProduct.cost_price || 0,
         store: selectedProduct.store || 'A',
         has_tax: hasTax,
@@ -99,6 +106,7 @@ const SalesForm = ({ onSuccess }) => {
       setSelectedProduct(null);
       setProductSearch('');
       setQuantity('');
+      setTotal('');
       setCustomer('');
       setPaymentMethod('Efectivo');
       setHasTax(true);
@@ -116,16 +124,25 @@ const SalesForm = ({ onSuccess }) => {
     setSelectedProduct(prod);
     setProductSearch(prod.name);
     setShowProductSuggestions(false);
+    // Calculate initial total when product is selected
+    if (quantity && prod.sale_price) {
+      setTotal((parseFloat(quantity) * prod.sale_price).toString());
+    }
   };
+
+  // Update total when quantity changes
+  useEffect(() => {
+    if (selectedProduct && selectedProduct.sale_price && quantity) {
+      setTotal((parseFloat(quantity) * selectedProduct.sale_price).toString());
+    } else {
+      setTotal('');
+    }
+  }, [quantity, selectedProduct]);
 
   const selectCustomer = (cust) => {
     setCustomer(cust.name);
     setShowCustomerSuggestions(false);
   };
-
-  const total = quantity && selectedProduct && selectedProduct.sale_price 
-    ? (parseFloat(quantity) * selectedProduct.sale_price).toLocaleString('es-CL') 
-    : '0';
 
   return (
     <div 
@@ -273,10 +290,10 @@ const SalesForm = ({ onSuccess }) => {
           </select>
         </div>
 
-        {/* Total Display with IVA Checkbox */}
+        {/* Total Editable with IVA Checkbox */}
         <div className="bg-slate-100 border-2 border-slate-900 rounded-xl p-4">
           <div className="flex justify-between items-center mb-3">
-            <p className="text-xs font-bold tracking-widest uppercase text-slate-500">Total</p>
+            <p className="text-xs font-bold tracking-widest uppercase text-slate-500">Total (Editable)</p>
             <div className="flex items-center gap-2">
               <input
                 type="checkbox"
@@ -291,15 +308,19 @@ const SalesForm = ({ onSuccess }) => {
               </label>
             </div>
           </div>
-          <p 
-            className="text-3xl font-black text-slate-900"
+          <input
+            type="number"
+            step="0.01"
+            value={total}
+            onChange={(e) => setTotal(e.target.value)}
+            className="w-full bg-white border-2 border-slate-900 rounded-xl px-4 py-3 text-3xl font-black text-slate-900 focus:ring-0 focus:outline-none focus:border-indigo-500 transition-all"
             style={{ fontFamily: 'JetBrains Mono, monospace' }}
-            data-testid="sales-total-display"
-          >
-            ${total}
-          </p>
+            placeholder="0"
+            required
+            data-testid="sales-total-input"
+          />
           <p className="text-xs text-slate-500 mt-2">
-            {hasTax ? 'Se considera IVA (19%) - va a Gastos Fijos' : 'Sin IVA - va a Inversión'}
+            {hasTax ? 'Se considera IVA (19%) - Utilidades calculadas' : 'Sin IVA - IVA va a favor'}
           </p>
         </div>
 

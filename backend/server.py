@@ -105,6 +105,7 @@ class SaleCreate(BaseModel):
     product_name: str
     quantity: float
     price: float
+    total: float  # Now editable by user
     cost_price: float
     store: str  # A or B
     has_tax: bool = True  # Default activated
@@ -114,7 +115,6 @@ class SaleCreate(BaseModel):
 class Sale(SaleCreate):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    total: float
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     user_id: str
     user_name: str
@@ -363,12 +363,8 @@ async def create_or_get_customer(customer_input: CustomerBase, current_user: Use
 
 @api_router.post("/sales", response_model=Sale)
 async def create_sale(sale_input: SaleCreate, current_user: User = Depends(get_current_user)):
-    # Calculate total
-    total = sale_input.quantity * sale_input.price
-    
-    # Create sale
+    # Create sale with user-provided total
     sale_dict = sale_input.model_dump()
-    sale_dict['total'] = total
     sale_dict['user_id'] = current_user.id
     sale_dict['user_name'] = current_user.name
     sale = Sale(**sale_dict)
@@ -532,39 +528,55 @@ async def get_realtime_metrics(current_user: User = Depends(get_current_user)):
         'created_at': {'$gte': month_start.isoformat(), '$lt': next_month_start.isoformat()}
     }, {'_id': 0}).to_list(100000)
     
-    def calculate_metrics(sales, income_list, store):
+    # Get expenses
+    today_expenses = await db.expenses.find({
+        'created_at': {'$gte': today_start.isoformat(), '$lt': tomorrow_start.isoformat()}
+    }, {'_id': 0}).to_list(10000)
+    
+    month_expenses = await db.expenses.find({
+        'created_at': {'$gte': month_start.isoformat(), '$lt': next_month_start.isoformat()}
+    }, {'_id': 0}).to_list(100000)
+    
+    def calculate_metrics(sales, income_list, expenses_list, store):
         filtered_sales = [s for s in sales if s.get('store') == store]
         
-        # Monto para Compras: sum of cost prices
+        # Compras: sum of cost prices
         compras = sum(s.get('cost_price', 0) * s.get('quantity', 0) for s in filtered_sales)
         
-        # Monto para Gastos Fijos: profit from sales with tax
-        gastos_fijos = sum(
-            ((s.get('price', 0) / 1.19) - s.get('cost_price', 0)) * s.get('quantity', 0)
-            for s in filtered_sales if s.get('has_tax', True)
-        )
-        
-        # Monto para Inversión: total from sales without tax
-        inversion = sum(
-            s.get('total', 0)
+        # IVA a favor: IVA from sales WITHOUT tax (has_tax=False)
+        # IVA = sale_price / 1.19 * 0.19
+        iva_a_favor = sum(
+            (s.get('price', 0) / 1.19 * 0.19) * s.get('quantity', 0)
             for s in filtered_sales if not s.get('has_tax', True)
         )
         
-        # Otros Ingresos: sum of other income
+        # Utilidades: profit margin from all sales
+        # Margin = total - cost - iva
+        # IVA = price / 1.19 * 0.19
+        utilidades = sum(
+            s.get('total', 0) - (s.get('cost_price', 0) * s.get('quantity', 0)) - ((s.get('price', 0) / 1.19 * 0.19) * s.get('quantity', 0))
+            for s in filtered_sales
+        )
+        
+        # Otros Ingresos: sum of other income (not filtered by store)
         otros = sum(inc.get('amount', 0) for inc in income_list)
+        
+        # Egresos: sum of expenses (not filtered by store)
+        egresos = sum(exp.get('amount', 0) for exp in expenses_list)
         
         return {
             'compras': compras,
-            'gastos_fijos': gastos_fijos,
-            'inversion': inversion,
-            'otros_ingresos': otros
+            'iva_a_favor': iva_a_favor,
+            'utilidades': utilidades,
+            'otros_ingresos': otros,
+            'egresos': egresos
         }
     
     return RealtimeMetrics(
-        store_a_day=calculate_metrics(today_sales, today_income, 'A'),
-        store_b_day=calculate_metrics(today_sales, today_income, 'B'),
-        store_a_month=calculate_metrics(month_sales, month_income, 'A'),
-        store_b_month=calculate_metrics(month_sales, month_income, 'B')
+        store_a_day=calculate_metrics(today_sales, today_income, today_expenses, 'A'),
+        store_b_day=calculate_metrics(today_sales, today_income, today_expenses, 'B'),
+        store_a_month=calculate_metrics(month_sales, month_income, month_expenses, 'A'),
+        store_b_month=calculate_metrics(month_sales, month_income, month_expenses, 'B')
     )
 
 # ============= DASHBOARD ROUTES =============

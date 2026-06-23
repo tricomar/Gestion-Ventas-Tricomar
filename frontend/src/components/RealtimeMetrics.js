@@ -100,22 +100,28 @@ const RealtimeMetrics = ({ refreshTrigger }) => {
               color="#FFF7ED"
             />
             <MetricCard
-              title="Gastos Fijos"
-              value={currentMetrics.store_a.gastos_fijos}
-              icon={TrendingDown}
-              color="#FEF3C7"
+              title="Utilidades"
+              value={currentMetrics.store_a.utilidades}
+              icon={TrendingUp}
+              color="#D1FAE5"
             />
             <MetricCard
-              title="Inversión"
-              value={currentMetrics.store_a.inversion}
-              icon={TrendingUp}
+              title="IVA a favor"
+              value={currentMetrics.store_a.iva_a_favor}
+              icon={DollarSign}
               color="#DBEAFE"
             />
             <MetricCard
               title="Otros Ingresos"
               value={currentMetrics.store_a.otros_ingresos}
-              icon={DollarSign}
+              icon={TrendingUp}
               color="#E0E7FF"
+            />
+            <MetricCard
+              title="Egresos"
+              value={currentMetrics.store_a.egresos}
+              icon={TrendingDown}
+              color="#FEE2E2"
             />
           </div>
         </div>
@@ -136,22 +142,28 @@ const RealtimeMetrics = ({ refreshTrigger }) => {
               color="#FFF7ED"
             />
             <MetricCard
-              title="Gastos Fijos"
-              value={currentMetrics.store_b.gastos_fijos}
-              icon={TrendingDown}
-              color="#FEF3C7"
+              title="Utilidades"
+              value={currentMetrics.store_b.utilidades}
+              icon={TrendingUp}
+              color="#D1FAE5"
             />
             <MetricCard
-              title="Inversión"
-              value={currentMetrics.store_b.inversion}
-              icon={TrendingUp}
+              title="IVA a favor"
+              value={currentMetrics.store_b.iva_a_favor}
+              icon={DollarSign}
               color="#DBEAFE"
             />
             <MetricCard
               title="Otros Ingresos"
               value={currentMetrics.store_b.otros_ingresos}
-              icon={DollarSign}
+              icon={TrendingUp}
               color="#E0E7FF"
+            />
+            <MetricCard
+              title="Egresos"
+              value={currentMetrics.store_b.egresos}
+              icon={TrendingDown}
+              color="#FEE2E2"
             />
           </div>
         </div>
