@@ -1,0 +1,46 @@
+{
+  "summary": "Backend math/flow for sales+metrics works correctly. Critical 500 on GET /api/products caused by legacy MongoDB records lacking the new required Product fields (store, cost_price, sale_price), which breaks Inventory page and product autocomplete loading on UI.",
+  "tested_scope": ["backend", "frontend", "integration"],
+  "passed": [
+    "POST /api/auth/login admin@ventas.com works (200)",
+    "POST /api/products creates product with store/cost_price/sale_price (200)",
+    "GET /api/products/search returns matching products (200)",
+    "POST /api/sales with has_tax=true (Tienda A) creates sale; total=4760 for qty=2 price=2380",
+    "POST /api/sales with has_tax=false (Tienda B) creates sale; total=2000",
+    "GET /api/dashboard/realtime-metrics?period=today returns correctly split A/B day & month",
+    "Math verified: Tienda A compras=cost*qty=2000, gastos_fijos=(price/1.19 - cost)*qty=2000, inversion=0 (has_tax=true)",
+    "Math verified: Tienda B compras=1000, inversion=total=2000, gastos_fijos=0 (has_tax=false)",
+    "Frontend loads, login redirects to dashboard, Hoy/Este Mes switch present, Tienda A/B blocks render with correct values",
+    "'Incluye IVA' checkbox visible with helper text 'Se considera IVA (19%) - va a Gastos Fijos'"
+  ],
+  "failed": [
+    {
+      "area": "backend GET /api/products",
+      "issue": "Returns 500 ResponseValidationError: legacy product docs in DB are missing required fields 'store', 'cost_price', 'sale_price'. Pydantic Product model rejects them.",
+      "evidence": "supervisor backend.err.log: 'fastapi.exceptions.ResponseValidationError: 15 validation errors ... loc: response,0,store ... input: {name: Bravery Salmon..., last_price, usage_count}'. curl GET /api/products -> HTTP 500 'Internal Server Error'.",
+      "priority": "HIGH"
+    },
+    {
+      "area": "frontend Inventory / Sales product loading",
+      "issue": "UI shows toast 'Error al cargar productos' on dashboard and inventory page; axios 500 from /api/products spams console continuously (auto-refresh of realtime data also pulls products list).",
+      "evidence": "Console errors: 'Error fetching products: AxiosError: Request failed with status code 500' and 'Error fetching today data' repeating. Visible toast in screenshot.",
+      "priority": "HIGH"
+    },
+    {
+      "area": "frontend routing",
+      "issue": "Navigating to /inventory does NOT change URL (stays on /). Inventory may be rendered as a tab/button instead of a dedicated route; needs verification that an actual /inventory route exists per problem statement.",
+      "evidence": "page.goto('/inventory') => page.url remains 'https://sales-ledger-47.preview.emergentagent.com/'. Body still shows the dashboard layout.",
+      "priority": "MEDIUM"
+    }
+  ],
+  "action_items": [
+    "Migrate or backfill legacy products in MongoDB to include store (default e.g. 'A'), cost_price (e.g. 0 or last_price), sale_price (e.g. last_price). Or relax the Product response model to make those fields Optional with sane defaults, then write a one-time migration.",
+    "Alternatively, in GET /api/products, filter/transform legacy docs (skip or coerce) before returning so endpoint stops 500'ing.",
+    "Verify /inventory route is wired in React Router; currently /inventory does not render a distinct page.",
+    "Re-test after fix: GET /api/products 200, inventory CRUD (create/edit/delete), product autocomplete in SalesForm, end-to-end sale -> metrics update."
+  ],
+  "success_rate": {"backend": "85% (5/6 critical endpoints: products list broken)", "frontend": "60% (dashboard+metrics OK; inventory page+product autocomplete broken)"},
+  "retest_needed": true,
+  "full_testing_deferred": true,
+  "test_credentials": "Used admin@ventas.com / admin123 from /app/memory/test_credentials.md (login succeeded)."
+}
