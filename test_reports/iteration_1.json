@@ -1,0 +1,30 @@
+{
+  "summary": "First-finish smoke testing of the Sistema de Gestión de Ventas (React + FastAPI + MongoDB). Backend API endpoints verified end-to-end with admin credentials; frontend login + dashboard rendering + sidebar + sales form verified via Playwright. All critical flows working.",
+  "tested_scope": ["backend", "frontend", "auth", "integration"],
+  "passed": [
+    "POST /api/auth/login with admin@ventas.com/admin123 -> 200, returns JWT token",
+    "GET /api/auth/me -> 200, returns user object",
+    "POST /api/sales -> 200, total auto-calculated (quantity*price = 31.5) and persisted",
+    "POST /api/expenses -> 200, expense persisted",
+    "POST /api/other-income -> 200, income persisted",
+    "GET /api/products/search?q=Pan -> 200, returns newly created product (usage_count incremented)",
+    "GET /api/customers/search?q=Cliente -> 200, returns auto-created customer (purchase_count incremented)",
+    "GET /api/dashboard/stats -> 200, returns today/monthly totals, sales_by_payment_method, top_products, 7-day daily_sales_trend",
+    "GET /api/sales?date=today -> 200, list filtered by day, chronological DESC",
+    "Frontend login UI: form fills correctly, click Ingresar redirects from /login to /",
+    "Token persisted to localStorage after login",
+    "Dashboard header shows 'TOTAL HOY $26.531,5' (matches stats endpoint)",
+    "Tabs visible: Ventas, Egresos, Otros Ingresos, Dashboard",
+    "Sales form renders all fields: Producto, Cantidad, Precio, Cliente (opcional), Método de Pago, Total live preview",
+    "Right sidebar shows 'Registros del Día' with date header and per-category totals (Ventas/Egresos/Otros)",
+    "Sidebar lists records in chronological order with timestamps, payment method badges, delete buttons",
+    "Product input accepts text typing (autocomplete-ready)",
+    "Logout icon visible top-right"
+  ],
+  "failed": [],
+  "action_items": [],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "retest_needed": false,
+  "full_testing_deferred": true,
+  "notes": "Deferred to full testing agent: register flow, autocomplete dropdown UX, delete record flow, dashboard charts (Recharts rendering), responsive mobile layout, multi-user permissions, edge cases (negative qty/price, invalid date, expired token). User profile returned role='operator' for admin@ventas.com — RBAC was not verified; main agent may want to confirm role assignment for admin user (test_credentials.md says admin but DB has operator)."
+}
