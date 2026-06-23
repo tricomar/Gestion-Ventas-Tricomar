@@ -556,17 +556,18 @@ async def get_realtime_metrics(current_user: User = Depends(get_current_user)):
         # Compras: sum of cost prices
         compras = sum(s.get('cost_price', 0) * s.get('quantity', 0) for s in filtered_sales)
         
-        # IVA a favor: 19% del precio de venta de productos SIN IVA (has_tax=False)
+        # IVA a favor: Para ventas SIN IVA marcado (has_tax=False)
+        # IVA = total / 1.19 * 0.19 (el 19% del precio neto)
         iva_a_favor = sum(
-            s.get('price', 0) * s.get('quantity', 0) * 0.19
+            s.get('total', 0) / 1.19 * 0.19
             for s in filtered_sales if not s.get('has_tax', True)
         )
         
         # Utilidades: profit margin from all sales
         # Margin = total - cost - iva
-        # IVA = price * quantity * 0.19
+        # IVA = total / 1.19 * 0.19
         utilidades = sum(
-            s.get('total', 0) - (s.get('cost_price', 0) * s.get('quantity', 0)) - (s.get('price', 0) * s.get('quantity', 0) * 0.19)
+            s.get('total', 0) - (s.get('cost_price', 0) * s.get('quantity', 0)) - (s.get('total', 0) / 1.19 * 0.19)
             for s in filtered_sales
         )
         
