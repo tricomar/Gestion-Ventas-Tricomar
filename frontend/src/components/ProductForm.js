@@ -51,8 +51,11 @@ const ProductForm = ({ product, onClose }) => {
     }
   };
 
-  const taxAmount = salePrice ? parseFloat(salePrice) - (parseFloat(salePrice) / 1.19) : 0;
-  const profit = costPrice && salePrice ? (parseFloat(salePrice) / 1.19) - parseFloat(costPrice) : 0;
+  // Cálculos automáticos
+  const ivaAmount = salePrice ? parseFloat(salePrice) / 1.19 * 0.19 : 0;
+  const margin = costPrice && salePrice 
+    ? parseFloat(salePrice) - parseFloat(costPrice) - ivaAmount 
+    : 0;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -114,7 +117,7 @@ const ProductForm = ({ product, onClose }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold tracking-widest uppercase text-slate-500 mb-2">
-                Precio Costo *
+                Precio Compra *
               </label>
               <input
                 type="number"
@@ -148,15 +151,23 @@ const ProductForm = ({ product, onClose }) => {
               className="bg-slate-100 border-2 border-slate-900 rounded-xl p-4"
               data-testid="product-calculations"
             >
-              <p className="text-xs font-bold tracking-widest uppercase text-slate-500 mb-3">Cálculos Automáticos</p>
+              <p className="text-xs font-bold tracking-widest uppercase text-slate-500 mb-3">Desglose Automático</p>
               <div className="space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-sm font-medium text-slate-600">Utilidad (sin IVA):</span>
-                  <span className="font-mono font-bold text-green-600">${profit.toFixed(0)}</span>
+                  <span className="text-sm font-medium text-slate-600">Precio Compra:</span>
+                  <span className="font-mono font-bold">${parseFloat(costPrice).toFixed(0)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm font-medium text-slate-600">IVA (19%):</span>
-                  <span className="font-mono font-bold text-slate-600">${taxAmount.toFixed(0)}</span>
+                  <span className="font-mono font-bold text-blue-600">${ivaAmount.toFixed(0)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm font-medium text-slate-600">Margen Utilidad:</span>
+                  <span className="font-mono font-bold text-green-600">${margin.toFixed(0)}</span>
+                </div>
+                <div className="flex justify-between pt-2 border-t-2 border-slate-900">
+                  <span className="text-sm font-bold text-slate-900">Precio Venta:</span>
+                  <span className="font-mono font-bold text-lg text-slate-900">${parseFloat(salePrice).toFixed(0)}</span>
                 </div>
               </div>
             </div>
