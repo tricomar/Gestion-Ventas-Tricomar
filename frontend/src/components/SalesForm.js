@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { Search } from 'lucide-react';
+import { Search, Plus } from 'lucide-react';
+import ProductForm from './ProductForm';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -15,6 +16,7 @@ const SalesForm = ({ onSuccess }) => {
   const [paymentMethod, setPaymentMethod] = useState('Efectivo');
   const [hasTax, setHasTax] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [showProductForm, setShowProductForm] = useState(false);
   
   const [productSuggestions, setProductSuggestions] = useState([]);
   const [customerSuggestions, setCustomerSuggestions] = useState([]);
@@ -144,6 +146,25 @@ const SalesForm = ({ onSuccess }) => {
     setShowCustomerSuggestions(false);
   };
 
+  const handleProductFormClose = async () => {
+    setShowProductForm(false);
+    // Refresh product search after creating new product
+    if (productSearch.length > 1) {
+      try {
+        const response = await axios.get(`${API}/products/search?q=${productSearch}`);
+        setProductSuggestions(response.data);
+        setShowProductSuggestions(true);
+        
+        // Auto-select the newly created product if it matches the search
+        if (response.data.length === 1) {
+          selectProduct(response.data[0]);
+        }
+      } catch (error) {
+        console.error('Error refreshing products:', error);
+      }
+    }
+  };
+
   return (
     <div 
       className="bg-white border-2 border-slate-900 rounded-xl p-6 md:p-8"
@@ -199,6 +220,30 @@ const SalesForm = ({ onSuccess }) => {
                   </div>
                 </button>
               ))}
+            </div>
+          )}
+          
+          {/* No results - Show create button */}
+          {showProductSuggestions && productSuggestions.length === 0 && productSearch.length > 1 && (
+            <div className="absolute z-10 w-full mt-2 bg-white border-2 border-slate-900 rounded-xl shadow-lg overflow-hidden">
+              <div className="p-4 text-center">
+                <p className="text-sm text-slate-600 mb-3">
+                  No se encontró &quot;{productSearch}&quot;
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowProductSuggestions(false);
+                    setShowProductForm(true);
+                  }}
+                  className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-[#D4F0A5] border-2 border-slate-900 rounded-xl font-bold hover:bg-[#c5e196] transition-all"
+                  style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
+                  data-testid="create-product-from-sales-btn"
+                >
+                  <Plus className="w-5 h-5" />
+                  Crear Producto Nuevo
+                </button>
+              </div>
             </div>
           )}
           
@@ -345,6 +390,14 @@ const SalesForm = ({ onSuccess }) => {
           {loading ? 'Guardando...' : 'Registrar Venta'}
         </button>
       </form>
+
+      {/* Product Form Modal */}
+      {showProductForm && (
+        <ProductForm
+          product={null}
+          onClose={handleProductFormClose}
+        />
+      )}
     </div>
   );
 };
