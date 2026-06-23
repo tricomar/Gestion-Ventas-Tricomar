@@ -34,15 +34,58 @@ const InventoryPage = () => {
   };
 
   const handleDelete = async (productId) => {
-    if (!window.confirm('¿Estás seguro de eliminar este producto?')) return;
+    // Find product name for better feedback
+    const product = products.find(p => p.id === productId);
+    const productName = product ? product.name : 'este producto';
+    
+    if (!window.confirm(`¿Estás seguro de eliminar "${productName}"?`)) return;
 
     try {
+      // Add visual feedback - mark row as deleting
+      const row = document.querySelector(`[data-testid="product-row-${productId}"]`);
+      if (row) {
+        row.style.opacity = '0.5';
+        row.style.transition = 'opacity 0.3s';
+      }
+
       await axios.delete(`${API}/products/${productId}`);
-      toast.success('Producto eliminado');
-      fetchProducts();
+      
+      // Success toast with product name
+      toast.success(`✓ "${productName}" eliminado exitosamente`, {
+        duration: 4000,
+        style: {
+          background: '#D4F0A5',
+          color: '#0f172a',
+          border: '2px solid #0f172a',
+          fontWeight: 'bold',
+        }
+      });
+      
+      // Fade out animation before removing
+      if (row) {
+        row.style.opacity = '0';
+        setTimeout(() => fetchProducts(), 300);
+      } else {
+        fetchProducts();
+      }
     } catch (error) {
-      toast.error('Error al eliminar producto');
+      // Error toast with more details
+      toast.error(`✗ No se pudo eliminar "${productName}"`, {
+        duration: 4000,
+        style: {
+          background: '#FFA8A8',
+          color: '#0f172a',
+          border: '2px solid #0f172a',
+          fontWeight: 'bold',
+        }
+      });
       console.error('Error deleting product:', error);
+      
+      // Restore row opacity on error
+      const row = document.querySelector(`[data-testid="product-row-${productId}"]`);
+      if (row) {
+        row.style.opacity = '1';
+      }
     }
   };
 
