@@ -112,12 +112,25 @@ class SaleCreate(BaseModel):
     customer: Optional[str] = None
     payment_method: str  # Efectivo, Tarjeta, Transferencia
 
-class Sale(SaleCreate):
+class Sale(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     user_id: str
     user_name: str
+    # Core fields (with defaults for legacy documents)
+    product_id: str = ""
+    product_name: str = ""
+    quantity: float = 0
+    price: float = 0
+    total: float = 0
+    cost_price: float = 0
+    store: str = "A"
+    has_tax: bool = True
+    customer: Optional[str] = None
+    payment_method: str = "Efectivo"
+    # Legacy field support
+    product: Optional[str] = None
 
 # Expense Models
 class ExpenseCreate(BaseModel):
@@ -418,11 +431,36 @@ async def get_sales(date: Optional[str] = None, current_user: User = Depends(get
     
     sales = await db.sales.find(query, {'_id': 0}).sort('created_at', -1).to_list(1000)
     
+    result = []
     for sale in sales:
         if isinstance(sale.get('created_at'), str):
             sale['created_at'] = datetime.fromisoformat(sale['created_at'])
+        
+        # Handle legacy documents that have 'product' instead of 'product_name'
+        if 'product' in sale and not sale.get('product_name'):
+            sale['product_name'] = sale['product']
+        
+        # Set defaults for missing fields
+        if 'product_id' not in sale:
+            sale['product_id'] = ''
+        if 'cost_price' not in sale:
+            sale['cost_price'] = 0
+        if 'store' not in sale:
+            sale['store'] = 'A'
+        if 'has_tax' not in sale:
+            sale['has_tax'] = True
+        if 'payment_method' not in sale:
+            sale['payment_method'] = 'Efectivo'
+        if 'quantity' not in sale:
+            sale['quantity'] = 1
+        if 'price' not in sale:
+            sale['price'] = sale.get('total', 0)
+        if 'total' not in sale:
+            sale['total'] = 0
+        
+        result.append(Sale(**sale))
     
-    return sales
+    return result
 
 @api_router.put("/sales/{sale_id}", response_model=Sale)
 async def update_sale(sale_id: str, sale_input: SaleCreate, current_user: User = Depends(get_current_user)):
