@@ -2,18 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { LogOut, TrendingUp, TrendingDown, DollarSign, PlusCircle } from 'lucide-react';
+import { LogOut, TrendingUp, TrendingDown, DollarSign, PlusCircle, Package } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import SalesForm from '../components/SalesForm';
 import ExpenseForm from '../components/ExpenseForm';
 import OtherIncomeForm from '../components/OtherIncomeForm';
 import DailySidebar from '../components/DailySidebar';
 import DashboardStats from '../components/DashboardStats';
+import RealtimeMetrics from '../components/RealtimeMetrics';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const DashboardPage = () => {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('sales');
   const [todayTotal, setTodayTotal] = useState(0);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -78,10 +81,24 @@ const DashboardPage = () => {
           </div>
         </header>
 
+        {/* Realtime Metrics */}
+        <div className="p-6 md:p-8 pb-0">
+          <RealtimeMetrics refreshTrigger={refreshTrigger} />
+        </div>
+
         {/* Content */}
         <div className="flex-1 p-6 md:p-8 overflow-y-auto">
           {/* Tab Navigation */}
           <div className="mb-6 flex gap-4 flex-wrap">
+            <button
+              onClick={() => navigate('/inventory')}
+              className="px-6 py-3 rounded-xl font-bold border-2 border-slate-900 bg-white text-slate-600 hover:bg-slate-50 transition-all"
+              style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
+              data-testid="inventory-nav-btn"
+            >
+              <Package className="inline w-5 h-5 mr-2" />
+              Inventario
+            </button>
             <button
               onClick={() => setActiveTab('sales')}
               className={`px-6 py-3 rounded-xl font-bold border-2 border-slate-900 transition-all ${

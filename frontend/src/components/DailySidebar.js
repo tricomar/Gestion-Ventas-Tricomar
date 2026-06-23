@@ -178,9 +178,12 @@ const DailySidebar = ({ refreshTrigger, onDelete }) => {
 
                   {isSale ? (
                     <>
-                      <p className="font-bold text-slate-900">{record.product}</p>
+                      <p className="font-bold text-slate-900">{record.product_name || record.product}</p>
                       <p className="text-sm text-slate-700">
                         {record.quantity} x ${record.price.toLocaleString('es-CL')}
+                      </p>
+                      <p className="text-xs text-slate-600">
+                        Tienda {record.store} {record.has_tax ? '(Con IVA)' : '(Sin IVA)'}
                       </p>
                       {record.customer && (
                         <p className="text-sm text-slate-600">Cliente: {record.customer}</p>

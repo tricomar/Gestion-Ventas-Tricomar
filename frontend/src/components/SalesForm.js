@@ -7,11 +7,12 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const SalesForm = ({ onSuccess }) => {
-  const [product, setProduct] = useState('');
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [productSearch, setProductSearch] = useState('');
   const [quantity, setQuantity] = useState('');
-  const [price, setPrice] = useState('');
   const [customer, setCustomer] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('Efectivo');
+  const [hasTax, setHasTax] = useState(true);
   const [loading, setLoading] = useState(false);
   
   const [productSuggestions, setProductSuggestions] = useState([]);
@@ -21,9 +22,9 @@ const SalesForm = ({ onSuccess }) => {
 
   useEffect(() => {
     const searchProducts = async () => {
-      if (product.length > 1) {
+      if (productSearch.length > 1) {
         try {
-          const response = await axios.get(`${API}/products/search?q=${product}`);
+          const response = await axios.get(`${API}/products/search?q=${productSearch}`);
           setProductSuggestions(response.data);
           setShowProductSuggestions(true);
         } catch (error) {
@@ -37,7 +38,7 @@ const SalesForm = ({ onSuccess }) => {
 
     const timer = setTimeout(searchProducts, 300);
     return () => clearTimeout(timer);
-  }, [product]);
+  }, [productSearch]);
 
   useEffect(() => {
     const searchCustomers = async () => {
@@ -61,13 +62,23 @@ const SalesForm = ({ onSuccess }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!selectedProduct) {
+      toast.error('Debes seleccionar un producto del inventario');
+      return;
+    }
+    
     setLoading(true);
 
     try {
       await axios.post(`${API}/sales`, {
-        product,
+        product_id: selectedProduct.id,
+        product_name: selectedProduct.name,
         quantity: parseFloat(quantity),
-        price: parseFloat(price),
+        price: selectedProduct.sale_price,
+        cost_price: selectedProduct.cost_price,
+        store: selectedProduct.store,
+        has_tax: hasTax,
         customer: customer || null,
         payment_method: paymentMethod
       });
@@ -75,11 +86,12 @@ const SalesForm = ({ onSuccess }) => {
       toast.success('Venta registrada exitosamente');
       
       // Reset form
-      setProduct('');
+      setSelectedProduct(null);
+      setProductSearch('');
       setQuantity('');
-      setPrice('');
       setCustomer('');
       setPaymentMethod('Efectivo');
+      setHasTax(true);
       
       if (onSuccess) onSuccess();
     } catch (error) {
@@ -91,10 +103,8 @@ const SalesForm = ({ onSuccess }) => {
   };
 
   const selectProduct = (prod) => {
-    setProduct(prod.name);
-    if (prod.last_price) {
-      setPrice(prod.last_price.toString());
-    }
+    setSelectedProduct(prod);
+    setProductSearch(prod.name);
     setShowProductSuggestions(false);
   };
 
@@ -103,7 +113,7 @@ const SalesForm = ({ onSuccess }) => {
     setShowCustomerSuggestions(false);
   };
 
-  const total = quantity && price ? (parseFloat(quantity) * parseFloat(price)).toLocaleString('es-CL') : '0';
+  const total = quantity && selectedProduct ? (parseFloat(quantity) * selectedProduct.sale_price).toLocaleString('es-CL') : '0';
 
   return (
     <div 
@@ -119,7 +129,7 @@ const SalesForm = ({ onSuccess }) => {
       </h2>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Product */}
+        {/* Product Search */}
         <div className="relative">
           <label className="block text-xs font-bold tracking-widest uppercase text-slate-500 mb-2">
             Producto *
@@ -127,10 +137,14 @@ const SalesForm = ({ onSuccess }) => {
           <div className="relative">
             <input
               type="text"
-              value={product}
-              onChange={(e) => setProduct(e.target.value)}
+              value={productSearch}
+              onChange={(e) => {
+                setProductSearch(e.target.value);
+                if (!e.target.value) setSelectedProduct(null);
+              }}
               onBlur={() => setTimeout(() => setShowProductSuggestions(false), 200)}
               className="w-full bg-white border-2 border-slate-900 rounded-xl px-4 py-3 font-medium text-slate-900 focus:ring-0 focus:outline-none focus:border-indigo-500 transition-all"
+              placeholder="Buscar producto..."
               required
               data-testid="sales-product-input"
             />
@@ -143,45 +157,53 @@ const SalesForm = ({ onSuccess }) => {
                   key={prod.id}
                   type="button"
                   onClick={() => selectProduct(prod)}
-                  className="w-full text-left px-4 py-2 hover:bg-slate-100 font-medium"
+                  className="w-full text-left px-4 py-3 hover:bg-slate-100 font-medium border-b border-slate-200 last:border-b-0"
                 >
-                  {prod.name} {prod.last_price && `- $${prod.last_price}`}
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="font-bold">{prod.name}</p>
+                      <p className="text-xs text-slate-500">Tienda {prod.store}</p>
+                    </div>
+                    <span className="font-mono font-bold">${prod.sale_price.toLocaleString('es-CL')}</span>
+                  </div>
                 </button>
               ))}
             </div>
           )}
+          
+          {/* Selected Product Info */}
+          {selectedProduct && (
+            <div className="mt-2 p-3 bg-slate-100 border-2 border-slate-900 rounded-xl">
+              <div className="flex justify-between items-center">
+                <div>
+                  <span className="text-xs font-bold uppercase text-slate-500">Tienda {selectedProduct.store}</span>
+                  <p className="font-mono font-bold">${selectedProduct.sale_price.toLocaleString('es-CL')}</p>
+                </div>
+                <span 
+                  className="px-3 py-1 rounded-full text-xs font-bold uppercase border-2 border-slate-900"
+                  style={{ backgroundColor: selectedProduct.store === 'A' ? '#D4F0A5' : '#FADBB0' }}
+                >
+                  {selectedProduct.store}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Quantity & Price */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-bold tracking-widest uppercase text-slate-500 mb-2">
-              Cantidad *
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-              className="w-full bg-white border-2 border-slate-900 rounded-xl px-4 py-3 font-medium text-slate-900 focus:ring-0 focus:outline-none focus:border-indigo-500 transition-all"
-              required
-              data-testid="sales-quantity-input"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-bold tracking-widest uppercase text-slate-500 mb-2">
-              Precio *
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              className="w-full bg-white border-2 border-slate-900 rounded-xl px-4 py-3 font-medium text-slate-900 focus:ring-0 focus:outline-none focus:border-indigo-500 transition-all"
-              required
-              data-testid="sales-price-input"
-            />
-          </div>
+        {/* Quantity */}
+        <div>
+          <label className="block text-xs font-bold tracking-widest uppercase text-slate-500 mb-2">
+            Cantidad *
+          </label>
+          <input
+            type="number"
+            step="0.01"
+            value={quantity}
+            onChange={(e) => setQuantity(e.target.value)}
+            className="w-full bg-white border-2 border-slate-900 rounded-xl px-4 py-3 font-medium text-slate-900 focus:ring-0 focus:outline-none focus:border-indigo-500 transition-all"
+            required
+            data-testid="sales-quantity-input"
+          />
         </div>
 
         {/* Customer */}
@@ -233,15 +255,33 @@ const SalesForm = ({ onSuccess }) => {
           </select>
         </div>
 
-        {/* Total Display */}
+        {/* Total Display with IVA Checkbox */}
         <div className="bg-slate-100 border-2 border-slate-900 rounded-xl p-4">
-          <p className="text-xs font-bold tracking-widest uppercase text-slate-500 mb-1">Total</p>
+          <div className="flex justify-between items-center mb-3">
+            <p className="text-xs font-bold tracking-widest uppercase text-slate-500">Total</p>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="hasTax"
+                checked={hasTax}
+                onChange={(e) => setHasTax(e.target.checked)}
+                className="w-5 h-5 border-2 border-slate-900 rounded cursor-pointer"
+                data-testid="sales-has-tax-checkbox"
+              />
+              <label htmlFor="hasTax" className="text-sm font-bold cursor-pointer select-none">
+                Incluye IVA
+              </label>
+            </div>
+          </div>
           <p 
             className="text-3xl font-black text-slate-900"
             style={{ fontFamily: 'JetBrains Mono, monospace' }}
             data-testid="sales-total-display"
           >
             ${total}
+          </p>
+          <p className="text-xs text-slate-500 mt-2">
+            {hasTax ? 'Se considera IVA (19%) - va a Gastos Fijos' : 'Sin IVA - va a Inversión'}
           </p>
         </div>
 
@@ -254,8 +294,12 @@ const SalesForm = ({ onSuccess }) => {
             backgroundColor: '#D4F0A5',
             boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)'
           }}
-          onMouseEnter={(e) => !loading && (e.target.style.transform = 'translateY(-2px)')}
-          onMouseLeave={(e) => e.target.style.transform = 'translateY(0)'}
+          onMouseEnter={(e) => {
+            if (!loading) e.target.style.transform = 'translateY(-2px)';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.transform = 'translateY(0)';
+          }}
           data-testid="sales-submit-btn"
         >
           {loading ? 'Guardando...' : 'Registrar Venta'}

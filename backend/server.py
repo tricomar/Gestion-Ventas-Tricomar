@@ -61,13 +61,29 @@ class TokenResponse(BaseModel):
 # Product Models
 class ProductBase(BaseModel):
     name: str
-    last_price: Optional[float] = None
+    store: str  # A or B
+    cost_price: float
+    sale_price: float
+
+class ProductCreate(ProductBase):
+    pass
 
 class Product(ProductBase):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     usage_count: int = 0
+    last_price: Optional[float] = None
+    
+    @property
+    def tax_amount(self) -> float:
+        """19% IVA in Chile"""
+        return self.sale_price - (self.sale_price / 1.19)
+    
+    @property
+    def profit(self) -> float:
+        """Profit without tax"""
+        return (self.sale_price / 1.19) - self.cost_price
 
 # Customer Models
 class CustomerBase(BaseModel):
@@ -81,9 +97,13 @@ class Customer(CustomerBase):
 
 # Sale Models
 class SaleCreate(BaseModel):
-    product: str
+    product_id: str
+    product_name: str
     quantity: float
     price: float
+    cost_price: float
+    store: str  # A or B
+    has_tax: bool = True  # Default activated
     customer: Optional[str] = None
     payment_method: str  # Efectivo, Tarjeta, Transferencia
 
@@ -99,6 +119,7 @@ class Sale(SaleCreate):
 class ExpenseCreate(BaseModel):
     description: str
     amount: float
+    category: str  # compra_inventario, retiros, compras_informales, otros
 
 class Expense(ExpenseCreate):
     model_config = ConfigDict(extra="ignore")
@@ -120,6 +141,12 @@ class OtherIncome(OtherIncomeCreate):
     user_name: str
 
 # Dashboard Stats Models
+class RealtimeMetrics(BaseModel):
+    store_a_day: Dict[str, float]
+    store_b_day: Dict[str, float]
+    store_a_month: Dict[str, float]
+    store_b_month: Dict[str, float]
+
 class DashboardStats(BaseModel):
     today_sales: float
     today_expenses: float
@@ -213,6 +240,14 @@ async def get_me(current_user: User = Depends(get_current_user)):
 
 # ============= PRODUCT ROUTES =============
 
+@api_router.get("/products", response_model=List[Product])
+async def get_products(current_user: User = Depends(get_current_user)):
+    products = await db.products.find({}, {'_id': 0}).sort('name', 1).to_list(10000)
+    for prod in products:
+        if isinstance(prod.get('created_at'), str):
+            prod['created_at'] = datetime.fromisoformat(prod['created_at'])
+    return products
+
 @api_router.get("/products/search")
 async def search_products(q: str, current_user: User = Depends(get_current_user)):
     products = await db.products.find(
@@ -222,21 +257,50 @@ async def search_products(q: str, current_user: User = Depends(get_current_user)
     return products
 
 @api_router.post("/products", response_model=Product)
-async def create_or_get_product(product_input: ProductBase, current_user: User = Depends(get_current_user)):
+async def create_product(product_input: ProductCreate, current_user: User = Depends(get_current_user)):
     # Check if product exists
     existing = await db.products.find_one({'name': product_input.name}, {'_id': 0})
     if existing:
-        if isinstance(existing.get('created_at'), str):
-            existing['created_at'] = datetime.fromisoformat(existing['created_at'])
-        return Product(**existing)
+        raise HTTPException(status_code=400, detail="Product already exists")
     
     # Create new product
-    product = Product(**product_input.model_dump())
+    product = Product(**product_input.model_dump(), usage_count=0)
     doc = product.model_dump()
     doc['created_at'] = doc['created_at'].isoformat()
     await db.products.insert_one(doc)
     
     return product
+
+@api_router.put("/products/{product_id}", response_model=Product)
+async def update_product(product_id: str, product_input: ProductCreate, current_user: User = Depends(get_current_user)):
+    existing = await db.products.find_one({'id': product_id}, {'_id': 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    update_data = product_input.model_dump()
+    await db.products.update_one({'id': product_id}, {'$set': update_data})
+    
+    updated = await db.products.find_one({'id': product_id}, {'_id': 0})
+    if isinstance(updated.get('created_at'), str):
+        updated['created_at'] = datetime.fromisoformat(updated['created_at'])
+    
+    return Product(**updated)
+
+@api_router.delete("/products/{product_id}")
+async def delete_product(product_id: str, current_user: User = Depends(get_current_user)):
+    result = await db.products.delete_one({'id': product_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Product not found")
+    return {"message": "Product deleted"}
+
+@api_router.get("/products/{product_id}", response_model=Product)
+async def get_product(product_id: str, current_user: User = Depends(get_current_user)):
+    product = await db.products.find_one({'id': product_id}, {'_id': 0})
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+    if isinstance(product.get('created_at'), str):
+        product['created_at'] = datetime.fromisoformat(product['created_at'])
+    return Product(**product)
 
 # ============= CUSTOMER ROUTES =============
 
@@ -284,11 +348,11 @@ async def create_sale(sale_input: SaleCreate, current_user: User = Depends(get_c
     doc['created_at'] = doc['created_at'].isoformat()
     await db.sales.insert_one(doc)
     
-    # Update product usage count and last price
+    # Update product usage count
     await db.products.update_one(
-        {'name': sale_input.product},
-        {'$inc': {'usage_count': 1}, '$set': {'last_price': sale_input.price}},
-        upsert=True
+        {'id': sale_input.product_id},
+        {'$inc': {'usage_count': 1}},
+        upsert=False
     )
     
     # Update customer purchase count if provided
@@ -410,6 +474,69 @@ async def delete_other_income(income_id: str, current_user: User = Depends(get_c
         raise HTTPException(status_code=404, detail="Income not found")
     return {"message": "Income deleted"}
 
+# ============= REALTIME METRICS ROUTE =============
+
+@api_router.get("/dashboard/realtime-metrics", response_model=RealtimeMetrics)
+async def get_realtime_metrics(current_user: User = Depends(get_current_user)):
+    now = datetime.now(timezone.utc)
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    tomorrow_start = today_start + timedelta(days=1)
+    next_month_start = (month_start + timedelta(days=32)).replace(day=1)
+    
+    # Get all sales
+    today_sales = await db.sales.find({
+        'created_at': {'$gte': today_start.isoformat(), '$lt': tomorrow_start.isoformat()}
+    }, {'_id': 0}).to_list(10000)
+    
+    month_sales = await db.sales.find({
+        'created_at': {'$gte': month_start.isoformat(), '$lt': next_month_start.isoformat()}
+    }, {'_id': 0}).to_list(100000)
+    
+    # Get other income
+    today_income = await db.other_income.find({
+        'created_at': {'$gte': today_start.isoformat(), '$lt': tomorrow_start.isoformat()}
+    }, {'_id': 0}).to_list(10000)
+    
+    month_income = await db.other_income.find({
+        'created_at': {'$gte': month_start.isoformat(), '$lt': next_month_start.isoformat()}
+    }, {'_id': 0}).to_list(100000)
+    
+    def calculate_metrics(sales, income_list, store):
+        filtered_sales = [s for s in sales if s.get('store') == store]
+        
+        # Monto para Compras: sum of cost prices
+        compras = sum(s.get('cost_price', 0) * s.get('quantity', 0) for s in filtered_sales)
+        
+        # Monto para Gastos Fijos: profit from sales with tax
+        gastos_fijos = sum(
+            ((s.get('price', 0) / 1.19) - s.get('cost_price', 0)) * s.get('quantity', 0)
+            for s in filtered_sales if s.get('has_tax', True)
+        )
+        
+        # Monto para Inversión: total from sales without tax
+        inversion = sum(
+            s.get('total', 0)
+            for s in filtered_sales if not s.get('has_tax', True)
+        )
+        
+        # Otros Ingresos: sum of other income
+        otros = sum(inc.get('amount', 0) for inc in income_list)
+        
+        return {
+            'compras': compras,
+            'gastos_fijos': gastos_fijos,
+            'inversion': inversion,
+            'otros_ingresos': otros
+        }
+    
+    return RealtimeMetrics(
+        store_a_day=calculate_metrics(today_sales, today_income, 'A'),
+        store_b_day=calculate_metrics(today_sales, today_income, 'B'),
+        store_a_month=calculate_metrics(month_sales, month_income, 'A'),
+        store_b_month=calculate_metrics(month_sales, month_income, 'B')
+    )
+
 # ============= DASHBOARD ROUTES =============
 
 @api_router.get("/dashboard/stats", response_model=DashboardStats)
@@ -461,7 +588,7 @@ async def get_dashboard_stats(current_user: User = Depends(get_current_user)):
     # Top products (this month)
     product_totals = {}
     for sale in monthly_sales_docs:
-        product = sale['product']
+        product = sale.get('product_name', sale.get('product', 'Unknown'))
         product_totals[product] = product_totals.get(product, 0) + sale['total']
     
     top_products = [
@@ -495,6 +622,79 @@ async def get_dashboard_stats(current_user: User = Depends(get_current_user)):
         top_products=top_products,
         daily_sales_trend=daily_trend
     )
+
+# ============= REPORTS ROUTE =============
+
+@api_router.get("/reports/data")
+async def get_report_data(
+    period: str,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get report data for specified period
+    period: day, week, month, custom
+    """
+    now = datetime.now(timezone.utc)
+    
+    if period == 'day':
+        start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        end = start + timedelta(days=1)
+    elif period == 'week':
+        start = now - timedelta(days=now.weekday())
+        start = start.replace(hour=0, minute=0, second=0, microsecond=0)
+        end = start + timedelta(days=7)
+    elif period == 'month':
+        start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        end = (start + timedelta(days=32)).replace(day=1)
+    elif period == 'custom':
+        if not start_date or not end_date:
+            raise HTTPException(status_code=400, detail="start_date and end_date required for custom period")
+        start = datetime.fromisoformat(start_date)
+        end = datetime.fromisoformat(end_date) + timedelta(days=1)
+    else:
+        raise HTTPException(status_code=400, detail="Invalid period")
+    
+    # Fetch data
+    sales = await db.sales.find({
+        'created_at': {'$gte': start.isoformat(), '$lt': end.isoformat()}
+    }, {'_id': 0}).sort('created_at', -1).to_list(100000)
+    
+    expenses = await db.expenses.find({
+        'created_at': {'$gte': start.isoformat(), '$lt': end.isoformat()}
+    }, {'_id': 0}).sort('created_at', -1).to_list(100000)
+    
+    income = await db.other_income.find({
+        'created_at': {'$gte': start.isoformat(), '$lt': end.isoformat()}
+    }, {'_id': 0}).sort('created_at', -1).to_list(100000)
+    
+    # Calculate summaries by store
+    store_a_sales = [s for s in sales if s.get('store') == 'A']
+    store_b_sales = [s for s in sales if s.get('store') == 'B']
+    
+    summary = {
+        'period': period,
+        'start_date': start.isoformat(),
+        'end_date': end.isoformat(),
+        'store_a': {
+            'sales_count': len(store_a_sales),
+            'total_sales': sum(s['total'] for s in store_a_sales),
+            'total_cost': sum(s.get('cost_price', 0) * s.get('quantity', 0) for s in store_a_sales),
+        },
+        'store_b': {
+            'sales_count': len(store_b_sales),
+            'total_sales': sum(s['total'] for s in store_b_sales),
+            'total_cost': sum(s.get('cost_price', 0) * s.get('quantity', 0) for s in store_b_sales),
+        },
+        'total_expenses': sum(e['amount'] for e in expenses),
+        'total_other_income': sum(i['amount'] for i in income),
+        'sales': sales,
+        'expenses': expenses,
+        'other_income': income
+    }
+    
+    return summary
 
 # Include the router in the main app
 app.include_router(api_router)

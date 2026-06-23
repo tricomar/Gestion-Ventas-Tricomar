@@ -8,6 +8,7 @@ const API = `${BACKEND_URL}/api`;
 const ExpenseForm = ({ onSuccess }) => {
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
+  const [category, setCategory] = useState('otros');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -17,13 +18,15 @@ const ExpenseForm = ({ onSuccess }) => {
     try {
       await axios.post(`${API}/expenses`, {
         description,
-        amount: parseFloat(amount)
+        amount: parseFloat(amount),
+        category
       });
 
       toast.success('Egreso registrado exitosamente');
       
       setDescription('');
       setAmount('');
+      setCategory('otros');
       
       if (onSuccess) onSuccess();
     } catch (error) {
@@ -61,6 +64,23 @@ const ExpenseForm = ({ onSuccess }) => {
             required
             data-testid="expense-description-input"
           />
+        </div>
+
+        <div>
+          <label className="block text-xs font-bold tracking-widest uppercase text-slate-500 mb-2">
+            Categoría *
+          </label>
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className="w-full bg-white border-2 border-slate-900 rounded-xl px-4 py-3 font-medium text-slate-900 cursor-pointer focus:ring-0 focus:outline-none focus:border-indigo-500"
+            data-testid="expense-category-select"
+          >
+            <option value="compra_inventario">Compra de Inventario</option>
+            <option value="retiros">Retiros</option>
+            <option value="compras_informales">Compras Informales</option>
+            <option value="otros">Otros</option>
+          </select>
         </div>
 
         <div>
