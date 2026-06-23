@@ -424,6 +424,27 @@ async def get_sales(date: Optional[str] = None, current_user: User = Depends(get
     
     return sales
 
+@api_router.put("/sales/{sale_id}", response_model=Sale)
+async def update_sale(sale_id: str, sale_input: SaleCreate, current_user: User = Depends(get_current_user)):
+    existing = await db.sales.find_one({'id': sale_id}, {'_id': 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Sale not found")
+    
+    # Update sale data
+    update_data = sale_input.model_dump()
+    await db.sales.update_one({'id': sale_id}, {'$set': update_data})
+    
+    # Fetch updated sale
+    updated = await db.sales.find_one({'id': sale_id}, {'_id': 0})
+    if isinstance(updated.get('created_at'), str):
+        updated['created_at'] = datetime.fromisoformat(updated['created_at'])
+    
+    # Rebuild Sale object with existing user data
+    updated['user_id'] = existing['user_id']
+    updated['user_name'] = existing['user_name']
+    
+    return Sale(**updated)
+
 @api_router.delete("/sales/{sale_id}")
 async def delete_sale(sale_id: str, current_user: User = Depends(get_current_user)):
     result = await db.sales.delete_one({'id': sale_id})
@@ -465,6 +486,27 @@ async def get_expenses(date: Optional[str] = None, current_user: User = Depends(
     
     return expenses
 
+@api_router.put("/expenses/{expense_id}", response_model=Expense)
+async def update_expense(expense_id: str, expense_input: ExpenseCreate, current_user: User = Depends(get_current_user)):
+    existing = await db.expenses.find_one({'id': expense_id}, {'_id': 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Expense not found")
+    
+    # Update expense data
+    update_data = expense_input.model_dump()
+    await db.expenses.update_one({'id': expense_id}, {'$set': update_data})
+    
+    # Fetch updated expense
+    updated = await db.expenses.find_one({'id': expense_id}, {'_id': 0})
+    if isinstance(updated.get('created_at'), str):
+        updated['created_at'] = datetime.fromisoformat(updated['created_at'])
+    
+    # Rebuild Expense object with existing user data
+    updated['user_id'] = existing['user_id']
+    updated['user_name'] = existing['user_name']
+    
+    return Expense(**updated)
+
 @api_router.delete("/expenses/{expense_id}")
 async def delete_expense(expense_id: str, current_user: User = Depends(get_current_user)):
     result = await db.expenses.delete_one({'id': expense_id})
@@ -505,6 +547,27 @@ async def get_other_income(date: Optional[str] = None, current_user: User = Depe
             income['created_at'] = datetime.fromisoformat(income['created_at'])
     
     return income_list
+
+@api_router.put("/other-income/{income_id}", response_model=OtherIncome)
+async def update_other_income(income_id: str, income_input: OtherIncomeCreate, current_user: User = Depends(get_current_user)):
+    existing = await db.other_income.find_one({'id': income_id}, {'_id': 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Income not found")
+    
+    # Update income data
+    update_data = income_input.model_dump()
+    await db.other_income.update_one({'id': income_id}, {'$set': update_data})
+    
+    # Fetch updated income
+    updated = await db.other_income.find_one({'id': income_id}, {'_id': 0})
+    if isinstance(updated.get('created_at'), str):
+        updated['created_at'] = datetime.fromisoformat(updated['created_at'])
+    
+    # Rebuild OtherIncome object with existing user data
+    updated['user_id'] = existing['user_id']
+    updated['user_name'] = existing['user_name']
+    
+    return OtherIncome(**updated)
 
 @api_router.delete("/other-income/{income_id}")
 async def delete_other_income(income_id: str, current_user: User = Depends(get_current_user)):

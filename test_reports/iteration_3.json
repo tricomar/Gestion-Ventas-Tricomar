@@ -1,0 +1,40 @@
+{
+  "summary": "Tested PUT endpoints (sales, expenses, other-income) and DailySidebar edit flow. PUT endpoints work individually. However a CRITICAL backend bug blocks the entire sidebar feature: GET /api/sales returns HTTP 500 (ResponseValidationError) due to legacy sales documents missing the new required fields (product_id, product_name, cost_price, store). Because GET /api/sales fails, the DailySidebar cannot list ANY sale records, the Edit2 buttons never render, and the edit modal is unreachable from the UI. Expense and other-income lists work and could be edited via the new modal, but the sales path is broken end-to-end.",
+  "tested_scope": ["backend", "frontend", "integration"],
+  "passed": [
+    "Login (POST /api/auth/login) with admin@ventas.com returns 200 + JWT",
+    "POST /api/expenses then PUT /api/expenses/{id} -> 200, payload updated correctly",
+    "POST /api/other-income then PUT /api/other-income/{id} -> 200, payload updated correctly",
+    "POST /api/sales (with product_id+cost_price) and PUT /api/sales/{id} -> 200 (PUT logic itself works)",
+    "GET /api/expenses?date_filter=today and GET /api/other-income?date_filter=today return today's records",
+    "Frontend loads, dashboard renders, daily-sidebar element exists with date header"
+  ],
+  "failed": [
+    {
+      "area": "Backend - GET /api/sales",
+      "issue": "Endpoint returns HTTP 500 (always) due to fastapi.exceptions.ResponseValidationError. Legacy sales documents in MongoDB lack required fields product_id, product_name, cost_price, store (they have an old 'product' field). Pydantic response model rejects them, breaking the whole list response.",
+      "evidence": "curl GET /api/sales -> HTTP 500 'Internal Server Error'. backend.err.log: 'ResponseValidationError: 4 validation errors ... loc: (response, 10, product_id/product_name/cost_price/store), msg: Field required, input: {product: \"Bravery Salmon Gatos 7 KG\", ...}'",
+      "priority": "HIGH"
+    },
+    {
+      "area": "Frontend - DailySidebar sales list",
+      "issue": "Sidebar shows 'No hay registros hoy' and VENTAS=$0 even though dashboard 'Total Hoy' shows $116.345. Caused by the GET /api/sales 500 above. As a result, no sale rows render and the new 'Editar' (Edit2) buttons never appear in the sidebar.",
+      "evidence": "Sidebar inner_text after login: 'VENTAS $0 / EGRESOS $0 / OTROS $0 / No hay registros hoy'. Sidebar buttons count = 0, sidebar data-testids = []. No svg.lucide-edit-2 / lucide-pencil found anywhere on the page.",
+      "priority": "HIGH"
+    },
+    {
+      "area": "Integration - End-to-end edit flow (sales)",
+      "issue": "Could not verify: 'register sale -> appears in sidebar -> click Editar -> modal pre-fills -> save -> sidebar updates'. UI attempt to create a sale via SalesForm also failed with toast 'Debes seleccionar un producto del inventario' because the product suggestion dropdown did not surface for the typed term. Even if it had, GET /api/sales would still 500 and the sidebar would stay empty.",
+      "evidence": "Toast error 'Debes seleccionar un producto del inventario' after submit; sidebar text unchanged before/after submit.",
+      "priority": "HIGH"
+    }
+  ],
+  "action_items": [
+    "Fix GET /api/sales 500: make Sale response model fields product_id/product_name/cost_price/store Optional (with defaults) OR run a one-time migration filling them from the legacy 'product' field and a default store, OR skip/repair invalid docs in the list handler.",
+    "Once GET /api/sales returns 200, re-test the DailySidebar: confirm sale rows render, Edit2 button appears per row, edit modal opens pre-filled, PUT /api/sales/{id} from modal updates the row, sidebar totals refresh via refreshTrigger.",
+    "Optional: verify SalesForm product autocomplete actually shows suggestions when the user types (the dropdown did not appear for 'Bravery' in our test, blocking new sale creation from UI)."
+  ],
+  "success_rate": {"backend": "60%", "frontend": "30%"},
+  "retest_needed": true,
+  "full_testing_deferred": true
+}

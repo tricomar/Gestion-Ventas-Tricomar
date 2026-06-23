@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Trash2, DollarSign, TrendingUp, TrendingDown } from 'lucide-react';
+import { Trash2, DollarSign, TrendingUp, TrendingDown, Edit2, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -11,6 +11,7 @@ const DailySidebar = ({ refreshTrigger, onDelete }) => {
   const [expenses, setExpenses] = useState([]);
   const [income, setIncome] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [editModal, setEditModal] = useState({ open: false, type: null, data: null });
 
   useEffect(() => {
     fetchTodayData();
@@ -47,6 +48,65 @@ const DailySidebar = ({ refreshTrigger, onDelete }) => {
       toast.error('Error al eliminar');
       console.error('Error deleting:', error);
     }
+  };
+
+  const handleEdit = (type, record) => {
+    setEditModal({ open: true, type, data: record });
+  };
+
+  const handleUpdate = async (e) => {
+    e.preventDefault();
+    const { type, data } = editModal;
+
+    try {
+      let endpoint = '';
+      let payload = {};
+
+      if (type === 'sales') {
+        endpoint = `${API}/sales/${data.id}`;
+        payload = {
+          product_id: data.product_id,
+          product_name: data.product_name,
+          quantity: parseFloat(data.quantity),
+          price: parseFloat(data.price),
+          total: parseFloat(data.total),
+          cost_price: parseFloat(data.cost_price),
+          store: data.store,
+          has_tax: data.has_tax,
+          customer: data.customer || null,
+          payment_method: data.payment_method
+        };
+      } else if (type === 'expenses') {
+        endpoint = `${API}/expenses/${data.id}`;
+        payload = {
+          description: data.description,
+          amount: parseFloat(data.amount),
+          category: data.category
+        };
+      } else if (type === 'other-income') {
+        endpoint = `${API}/other-income/${data.id}`;
+        payload = {
+          description: data.description,
+          amount: parseFloat(data.amount)
+        };
+      }
+
+      await axios.put(endpoint, payload);
+      toast.success('Registro actualizado');
+      setEditModal({ open: false, type: null, data: null });
+      fetchTodayData();
+      if (onDelete) onDelete(); // Trigger refresh in parent
+    } catch (error) {
+      toast.error('Error al actualizar');
+      console.error('Error updating:', error);
+    }
+  };
+
+  const updateEditData = (field, value) => {
+    setEditModal(prev => ({
+      ...prev,
+      data: { ...prev.data, [field]: value }
+    }));
   };
 
   const formatTime = (dateString) => {
@@ -164,6 +224,16 @@ const DailySidebar = ({ refreshTrigger, onDelete }) => {
                         {formatTime(record.created_at)}
                       </span>
                       <button
+                        onClick={() => handleEdit(
+                          isSale ? 'sales' : isExpense ? 'expenses' : 'other-income',
+                          record
+                        )}
+                        className="p-1 hover:bg-slate-900 hover:text-white rounded transition-colors"
+                        data-testid={`edit-record-${record.id}`}
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button
                         onClick={() => handleDelete(
                           isSale ? 'sales' : isExpense ? 'expenses' : 'other-income',
                           record.id
@@ -214,6 +284,216 @@ const DailySidebar = ({ refreshTrigger, onDelete }) => {
           <p className="text-center text-slate-500 mt-8">No hay registros hoy</p>
         )}
       </div>
+
+      {/* Edit Modal */}
+      {editModal.open && (
+        <div 
+          className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          data-testid="edit-modal"
+          onClick={() => setEditModal({ open: false, type: null, data: null })}
+        >
+          <div 
+            className="bg-white border-2 border-slate-900 rounded-xl p-6 max-w-md w-full"
+            style={{ boxShadow: '8px 8px 0px 0px rgba(15,23,42,1)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-slate-900" style={{ fontFamily: 'Cabinet Grotesk, sans-serif' }}>
+                Editar Registro
+              </h3>
+              <button
+                onClick={() => setEditModal({ open: false, type: null, data: null })}
+                className="p-1 hover:bg-slate-100 rounded"
+                data-testid="close-edit-modal"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdate} className="space-y-4">
+              {editModal.type === 'sales' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1">Producto</label>
+                    <input
+                      type="text"
+                      value={editModal.data.product_name}
+                      onChange={(e) => updateEditData('product_name', e.target.value)}
+                      className="w-full px-3 py-2 border-2 border-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900"
+                      required
+                      data-testid="edit-product-name"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-1">Cantidad</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={editModal.data.quantity}
+                        onChange={(e) => updateEditData('quantity', e.target.value)}
+                        className="w-full px-3 py-2 border-2 border-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900"
+                        required
+                        data-testid="edit-quantity"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-1">Precio</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={editModal.data.price}
+                        onChange={(e) => updateEditData('price', e.target.value)}
+                        className="w-full px-3 py-2 border-2 border-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900"
+                        required
+                        data-testid="edit-price"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1">Total</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={editModal.data.total}
+                      onChange={(e) => updateEditData('total', e.target.value)}
+                      className="w-full px-3 py-2 border-2 border-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900"
+                      required
+                      data-testid="edit-total"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1">Método de Pago</label>
+                    <select
+                      value={editModal.data.payment_method}
+                      onChange={(e) => updateEditData('payment_method', e.target.value)}
+                      className="w-full px-3 py-2 border-2 border-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900"
+                      required
+                      data-testid="edit-payment-method"
+                    >
+                      <option value="Efectivo">Efectivo</option>
+                      <option value="Tarjeta">Tarjeta</option>
+                      <option value="Transferencia">Transferencia</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={editModal.data.has_tax}
+                        onChange={(e) => updateEditData('has_tax', e.target.checked)}
+                        className="w-4 h-4"
+                        data-testid="edit-has-tax"
+                      />
+                      <span className="text-sm font-bold text-slate-700">Incluye IVA</span>
+                    </label>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1">Cliente (opcional)</label>
+                    <input
+                      type="text"
+                      value={editModal.data.customer || ''}
+                      onChange={(e) => updateEditData('customer', e.target.value)}
+                      className="w-full px-3 py-2 border-2 border-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900"
+                      data-testid="edit-customer"
+                    />
+                  </div>
+                </>
+              )}
+
+              {editModal.type === 'expenses' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1">Descripción</label>
+                    <input
+                      type="text"
+                      value={editModal.data.description}
+                      onChange={(e) => updateEditData('description', e.target.value)}
+                      className="w-full px-3 py-2 border-2 border-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900"
+                      required
+                      data-testid="edit-expense-description"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1">Monto</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={editModal.data.amount}
+                      onChange={(e) => updateEditData('amount', e.target.value)}
+                      className="w-full px-3 py-2 border-2 border-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900"
+                      required
+                      data-testid="edit-expense-amount"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1">Categoría</label>
+                    <select
+                      value={editModal.data.category}
+                      onChange={(e) => updateEditData('category', e.target.value)}
+                      className="w-full px-3 py-2 border-2 border-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900"
+                      required
+                      data-testid="edit-expense-category"
+                    >
+                      <option value="compra_inventario">Compra Inventario</option>
+                      <option value="retiros">Retiros</option>
+                      <option value="compras_informales">Compras Informales</option>
+                      <option value="otros">Otros</option>
+                    </select>
+                  </div>
+                </>
+              )}
+
+              {editModal.type === 'other-income' && (
+                <>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1">Descripción</label>
+                    <input
+                      type="text"
+                      value={editModal.data.description}
+                      onChange={(e) => updateEditData('description', e.target.value)}
+                      className="w-full px-3 py-2 border-2 border-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900"
+                      required
+                      data-testid="edit-income-description"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1">Monto</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={editModal.data.amount}
+                      onChange={(e) => updateEditData('amount', e.target.value)}
+                      className="w-full px-3 py-2 border-2 border-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900"
+                      required
+                      data-testid="edit-income-amount"
+                    />
+                  </div>
+                </>
+              )}
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditModal({ open: false, type: null, data: null })}
+                  className="flex-1 px-4 py-2 border-2 border-slate-900 rounded-lg font-bold hover:bg-slate-50 transition-colors"
+                  data-testid="cancel-edit-btn"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 bg-[#D4F0A5] border-2 border-slate-900 rounded-lg font-bold hover:bg-[#c5e196] transition-colors"
+                  style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
+                  data-testid="save-edit-btn"
+                >
+                  Guardar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
