@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { LogOut, TrendingUp, TrendingDown, DollarSign, PlusCircle, Package, FileText } from 'lucide-react';
+import { LogOut, TrendingUp, TrendingDown, DollarSign, PlusCircle, Package, FileText, Settings } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import SalesForm from '../components/SalesForm';
 import ExpenseForm from '../components/ExpenseForm';
@@ -107,6 +107,15 @@ const DashboardPage = () => {
             >
               <FileText className="inline w-5 h-5 mr-2" />
               Reportes
+            </button>
+            <button
+              onClick={() => navigate('/settings')}
+              className="px-6 py-3 rounded-xl font-bold border-2 border-slate-900 bg-white text-slate-600 hover:bg-slate-50 transition-all"
+              style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
+              data-testid="settings-nav-btn"
+            >
+              <Settings className="inline w-5 h-5 mr-2" />
+              Configuración
             </button>
             <button
               onClick={() => setActiveTab('sales')}
