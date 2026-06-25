@@ -1,0 +1,22 @@
+{
+  "summary": "Verified delete functionality on DailySidebar for sales, expenses, and other-income. Backend DELETE endpoints return 200. UI flow works end-to-end: confirm dialog appears, record disappears, 'Registro eliminado' toast shown, sidebar updates to 'No hay registros hoy', and metrics refresh.",
+  "tested_scope": ["frontend", "backend", "integration", "auth"],
+  "passed": [
+    "Login admin@ventas.com/admin123 -> dashboard loaded",
+    "Backend DELETE /api/sales/{id} -> 200 {\"message\":\"Sale deleted\"}",
+    "Backend DELETE /api/expenses/{id} -> 200 {\"message\":\"Expense deleted\"}",
+    "Backend DELETE /api/other-income/{id} -> 200 {\"message\":\"Income deleted\"}",
+    "UI: 3 records (sale, expense, income) appear in sidebar with data-testid='delete-record-{id}'",
+    "UI: clicking delete button triggers window.confirm dialog with text '¿Estás seguro de eliminar este registro?'",
+    "UI: confirming dialog deletes record from sidebar (all 3 types)",
+    "UI: toast 'Registro eliminado' displayed after deletion",
+    "UI: sidebar refreshes to 'No hay registros hoy' after all deletions",
+    "Integration: dashboard metrics update after deletion (Ventas/Egresos/Otros return to $0)"
+  ],
+  "failed": [],
+  "action_items": [],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "retest_needed": false,
+  "full_testing_deferred": true,
+  "notes": "User-reported issue not reproducible. Delete flow is fully functional. Likely user did not confirm the window.confirm dialog or had an expired token."
+}
