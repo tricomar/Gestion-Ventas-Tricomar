@@ -12,6 +12,8 @@ import uuid
 from datetime import datetime, timezone, timedelta
 import bcrypt
 import jwt
+import httpx
+import asyncio
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -1301,6 +1303,63 @@ async def update_settings(settings_input: SettingsUpdate, current_user: User = D
         updated_doc['updated_at'] = datetime.fromisoformat(updated_doc['updated_at'])
     
     return Settings(**updated_doc)
+
+# ============= ECONOMIC INDICATORS =============
+indicators_cache = {
+    'data': None,
+    'timestamp': None,
+    'ttl': 3600  # 1 hour cache
+}
+
+async def fetch_indicator(indicator_name: str, api_url: str):
+    """Fetch a single indicator from findic.cl API"""
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(api_url)
+            if response.status_code == 200:
+                data = response.json()
+                if data.get('serie') and len(data['serie']) > 0:
+                    latest = data['serie'][0]
+                    return {
+                        'name': indicator_name,
+                        'value': latest.get('valor'),
+                        'date': latest.get('fecha'),
+                        'unit': data.get('unidad_medida', '')
+                    }
+    except Exception as e:
+        logger.error(f"Error fetching {indicator_name}: {e}")
+    return None
+
+@api_router.get("/indicators")
+async def get_economic_indicators():
+    """Get economic indicators from findic.cl with 1-hour cache"""
+    now = datetime.now(timezone.utc)
+    
+    # Check if cache is still valid
+    if (indicators_cache['data'] is not None and 
+        indicators_cache['timestamp'] is not None and
+        (now - indicators_cache['timestamp']).seconds < indicators_cache['ttl']):
+        return indicators_cache['data']
+    
+    # Fetch all indicators in parallel
+    indicators = await asyncio.gather(
+        fetch_indicator('UF', 'https://findic.cl/api/uf'),
+        fetch_indicator('Dólar', 'https://findic.cl/api/dolar'),
+        fetch_indicator('Bitcoin', 'https://findic.cl/api/bitcoin'),
+        fetch_indicator('Euro', 'https://findic.cl/api/euro'),
+        fetch_indicator('UTM', 'https://findic.cl/api/utm'),
+        fetch_indicator('Libra Cobre', 'https://findic.cl/api/libra_cobre'),
+        return_exceptions=True
+    )
+    
+    # Filter out None values and errors
+    valid_indicators = [ind for ind in indicators if ind is not None and not isinstance(ind, Exception)]
+    
+    # Update cache
+    indicators_cache['data'] = valid_indicators
+    indicators_cache['timestamp'] = now
+    
+    return valid_indicators
 
 # Include the router in the main app
 app.include_router(api_router)

@@ -10,6 +10,7 @@ import OtherIncomeForm from '../components/OtherIncomeForm';
 import DailySidebar from '../components/DailySidebar';
 import DashboardStats from '../components/DashboardStats';
 import RealtimeMetrics from '../components/RealtimeMetrics';
+import EconomicIndicators from '../components/EconomicIndicators';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -44,40 +45,48 @@ const DashboardPage = () => {
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
         <header 
-          className="bg-white border-b-2 border-slate-900 py-4 px-6 md:px-8 flex justify-between items-center sticky top-0 z-50"
+          className="bg-white border-b-2 border-slate-900 py-4 px-6 md:px-8 sticky top-0 z-50"
           data-testid="dashboard-header"
         >
-          <div>
-            <h1 
-              className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900"
-              style={{ fontFamily: 'Cabinet Grotesk, sans-serif' }}
-            >
-              Gestión de Ventas
-            </h1>
-            <p className="text-sm font-medium text-slate-600">Bienvenido, {user?.name}</p>
-          </div>
-          
-          <div className="flex items-center gap-6">
-            <div className="text-right">
-              <p className="text-xs font-bold tracking-widest uppercase text-slate-500">Total Hoy</p>
-              <p 
-                className="text-4xl sm:text-5xl font-black text-slate-900"
-                style={{ fontFamily: 'JetBrains Mono, monospace' }}
-                data-testid="daily-total-display"
+          {/* Primera fila: Título y Total del Día */}
+          <div className="flex justify-between items-center mb-4">
+            <div>
+              <h1 
+                className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900"
+                style={{ fontFamily: 'Cabinet Grotesk, sans-serif' }}
               >
-                ${todayTotal.toLocaleString('es-CL')}
-              </p>
+                Gestión de Ventas
+              </h1>
+              <p className="text-sm font-medium text-slate-600">Bienvenido, {user?.name}</p>
             </div>
-            <button
-              onClick={logout}
-              className="p-3 bg-white border-2 border-slate-900 rounded-xl hover:bg-slate-50 transition-all"
-              style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
-              onMouseEnter={(e) => e.target.style.transform = 'translateY(-2px)'}
-              onMouseLeave={(e) => e.target.style.transform = 'translateY(0)'}
-              data-testid="logout-btn"
-            >
-              <LogOut className="w-5 h-5" />
-            </button>
+            
+            <div className="flex items-center gap-6">
+              <div className="text-right">
+                <p className="text-xs font-bold tracking-widest uppercase text-slate-500">Total Hoy</p>
+                <p 
+                  className="text-4xl sm:text-5xl font-black text-slate-900"
+                  style={{ fontFamily: 'JetBrains Mono, monospace' }}
+                  data-testid="daily-total-display"
+                >
+                  ${todayTotal.toLocaleString('es-CL')}
+                </p>
+              </div>
+              <button
+                onClick={logout}
+                className="p-3 bg-white border-2 border-slate-900 rounded-xl hover:bg-slate-50 transition-all"
+                style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
+                onMouseEnter={(e) => e.target.style.transform = 'translateY(-2px)'}
+                onMouseLeave={(e) => e.target.style.transform = 'translateY(0)'}
+                data-testid="logout-btn"
+              >
+                <LogOut className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Segunda fila: Indicadores Económicos */}
+          <div className="border-t border-slate-200 pt-3">
+            <EconomicIndicators />
           </div>
         </header>
 
