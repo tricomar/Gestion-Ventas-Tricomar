@@ -1,0 +1,19 @@
+{
+  "summary": "Verified corrected Ganancia formula in /dashboard/realtime-metrics and /dashboard/historic-data endpoints. All 4 critical scenarios passed with exact math match: has_tax=True (total/1.19 - cost), has_tax=False (total - cost), positive profit case, and edit-sale recalculation. Backend formula correctly respects the 'Incluye IVA' checkbox.",
+  "tested_scope": ["backend", "integration"],
+  "passed": [
+    "Login admin@ventas.com - 200",
+    "Sale create has_tax=True (total=60k, cost=10k, qty=6): delta utilidades = -9579.83 (matches expected (60000/1.19)-60000)",
+    "Sale create has_tax=False (total=60k, cost=10k, qty=6): delta utilidades = 0.00 (matches expected 60000-60000)",
+    "Sale create positive profit has_tax=True (total=100k, cost=10k, qty=5): delta utilidades = 34033.61 (matches expected (100000/1.19)-50000)",
+    "/dashboard/realtime-metrics returns 200 with new formula applied",
+    "/dashboard/historic-data?year=YYYY&month=MM returns 200 with same formula",
+    "Edit sale has_tax True->False recalculates utilidades correctly (delta = 15966.39, matches expected)"
+  ],
+  "failed": [],
+  "action_items": [],
+  "success_rate": {"backend": "100%", "frontend": "not tested (backend formula change only)"},
+  "retest_needed": false,
+  "full_testing_deferred": true,
+  "notes": "Frontend UI testing skipped: the change is purely backend computation in two metrics endpoints. Dashboard UI consumes these endpoints; visible values will reflect correct formula. Test data was created and cleaned up."
+}

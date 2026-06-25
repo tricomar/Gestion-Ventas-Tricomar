@@ -673,13 +673,25 @@ async def get_realtime_metrics(current_user: User = Depends(get_current_user)):
             for s in filtered_sales if not s.get('has_tax', True)
         )
         
-        # Utilidades (Ganancia): (Precio de venta - 19% IVA) - Costo
-        # Formula: sale_price * 0.81 - cost
-        # Usamos 'total' porque es el precio de venta final (ya editado por el usuario)
-        utilidades = sum(
-            (s.get('total', 0) * 0.81) - (s.get('cost_price', 0) * s.get('quantity', 0))
-            for s in filtered_sales
-        )
+        # Ganancia = Precio de Venta (sin IVA) - Precio de Compra
+        # Si has_tax=True (incluye IVA): Precio sin IVA = total / 1.19
+        # Si has_tax=False (no incluye IVA): Precio sin IVA = total
+        utilidades = 0
+        for s in filtered_sales:
+            total = s.get('total', 0)
+            costo_total = s.get('cost_price', 0) * s.get('quantity', 0)
+            
+            # Determinar precio de venta sin IVA
+            if s.get('has_tax', True):
+                # Total incluye IVA, necesitamos extraerlo
+                precio_sin_iva = total / 1.19
+            else:
+                # Total ya es sin IVA
+                precio_sin_iva = total
+            
+            # Ganancia = Precio Venta (sin IVA) - Costo
+            ganancia_venta = precio_sin_iva - costo_total
+            utilidades += ganancia_venta
         
         return {
             'compras': compras,
@@ -773,10 +785,19 @@ async def get_historic_data(
             for s in filtered_sales if not s.get('has_tax', True)
         )
         
-        utilidades = sum(
-            (s.get('total', 0) * 0.81) - (s.get('cost_price', 0) * s.get('quantity', 0))
-            for s in filtered_sales
-        )
+        # Ganancia = Precio de Venta (sin IVA) - Precio de Compra
+        utilidades = 0
+        for s in filtered_sales:
+            total = s.get('total', 0)
+            costo_total = s.get('cost_price', 0) * s.get('quantity', 0)
+            
+            if s.get('has_tax', True):
+                precio_sin_iva = total / 1.19
+            else:
+                precio_sin_iva = total
+            
+            ganancia_venta = precio_sin_iva - costo_total
+            utilidades += ganancia_venta
         
         return {
             'compras': compras,
