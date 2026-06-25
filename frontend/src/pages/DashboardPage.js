@@ -11,6 +11,8 @@ import DailySidebar from '../components/DailySidebar';
 import DashboardStats from '../components/DashboardStats';
 import RealtimeMetrics from '../components/RealtimeMetrics';
 import EconomicIndicators from '../components/EconomicIndicators';
+import NotesCalendar from '../components/NotesCalendar';
+import DailyNotes from '../components/DailyNotes';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -21,6 +23,7 @@ const DashboardPage = () => {
   const [activeTab, setActiveTab] = useState('sales');
   const [todayTotal, setTodayTotal] = useState(0);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
 
   const refresh = () => setRefreshTrigger(prev => prev + 1);
 
@@ -90,119 +93,112 @@ const DashboardPage = () => {
           </div>
         </header>
 
-        {/* Realtime Metrics */}
-        <div className="p-6 md:p-8 pb-0">
-          <RealtimeMetrics refreshTrigger={refreshTrigger} />
-        </div>
-
-        {/* Content */}
+        {/* Main Content Area - Nuevo Layout */}
         <div className="flex-1 p-6 md:p-8 overflow-y-auto">
-          {/* Tab Navigation */}
-          <div className="mb-6 flex gap-4 flex-wrap">
-            <button
-              onClick={() => navigate('/inventory')}
-              className="px-6 py-3 rounded-xl font-bold border-2 border-slate-900 bg-white text-slate-600 hover:bg-slate-50 transition-all"
-              style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
-              data-testid="inventory-nav-btn"
-            >
-              <Package className="inline w-5 h-5 mr-2" />
-              Inventario
-            </button>
-            <button
-              onClick={() => navigate('/reports')}
-              className="px-6 py-3 rounded-xl font-bold border-2 border-slate-900 bg-white text-slate-600 hover:bg-slate-50 transition-all"
-              style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
-              data-testid="reports-nav-btn"
-            >
-              <FileText className="inline w-5 h-5 mr-2" />
-              Reportes
-            </button>
-            <button
-              onClick={() => navigate('/settings')}
-              className="px-6 py-3 rounded-xl font-bold border-2 border-slate-900 bg-white text-slate-600 hover:bg-slate-50 transition-all"
-              style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
-              data-testid="settings-nav-btn"
-            >
-              <Settings className="inline w-5 h-5 mr-2" />
-              Configuración
-            </button>
-            <button
-              onClick={() => setActiveTab('sales')}
-              className={`px-6 py-3 rounded-xl font-bold border-2 border-slate-900 transition-all ${
-                activeTab === 'sales' 
-                  ? 'text-slate-900' 
-                  : 'bg-white text-slate-600 hover:bg-slate-50'
-              }`}
-              style={{
-                backgroundColor: activeTab === 'sales' ? '#D4F0A5' : 'white',
-                boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)'
-              }}
-              data-testid="sales-tab-btn"
-            >
-              <PlusCircle className="inline w-5 h-5 mr-2" />
-              Ventas
-            </button>
-            <button
-              onClick={() => setActiveTab('expenses')}
-              className={`px-6 py-3 rounded-xl font-bold border-2 border-slate-900 transition-all ${
-                activeTab === 'expenses' 
-                  ? 'text-slate-900' 
-                  : 'bg-white text-slate-600 hover:bg-slate-50'
-              }`}
-              style={{
-                backgroundColor: activeTab === 'expenses' ? '#FFA8A8' : 'white',
-                boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)'
-              }}
-              data-testid="expenses-tab-btn"
-            >
-              <TrendingDown className="inline w-5 h-5 mr-2" />
-              Egresos
-            </button>
-            <button
-              onClick={() => setActiveTab('income')}
-              className={`px-6 py-3 rounded-xl font-bold border-2 border-slate-900 transition-all ${
-                activeTab === 'income' 
-                  ? 'text-slate-900' 
-                  : 'bg-white text-slate-600 hover:bg-slate-50'
-              }`}
-              style={{
-                backgroundColor: activeTab === 'income' ? '#FADBB0' : 'white',
-                boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)'
-              }}
-              data-testid="income-tab-btn"
-            >
-              <TrendingUp className="inline w-5 h-5 mr-2" />
-              Otros Ingresos
-            </button>
-            <button
-              onClick={() => setActiveTab('dashboard')}
-              className={`px-6 py-3 rounded-xl font-bold border-2 border-slate-900 transition-all ${
-                activeTab === 'dashboard' 
-                  ? 'text-slate-900' 
-                  : 'bg-white text-slate-600 hover:bg-slate-50'
-              }`}
-              style={{
-                backgroundColor: activeTab === 'dashboard' ? '#D4F0A5' : 'white',
-                boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)'
-              }}
-              data-testid="dashboard-tab-btn"
-            >
-              <DollarSign className="inline w-5 h-5 mr-2" />
-              Dashboard
-            </button>
+          {/* Grid Layout: 2 columnas en desktop */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            {/* Columna Izquierda: Formularios de Registro */}
+            <div>
+              {/* Tab Navigation */}
+              <div className="mb-4 flex gap-2 flex-wrap">
+                <button
+                  onClick={() => navigate('/inventory')}
+                  className="px-4 py-2 text-sm rounded-lg font-bold border-2 border-slate-900 bg-white text-slate-600 hover:bg-slate-50 transition-all"
+                  style={{ boxShadow: '3px 3px 0px 0px rgba(15,23,42,1)' }}
+                >
+                  <Package className="inline w-4 h-4 mr-1" />
+                  Inventario
+                </button>
+                <button
+                  onClick={() => navigate('/reports')}
+                  className="px-4 py-2 text-sm rounded-lg font-bold border-2 border-slate-900 bg-white text-slate-600 hover:bg-slate-50 transition-all"
+                  style={{ boxShadow: '3px 3px 0px 0px rgba(15,23,42,1)' }}
+                >
+                  <FileText className="inline w-4 h-4 mr-1" />
+                  Reportes
+                </button>
+                <button
+                  onClick={() => navigate('/settings')}
+                  className="px-4 py-2 text-sm rounded-lg font-bold border-2 border-slate-900 bg-white text-slate-600 hover:bg-slate-50 transition-all"
+                  style={{ boxShadow: '3px 3px 0px 0px rgba(15,23,42,1)' }}
+                >
+                  <Settings className="inline w-4 h-4 mr-1" />
+                  Configuración
+                </button>
+              </div>
+
+              {/* Tab Buttons for Forms */}
+              <div className="mb-4 flex gap-2 flex-wrap">
+                <button
+                  onClick={() => setActiveTab('sales')}
+                  className={`px-4 py-2 text-sm rounded-lg font-bold border-2 border-slate-900 transition-all ${
+                    activeTab === 'sales' ? 'text-slate-900' : 'bg-white text-slate-600 hover:bg-slate-50'
+                  }`}
+                  style={{
+                    backgroundColor: activeTab === 'sales' ? '#D4F0A5' : 'white',
+                    boxShadow: '3px 3px 0px 0px rgba(15,23,42,1)'
+                  }}
+                >
+                  <PlusCircle className="inline w-4 h-4 mr-1" />
+                  Ventas
+                </button>
+                <button
+                  onClick={() => setActiveTab('expenses')}
+                  className={`px-4 py-2 text-sm rounded-lg font-bold border-2 border-slate-900 transition-all ${
+                    activeTab === 'expenses' ? 'text-slate-900' : 'bg-white text-slate-600 hover:bg-slate-50'
+                  }`}
+                  style={{
+                    backgroundColor: activeTab === 'expenses' ? '#FFA8A8' : 'white',
+                    boxShadow: '3px 3px 0px 0px rgba(15,23,42,1)'
+                  }}
+                >
+                  <TrendingDown className="inline w-4 h-4 mr-1" />
+                  Egresos
+                </button>
+                <button
+                  onClick={() => setActiveTab('income')}
+                  className={`px-4 py-2 text-sm rounded-lg font-bold border-2 border-slate-900 transition-all ${
+                    activeTab === 'income' ? 'text-slate-900' : 'bg-white text-slate-600 hover:bg-slate-50'
+                  }`}
+                  style={{
+                    backgroundColor: activeTab === 'income' ? '#FADBB0' : 'white',
+                    boxShadow: '3px 3px 0px 0px rgba(15,23,42,1)'
+                  }}
+                >
+                  <TrendingUp className="inline w-4 h-4 mr-1" />
+                  Otros Ingresos
+                </button>
+              </div>
+
+              {/* Form Content */}
+              <div>
+                {activeTab === 'sales' && <SalesForm onSuccess={refresh} />}
+                {activeTab === 'expenses' && <ExpenseForm onSuccess={refresh} />}
+                {activeTab === 'income' && <OtherIncomeForm onSuccess={refresh} />}
+              </div>
+            </div>
+
+            {/* Columna Derecha: Calendario y Notas */}
+            <div className="space-y-6">
+              <NotesCalendar 
+                onDateSelect={setSelectedDate}
+                selectedDate={selectedDate}
+              />
+              <DailyNotes 
+                selectedDate={selectedDate}
+                onNoteChange={refresh}
+              />
+            </div>
           </div>
 
-          {/* Tab Content */}
-          <div>
-            {activeTab === 'sales' && <SalesForm onSuccess={refresh} />}
-            {activeTab === 'expenses' && <ExpenseForm onSuccess={refresh} />}
-            {activeTab === 'income' && <OtherIncomeForm onSuccess={refresh} />}
-            {activeTab === 'dashboard' && <DashboardStats />}
+          {/* Métricas en Tiempo Real - Parte inferior */}
+          <div className="mt-6">
+            <RealtimeMetrics refreshTrigger={refreshTrigger} />
           </div>
         </div>
       </div>
 
-      {/* Right Sidebar */}
+      {/* Right Sidebar - Registros del Día */}
       <DailySidebar refreshTrigger={refreshTrigger} onDelete={refresh} />
     </div>
   );
