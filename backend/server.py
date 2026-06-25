@@ -97,16 +97,6 @@ class Product(ProductBase):
             return 0
         return (self.sale_price / 1.19) - self.cost_price
 
-# Customer Models
-class CustomerBase(BaseModel):
-    name: str
-
-class Customer(CustomerBase):
-    model_config = ConfigDict(extra="ignore")
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    purchase_count: int = 0
-
 # Sale Models
 class SaleCreate(BaseModel):
     product_id: str
@@ -117,7 +107,8 @@ class SaleCreate(BaseModel):
     cost_price: float
     store: str  # A or B
     has_tax: bool = True  # Default activated
-    customer: Optional[str] = None
+    customer_id: Optional[str] = None
+    customer_name: Optional[str] = None
     payment_method: str  # Efectivo, Tarjeta, Transferencia
 
 class Sale(BaseModel):
@@ -135,10 +126,12 @@ class Sale(BaseModel):
     cost_price: float = 0
     store: str = "A"
     has_tax: bool = True
-    customer: Optional[str] = None
+    customer_id: Optional[str] = None
+    customer_name: Optional[str] = None
     payment_method: str = "Efectivo"
     # Legacy field support
     product: Optional[str] = None
+    customer: Optional[str] = None  # Legacy field
 
 # Expense Models
 class ExpenseCreate(BaseModel):
@@ -228,6 +221,30 @@ class NoteRead(BaseModel):
     user_id: str
     user_name: str
     read_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+# Customer Models
+class CustomerBase(BaseModel):
+    name: str
+    address: Optional[str] = None
+    phone: Optional[str] = None
+    store: str = "A"  # A, B, or "Ambas"
+
+class CustomerCreate(CustomerBase):
+    pass
+
+class CustomerUpdate(BaseModel):
+    name: Optional[str] = None
+    address: Optional[str] = None
+    phone: Optional[str] = None
+    store: Optional[str] = None
+
+class Customer(CustomerBase):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    total_spent: float = 0
+    purchase_count: int = 0
+    last_purchase_date: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 # ============= AUTH HELPERS =============
 
@@ -614,12 +631,20 @@ async def create_sale(sale_input: SaleCreate, current_user: User = Depends(get_c
         upsert=False
     )
     
-    # Update customer purchase count if provided
-    if sale_input.customer:
+    # Update customer stats if customer_id provided
+    if sale_input.customer_id:
+        sale_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
         await db.customers.update_one(
-            {'name': sale_input.customer},
-            {'$inc': {'purchase_count': 1}},
-            upsert=True
+            {'id': sale_input.customer_id},
+            {
+                '$inc': {
+                    'purchase_count': 1,
+                    'total_spent': sale_input.total
+                },
+                '$set': {
+                    'last_purchase_date': sale_date
+                }
+            }
         )
     
     return sale
@@ -1525,6 +1550,139 @@ async def get_calendar_days(
             }
     
     return result
+
+# ============= CUSTOMERS ROUTES =============
+
+@api_router.post("/customers", response_model=Customer)
+async def create_customer(
+    customer_input: CustomerCreate,
+    current_user: User = Depends(get_current_user)
+):
+    """Create a new customer"""
+    customer = Customer(**customer_input.model_dump())
+    
+    doc = customer.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    
+    await db.customers.insert_one(doc)
+    return customer
+
+@api_router.get("/customers")
+async def get_customers(
+    store: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """Get all customers with optional store filter"""
+    query = {}
+    if store and store != "Todas":
+        query['store'] = store
+    
+    customers = await db.customers.find(query, {'_id': 0}).to_list(1000)
+    
+    # Convert ISO strings to datetime
+    for customer in customers:
+        if isinstance(customer.get('created_at'), str):
+            customer['created_at'] = datetime.fromisoformat(customer['created_at'])
+    
+    return customers
+
+@api_router.get("/customers/{customer_id}")
+async def get_customer(
+    customer_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Get a specific customer with purchase history"""
+    customer = await db.customers.find_one({'id': customer_id}, {'_id': 0})
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    
+    if isinstance(customer.get('created_at'), str):
+        customer['created_at'] = datetime.fromisoformat(customer['created_at'])
+    
+    # Get purchase history
+    sales = await db.sales.find({'customer_id': customer_id}, {'_id': 0}).to_list(1000)
+    
+    # Convert dates
+    for sale in sales:
+        if isinstance(sale.get('created_at'), str):
+            sale['created_at'] = datetime.fromisoformat(sale['created_at'])
+    
+    # Calculate product frequency
+    product_frequency = {}
+    for sale in sales:
+        product_name = sale.get('product_name', '')
+        if product_name:
+            if product_name not in product_frequency:
+                product_frequency[product_name] = {
+                    'product_name': product_name,
+                    'count': 0,
+                    'total_spent': 0,
+                    'last_purchase': None
+                }
+            product_frequency[product_name]['count'] += 1
+            product_frequency[product_name]['total_spent'] += sale.get('total', 0)
+            
+            sale_date = sale.get('created_at')
+            if isinstance(sale_date, datetime):
+                sale_date = sale_date.isoformat()
+            
+            if not product_frequency[product_name]['last_purchase'] or sale_date > product_frequency[product_name]['last_purchase']:
+                product_frequency[product_name]['last_purchase'] = sale_date
+    
+    customer['purchase_history'] = sales
+    customer['favorite_products'] = sorted(
+        product_frequency.values(),
+        key=lambda x: x['count'],
+        reverse=True
+    )
+    
+    return customer
+
+@api_router.put("/customers/{customer_id}", response_model=Customer)
+async def update_customer(
+    customer_id: str,
+    customer_update: CustomerUpdate,
+    current_user: User = Depends(get_current_user)
+):
+    """Update a customer"""
+    customer = await db.customers.find_one({'id': customer_id}, {'_id': 0})
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    
+    update_data = {k: v for k, v in customer_update.model_dump().items() if v is not None}
+    
+    if update_data:
+        await db.customers.update_one(
+            {'id': customer_id},
+            {'$set': update_data}
+        )
+    
+    # Fetch updated customer
+    updated_customer = await db.customers.find_one({'id': customer_id}, {'_id': 0})
+    if isinstance(updated_customer.get('created_at'), str):
+        updated_customer['created_at'] = datetime.fromisoformat(updated_customer['created_at'])
+    
+    return Customer(**updated_customer)
+
+@api_router.delete("/customers/{customer_id}")
+async def delete_customer(
+    customer_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Delete a customer"""
+    customer = await db.customers.find_one({'id': customer_id}, {'_id': 0})
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    
+    # Remove customer_id from sales (keep history but unlink customer)
+    await db.sales.update_many(
+        {'customer_id': customer_id},
+        {'$set': {'customer_id': None, 'customer_name': None}}
+    )
+    
+    await db.customers.delete_one({'id': customer_id})
+    
+    return {"message": "Customer deleted successfully"}
 
 # ============= ECONOMIC INDICATORS =============
 indicators_cache = {
