@@ -103,10 +103,21 @@ const DailySidebar = ({ refreshTrigger, onDelete }) => {
   };
 
   const updateEditData = (field, value) => {
-    setEditModal(prev => ({
-      ...prev,
-      data: { ...prev.data, [field]: value }
-    }));
+    setEditModal(prev => {
+      const newData = { ...prev.data, [field]: value };
+      
+      // Auto-calcular total cuando cambia cantidad o precio (solo para ventas)
+      if (prev.type === 'sales' && (field === 'quantity' || field === 'price')) {
+        const quantity = field === 'quantity' ? parseFloat(value) || 0 : parseFloat(newData.quantity) || 0;
+        const price = field === 'price' ? parseFloat(value) || 0 : parseFloat(newData.price) || 0;
+        newData.total = quantity * price;
+      }
+      
+      return {
+        ...prev,
+        data: newData
+      };
+    });
   };
 
   const formatTime = (dateString) => {
@@ -352,16 +363,22 @@ const DailySidebar = ({ refreshTrigger, onDelete }) => {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-1">Total</label>
+                    <label className="block text-sm font-bold text-slate-700 mb-1">
+                      Total 
+                      <span className="text-xs text-slate-500 ml-2">(auto-calculado: cantidad × precio)</span>
+                    </label>
                     <input
                       type="number"
                       step="0.01"
                       value={editModal.data.total}
                       onChange={(e) => updateEditData('total', e.target.value)}
-                      className="w-full px-3 py-2 border-2 border-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900"
+                      className="w-full px-3 py-2 border-2 border-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 bg-slate-50"
                       required
                       data-testid="edit-total"
                     />
+                    <p className="text-xs text-slate-500 mt-1">
+                      Puedes modificar manualmente para aplicar descuentos
+                    </p>
                   </div>
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-1">Método de Pago</label>

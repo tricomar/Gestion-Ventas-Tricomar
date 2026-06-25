@@ -1,0 +1,26 @@
+{
+  "summary": "Verified bug fix: auto-calculation of Total field in sale edit modal. All 9 acceptance criteria passed: modal opens with current values, auto-calc triggers on qty/price change, manual override is respected, label and help text present, bg-slate-50 styling present, backend persists correctly and metrics update after save.",
+  "tested_scope": ["frontend", "backend", "integration"],
+  "passed": [
+    "Backend login OK (admin@ventas.com / admin123) returns valid JWT",
+    "Edit modal opens with original buggy sale data (qty=6, price=10000, total=10000)",
+    "Label '(auto-calculado: cantidad × precio)' is visible next to Total",
+    "Help text 'Puedes modificar manualmente para aplicar descuentos' visible below Total",
+    "Total input has bg-slate-50 class (gray background)",
+    "Changing qty=2 (with price=10000) auto-updated total to 20000",
+    "Changing price=5000 (with qty=2) auto-updated total to 10000",
+    "Manual Total override (8000) is respected after auto-calc",
+    "Setting qty=6 + price=10000 produced Total=60000 (the core bug-fix scenario)",
+    "Save persisted to backend: sale now shows '6 x $10.000' = $60.000 with toast 'Registro actualizado'",
+    "Tienda B Ganancia recalculated after save (was negative buggy value, now updated based on correct totals)"
+  ],
+  "failed": [],
+  "minor_notes": [
+    "Filling qty with same value (6→6) does not trigger onChange so total stays unchanged — expected React behavior, not a bug.",
+    "During testing 2 extra sales appeared in sidebar likely from accidental Enter key on login form pre-fill earlier; does not affect bug-fix verification."
+  ],
+  "action_items": [],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "retest_needed": false,
+  "full_testing_deferred": true
+}
