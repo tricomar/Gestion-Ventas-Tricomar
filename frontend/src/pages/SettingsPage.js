@@ -234,7 +234,7 @@ const SettingsPage = () => {
             <p className="text-slate-600">Personaliza tu aplicación</p>
           </div>
           <button
-            onClick={() => navigate('/dashboard')}
+            onClick={() => navigate('/')}
             className="flex items-center gap-2 px-4 py-2 bg-white border-2 border-slate-900 rounded-xl font-bold hover:bg-slate-50 transition-all"
             style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
             data-testid="back-to-dashboard-btn"
