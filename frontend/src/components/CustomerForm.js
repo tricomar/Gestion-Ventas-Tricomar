@@ -6,12 +6,12 @@ import { X } from 'lucide-react';
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
-const CustomerForm = ({ onClose, onSuccess }) => {
+const CustomerForm = ({ customer, onClose, onSuccess }) => {
   const [formData, setFormData] = useState({
-    name: '',
-    address: '',
-    phone: '',
-    store: 'A'
+    name: customer?.name || '',
+    address: customer?.address || '',
+    phone: customer?.phone || '',
+    store: customer?.store || 'A'
   });
   const [loading, setLoading] = useState(false);
 
@@ -20,13 +20,21 @@ const CustomerForm = ({ onClose, onSuccess }) => {
     setLoading(true);
 
     try {
-      const response = await axios.post(`${API}/customers`, formData);
-      toast.success('Cliente creado exitosamente');
-      onSuccess(response.data);
+      if (customer) {
+        // Update existing customer
+        const response = await axios.put(`${API}/customers/${customer.id}`, formData);
+        toast.success('Cliente actualizado exitosamente');
+        onSuccess(response.data);
+      } else {
+        // Create new customer
+        const response = await axios.post(`${API}/customers`, formData);
+        toast.success('Cliente creado exitosamente');
+        onSuccess(response.data);
+      }
       onClose();
     } catch (error) {
-      console.error('Error creating customer:', error);
-      toast.error('Error al crear cliente');
+      console.error('Error saving customer:', error);
+      toast.error('Error al guardar cliente');
     } finally {
       setLoading(false);
     }
@@ -36,7 +44,7 @@ const CustomerForm = ({ onClose, onSuccess }) => {
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl border-2 border-slate-900 p-6 w-full max-w-md" style={{ boxShadow: '8px 8px 0px 0px rgba(15,23,42,1)' }}>
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-bold">Nuevo Cliente</h3>
+          <h3 className="text-xl font-bold">{customer ? 'Editar Cliente' : 'Nuevo Cliente'}</h3>
           <button
             onClick={onClose}
             className="p-2 hover:bg-slate-100 rounded-lg"
@@ -100,7 +108,7 @@ const CustomerForm = ({ onClose, onSuccess }) => {
               className="flex-1 py-3 bg-slate-900 text-white font-bold rounded-lg hover:bg-slate-800 disabled:opacity-50"
               style={{ boxShadow: '3px 3px 0px 0px rgba(15,23,42,1)' }}
             >
-              {loading ? 'Guardando...' : 'Crear Cliente'}
+              {loading ? 'Guardando...' : customer ? 'Actualizar Cliente' : 'Crear Cliente'}
             </button>
             <button
               type="button"
