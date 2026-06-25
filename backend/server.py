@@ -673,11 +673,11 @@ async def get_realtime_metrics(current_user: User = Depends(get_current_user)):
             for s in filtered_sales if not s.get('has_tax', True)
         )
         
-        # Utilidades: profit margin from all sales
-        # Margin = total - cost - iva
-        # IVA = total / 1.19 * 0.19
+        # Utilidades (Ganancia): (Precio de venta - 19% IVA) - Costo
+        # Formula: sale_price * 0.81 - cost
+        # Usamos 'total' porque es el precio de venta final (ya editado por el usuario)
         utilidades = sum(
-            s.get('total', 0) - (s.get('cost_price', 0) * s.get('quantity', 0)) - (s.get('total', 0) / 1.19 * 0.19)
+            (s.get('total', 0) * 0.81) - (s.get('cost_price', 0) * s.get('quantity', 0))
             for s in filtered_sales
         )
         
@@ -707,6 +707,96 @@ async def get_realtime_metrics(current_user: User = Depends(get_current_user)):
         general_day=calculate_general_metrics(today_income, today_expenses),
         general_month=calculate_general_metrics(month_income, month_expenses)
     )
+
+@api_router.get("/dashboard/historic-months")
+async def get_historic_months(current_user: User = Depends(get_current_user)):
+    """Get list of months with data from last 2 years"""
+    now = datetime.now(timezone.utc)
+    two_years_ago = now - timedelta(days=730)
+    
+    # Get all sales from last 2 years
+    sales = await db.sales.find({
+        'created_at': {'$gte': two_years_ago.isoformat()}
+    }, {'_id': 0, 'created_at': 1}).to_list(100000)
+    
+    # Extract unique year-month combinations
+    months_set = set()
+    for sale in sales:
+        try:
+            if isinstance(sale.get('created_at'), str):
+                dt = datetime.fromisoformat(sale['created_at'])
+            else:
+                dt = sale['created_at']
+            months_set.add((dt.year, dt.month))
+        except (ValueError, KeyError, TypeError):
+            continue
+    
+    # Convert to list and sort (most recent first)
+    months_list = [{'year': y, 'month': m} for y, m in sorted(months_set, reverse=True)]
+    
+    return months_list
+
+@api_router.get("/dashboard/historic-data")
+async def get_historic_data(
+    year: int, 
+    month: int, 
+    current_user: User = Depends(get_current_user)
+):
+    """Get metrics for a specific historic month"""
+    # Calculate date range for the specified month
+    month_start = datetime(year, month, 1, tzinfo=timezone.utc)
+    if month == 12:
+        next_month_start = datetime(year + 1, 1, 1, tzinfo=timezone.utc)
+    else:
+        next_month_start = datetime(year, month + 1, 1, tzinfo=timezone.utc)
+    
+    # Get data for that month
+    month_sales = await db.sales.find({
+        'created_at': {'$gte': month_start.isoformat(), '$lt': next_month_start.isoformat()}
+    }, {'_id': 0}).to_list(100000)
+    
+    month_income = await db.other_income.find({
+        'created_at': {'$gte': month_start.isoformat(), '$lt': next_month_start.isoformat()}
+    }, {'_id': 0}).to_list(100000)
+    
+    month_expenses = await db.expenses.find({
+        'created_at': {'$gte': month_start.isoformat(), '$lt': next_month_start.isoformat()}
+    }, {'_id': 0}).to_list(100000)
+    
+    def calculate_metrics(sales, store):
+        filtered_sales = [s for s in sales if s.get('store') == store]
+        
+        compras = sum(s.get('cost_price', 0) * s.get('quantity', 0) for s in filtered_sales)
+        
+        iva_a_favor = sum(
+            s.get('total', 0) / 1.19 * 0.19
+            for s in filtered_sales if not s.get('has_tax', True)
+        )
+        
+        utilidades = sum(
+            (s.get('total', 0) * 0.81) - (s.get('cost_price', 0) * s.get('quantity', 0))
+            for s in filtered_sales
+        )
+        
+        return {
+            'compras': compras,
+            'iva_a_favor': iva_a_favor,
+            'utilidades': utilidades
+        }
+    
+    def calculate_general_metrics(income_list, expenses_list):
+        otros_ingresos = sum(inc.get('amount', 0) for inc in income_list)
+        egresos = sum(exp.get('amount', 0) for exp in expenses_list)
+        return {
+            'otros_ingresos': otros_ingresos,
+            'egresos': egresos
+        }
+    
+    return {
+        'store_a': calculate_metrics(month_sales, 'A'),
+        'store_b': calculate_metrics(month_sales, 'B'),
+        'general': calculate_general_metrics(month_income, month_expenses)
+    }
 
 # ============= DASHBOARD ROUTES =============
 

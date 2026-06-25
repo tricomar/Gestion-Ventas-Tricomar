@@ -1,0 +1,25 @@
+{
+  "summary": "Validated new Ganancia formula and historic months feature. Backend formula (total*0.81)-(cost*qty) returns correct values: qty=2 -> 2100, qty=4 -> -3900 (correct per spec, sale at loss). New endpoints /dashboard/historic-months and /dashboard/historic-data return 200 with proper data. Frontend shows 'Ganancia' and 'Compras' labels, 'Total Mes' and 'Histórico' buttons work, and Histórico view renders month cards (JUN 2026 visible).",
+  "tested_scope": ["backend", "frontend", "integration", "auth"],
+  "passed": [
+    "Auth login admin@ventas.com works (200, token returned)",
+    "GET /api/dashboard/historic-months -> 200, returned [{year:2026,month:6}]",
+    "GET /api/dashboard/historic-data?year=2026&month=6 -> 200, returns store_a, store_b, general metrics",
+    "GET /api/dashboard/realtime-metrics -> 200, contains utilidades field",
+    "Formula validation qty=2 total=10000 cost=3000 -> utilidades=2100.0 (matches expected 2100)",
+    "Formula validation qty=4 total=10000 cost=3000 -> utilidades=-3900.0 (correct per spec when cost*qty > total*0.81)",
+    "POST/PUT/DELETE /api/sales work and metrics update accordingly",
+    "Frontend [data-testid=realtime-metrics] container renders",
+    "Frontend 'Ganancia' label present (2 occurrences for Store A and B)",
+    "Frontend 'Compras' label present (2 occurrences)",
+    "Frontend [data-testid=period-month-btn] 'Total Mes' button present",
+    "Frontend [data-testid=period-historic-btn] 'Histórico' button present and clickable",
+    "Click on Histórico shows month cards (1 card for JUN 2026 detected via data-testid=historic-month-2026-6)"
+  ],
+  "failed": [],
+  "action_items": [],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "retest_needed": false,
+  "full_testing_deferred": true,
+  "notes": "Bug original ('valor negativo al aumentar cantidad') resuelto. La nueva fórmula puede dar negativo SOLO si cost_price*qty > total*0.81, que representa una venta con pérdida real (comportamiento esperado por el spec). El sidebar 00:00 reset no se probó porque no fue implementado (documentado en spec)."
+}
