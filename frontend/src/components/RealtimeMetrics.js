@@ -28,7 +28,7 @@ const MetricCard = ({ title, value, icon: Icon, color }) => (
       <Icon className="w-4 h-4" />
       <span className="text-xs font-bold uppercase">{title}</span>
     </div>
-    <p className="font-mono font-bold text-lg">${value.toLocaleString('es-CL')}</p>
+    <p className="font-mono font-bold text-lg">${(value ?? 0).toLocaleString('es-CL')}</p>
   </div>
 );
 
