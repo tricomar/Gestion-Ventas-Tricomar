@@ -3,6 +3,7 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import { Search, Plus } from 'lucide-react';
 import ProductForm from './ProductForm';
+import CustomerForm from './CustomerForm';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -12,11 +13,13 @@ const SalesForm = ({ onSuccess }) => {
   const [productSearch, setProductSearch] = useState('');
   const [quantity, setQuantity] = useState('');
   const [total, setTotal] = useState('');
-  const [customer, setCustomer] = useState('');
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [customerSearch, setCustomerSearch] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('Efectivo');
   const [hasTax, setHasTax] = useState(true);
   const [loading, setLoading] = useState(false);
   const [showProductForm, setShowProductForm] = useState(false);
+  const [showCustomerForm, setShowCustomerForm] = useState(false);
   
   const [productSuggestions, setProductSuggestions] = useState([]);
   const [customerSuggestions, setCustomerSuggestions] = useState([]);
@@ -45,10 +48,14 @@ const SalesForm = ({ onSuccess }) => {
 
   useEffect(() => {
     const searchCustomers = async () => {
-      if (customer.length > 1) {
+      if (customerSearch.length > 0) {
         try {
-          const response = await axios.get(`${API}/customers/search?q=${customer}`);
-          setCustomerSuggestions(response.data);
+          const response = await axios.get(`${API}/customers`);
+          // Filter by search term
+          const filtered = response.data.filter(c => 
+            c.name.toLowerCase().includes(customerSearch.toLowerCase())
+          );
+          setCustomerSuggestions(filtered);
           setShowCustomerSuggestions(true);
         } catch (error) {
           console.error('Error searching customers:', error);
@@ -61,7 +68,7 @@ const SalesForm = ({ onSuccess }) => {
 
     const timer = setTimeout(searchCustomers, 300);
     return () => clearTimeout(timer);
-  }, [customer]);
+  }, [customerSearch]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -98,7 +105,8 @@ const SalesForm = ({ onSuccess }) => {
         cost_price: selectedProduct.cost_price || 0,
         store: selectedProduct.store || 'A',
         has_tax: hasTax,
-        customer: customer || null,
+        customer_id: selectedCustomer?.id || null,
+        customer_name: selectedCustomer?.name || null,
         payment_method: paymentMethod
       });
 
@@ -109,7 +117,8 @@ const SalesForm = ({ onSuccess }) => {
       setProductSearch('');
       setQuantity('');
       setTotal('');
-      setCustomer('');
+      setSelectedCustomer(null);
+      setCustomerSearch('');
       setPaymentMethod('Efectivo');
       setHasTax(true);
       
@@ -140,11 +149,6 @@ const SalesForm = ({ onSuccess }) => {
       setTotal('');
     }
   }, [quantity, selectedProduct]);
-
-  const selectCustomer = (cust) => {
-    setCustomer(cust.name);
-    setShowCustomerSuggestions(false);
-  };
 
   const handleProductFormClose = async () => {
     setShowProductForm(false);
@@ -295,24 +299,63 @@ const SalesForm = ({ onSuccess }) => {
           <div className="relative">
             <input
               type="text"
-              value={customer}
-              onChange={(e) => setCustomer(e.target.value)}
+              value={customerSearch}
+              onChange={(e) => setCustomerSearch(e.target.value)}
+              onFocus={() => customerSearch && setShowCustomerSuggestions(true)}
               onBlur={() => setTimeout(() => setShowCustomerSuggestions(false), 200)}
-              className="w-full bg-white border-2 border-slate-900 rounded-xl px-4 py-3 font-medium text-slate-900 focus:ring-0 focus:outline-none focus:border-indigo-500 transition-all"
+              placeholder={selectedCustomer ? selectedCustomer.name : "Buscar cliente..."}
+              className="w-full bg-white border-2 border-slate-900 rounded-xl px-4 py-3 pr-20 font-medium text-slate-900 focus:ring-0 focus:outline-none focus:border-indigo-500 transition-all"
               data-testid="sales-customer-input"
             />
-            <Search className="absolute right-4 top-3.5 w-5 h-5 text-slate-400" />
+            <button
+              type="button"
+              onClick={() => setShowCustomerForm(true)}
+              className="absolute right-2 top-2 p-2 bg-lime-200 border-2 border-slate-900 rounded-lg hover:bg-lime-300"
+              style={{ boxShadow: '2px 2px 0px 0px rgba(15,23,42,1)' }}
+              title="Crear nuevo cliente"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
           </div>
+          {selectedCustomer && (
+            <div className="mt-2 p-2 bg-lime-100 border-2 border-slate-900 rounded-lg flex justify-between items-center">
+              <div className="text-sm">
+                <p className="font-bold">{selectedCustomer.name}</p>
+                {selectedCustomer.phone && (
+                  <p className="text-xs text-slate-600">{selectedCustomer.phone}</p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedCustomer(null);
+                  setCustomerSearch('');
+                }}
+                className="text-xs font-bold text-red-600 hover:text-red-800"
+              >
+                Quitar
+              </button>
+            </div>
+          )}
           {showCustomerSuggestions && customerSuggestions.length > 0 && (
             <div className="absolute z-10 w-full mt-2 bg-white border-2 border-slate-900 rounded-xl shadow-lg max-h-48 overflow-y-auto">
               {customerSuggestions.map((cust) => (
                 <button
                   key={cust.id}
                   type="button"
-                  onClick={() => selectCustomer(cust)}
-                  className="w-full text-left px-4 py-2 hover:bg-slate-100 font-medium"
+                  onClick={() => {
+                    setSelectedCustomer(cust);
+                    setCustomerSearch('');
+                    setShowCustomerSuggestions(false);
+                  }}
+                  className="w-full text-left px-4 py-2 hover:bg-slate-100 font-medium border-b border-slate-200 last:border-0"
                 >
-                  {cust.name}
+                  <div>
+                    <p className="font-bold">{cust.name}</p>
+                    {cust.phone && (
+                      <p className="text-xs text-slate-600">{cust.phone}</p>
+                    )}
+                  </div>
                 </button>
               ))}
             </div>
@@ -396,6 +439,17 @@ const SalesForm = ({ onSuccess }) => {
         <ProductForm
           product={null}
           onClose={handleProductFormClose}
+        />
+      )}
+
+      {/* Customer Form Modal */}
+      {showCustomerForm && (
+        <CustomerForm
+          onClose={() => setShowCustomerForm(false)}
+          onSuccess={(newCustomer) => {
+            setSelectedCustomer(newCustomer);
+            setCustomerSearch('');
+          }}
         />
       )}
     </div>
