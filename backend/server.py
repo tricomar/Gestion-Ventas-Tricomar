@@ -268,6 +268,48 @@ async def login(credentials: UserLogin):
 async def get_me(current_user: User = Depends(get_current_user)):
     return current_user
 
+@api_router.put("/auth/update-profile")
+async def update_profile(
+    name: str = None,
+    current_password: str = None,
+    new_password: str = None,
+    current_user: User = Depends(get_current_user)
+):
+    """Update user profile (name and/or password)"""
+    update_data = {}
+    
+    # Update name if provided
+    if name:
+        update_data['name'] = name
+    
+    # Update password if provided
+    if new_password:
+        if not current_password:
+            raise HTTPException(status_code=400, detail="Se requiere contraseña actual")
+        
+        # Verify current password
+        user_doc = await db.users.find_one({'id': current_user.id}, {'_id': 0})
+        if not user_doc:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        
+        if not bcrypt.checkpw(current_password.encode('utf-8'), user_doc['password_hash'].encode('utf-8')):
+            raise HTTPException(status_code=401, detail="Contraseña actual incorrecta")
+        
+        # Hash new password
+        hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
+        update_data['password_hash'] = hashed_password.decode('utf-8')
+    
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No hay cambios para actualizar")
+    
+    # Update user
+    await db.users.update_one(
+        {'id': current_user.id},
+        {'$set': update_data}
+    )
+    
+    return {"message": "Perfil actualizado exitosamente"}
+
 # ============= PRODUCT ROUTES =============
 
 @api_router.get("/products", response_model=List[Product])

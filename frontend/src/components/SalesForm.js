@@ -356,7 +356,7 @@ const SalesForm = ({ onSuccess }) => {
           </div>
           <input
             type="number"
-            step="0.01"
+            step="1"
             value={total}
             onChange={(e) => setTotal(e.target.value)}
             className="w-full bg-white border-2 border-slate-900 rounded-xl px-4 py-3 text-3xl font-black text-slate-900 focus:ring-0 focus:outline-none focus:border-indigo-500 transition-all"

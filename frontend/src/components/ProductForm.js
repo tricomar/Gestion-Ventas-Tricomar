@@ -119,11 +119,11 @@ const ProductForm = ({ product, onClose }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold tracking-widest uppercase text-slate-500 mb-2">
-                Precio Compra *
+                Precio Costo *
               </label>
               <input
                 type="number"
-                step="0.01"
+                step="1"
                 value={costPrice}
                 onChange={(e) => setCostPrice(e.target.value)}
                 className="w-full bg-white border-2 border-slate-900 rounded-xl px-4 py-3 font-medium text-slate-900 focus:ring-0 focus:outline-none focus:border-indigo-500 transition-all"
@@ -137,7 +137,7 @@ const ProductForm = ({ product, onClose }) => {
               </label>
               <input
                 type="number"
-                step="0.01"
+                step="1"
                 value={salePrice}
                 onChange={(e) => setSalePrice(e.target.value)}
                 className="w-full bg-white border-2 border-slate-900 rounded-xl px-4 py-3 font-medium text-slate-900 focus:ring-0 focus:outline-none focus:border-indigo-500 transition-all"
@@ -156,7 +156,7 @@ const ProductForm = ({ product, onClose }) => {
               <p className="text-xs font-bold tracking-widest uppercase text-slate-500 mb-3">Desglose Automático</p>
               <div className="space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-sm font-medium text-slate-600">Precio Compra:</span>
+                  <span className="text-sm font-medium text-slate-600">Precio Costo:</span>
                   <span className="font-mono font-bold">${parseFloat(costPrice).toFixed(0)}</span>
                 </div>
                 <div className="flex justify-between">
