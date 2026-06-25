@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { LogOut, TrendingUp, TrendingDown, DollarSign, PlusCircle, Package, FileText, Settings, Users } from 'lucide-react';
+import { LogOut, TrendingUp, TrendingDown, DollarSign, PlusCircle, Package, FileText, Settings, Users, Menu } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import SalesForm from '../components/SalesForm';
 import ExpenseForm from '../components/ExpenseForm';
@@ -24,6 +24,7 @@ const DashboardPage = () => {
   const [todayTotal, setTodayTotal] = useState(0);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [showMenu, setShowMenu] = useState(false);
 
   const refresh = () => setRefreshTrigger(prev => prev + 1);
 
@@ -99,40 +100,49 @@ const DashboardPage = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
             {/* Columna Izquierda: Formularios de Registro */}
             <div>
-              {/* Tab Navigation */}
-              <div className="mb-4 flex gap-2 flex-wrap">
+              {/* Navigation Menu */}
+              <div className="mb-4 relative">
                 <button
-                  onClick={() => navigate('/customers')}
-                  className="px-4 py-2 text-sm rounded-lg font-bold border-2 border-slate-900 bg-white text-slate-600 hover:bg-slate-50 transition-all"
+                  onClick={() => setShowMenu(!showMenu)}
+                  className="px-4 py-2 text-sm rounded-lg font-bold border-2 border-slate-900 bg-white hover:bg-slate-50 flex items-center gap-2"
                   style={{ boxShadow: '3px 3px 0px 0px rgba(15,23,42,1)' }}
                 >
-                  <Users className="inline w-4 h-4 mr-1" />
-                  Clientes
+                  <Menu className="w-4 h-4" />
+                  Menú
                 </button>
-                <button
-                  onClick={() => navigate('/inventory')}
-                  className="px-4 py-2 text-sm rounded-lg font-bold border-2 border-slate-900 bg-white text-slate-600 hover:bg-slate-50 transition-all"
-                  style={{ boxShadow: '3px 3px 0px 0px rgba(15,23,42,1)' }}
-                >
-                  <Package className="inline w-4 h-4 mr-1" />
-                  Inventario
-                </button>
-                <button
-                  onClick={() => navigate('/reports')}
-                  className="px-4 py-2 text-sm rounded-lg font-bold border-2 border-slate-900 bg-white text-slate-600 hover:bg-slate-50 transition-all"
-                  style={{ boxShadow: '3px 3px 0px 0px rgba(15,23,42,1)' }}
-                >
-                  <FileText className="inline w-4 h-4 mr-1" />
-                  Reportes
-                </button>
-                <button
-                  onClick={() => navigate('/settings')}
-                  className="px-4 py-2 text-sm rounded-lg font-bold border-2 border-slate-900 bg-white text-slate-600 hover:bg-slate-50 transition-all"
-                  style={{ boxShadow: '3px 3px 0px 0px rgba(15,23,42,1)' }}
-                >
-                  <Settings className="inline w-4 h-4 mr-1" />
-                  Configuración
-                </button>
+                
+                {showMenu && (
+                  <div className="absolute z-50 mt-2 w-48 bg-white border-2 border-slate-900 rounded-xl shadow-lg" style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}>
+                    <button
+                      onClick={() => { navigate('/customers'); setShowMenu(false); }}
+                      className="w-full text-left px-4 py-2 hover:bg-slate-100 font-bold flex items-center gap-2 border-b-2 border-slate-200"
+                    >
+                      <Users className="w-4 h-4" />
+                      Clientes
+                    </button>
+                    <button
+                      onClick={() => { navigate('/inventory'); setShowMenu(false); }}
+                      className="w-full text-left px-4 py-2 hover:bg-slate-100 font-bold flex items-center gap-2 border-b-2 border-slate-200"
+                    >
+                      <Package className="w-4 h-4" />
+                      Inventario
+                    </button>
+                    <button
+                      onClick={() => { navigate('/reports'); setShowMenu(false); }}
+                      className="w-full text-left px-4 py-2 hover:bg-slate-100 font-bold flex items-center gap-2 border-b-2 border-slate-200"
+                    >
+                      <FileText className="w-4 h-4" />
+                      Reportes
+                    </button>
+                    <button
+                      onClick={() => { navigate('/settings'); setShowMenu(false); }}
+                      className="w-full text-left px-4 py-2 hover:bg-slate-100 font-bold flex items-center gap-2 rounded-b-lg"
+                    >
+                      <Settings className="w-4 h-4" />
+                      Configuración
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Tab Buttons for Forms */}

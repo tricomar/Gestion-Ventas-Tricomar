@@ -106,54 +106,54 @@ const NotesCalendar = ({ onDateSelect, selectedDate }) => {
   const days = getDaysInMonth();
 
   return (
-    <div className="border-2 border-slate-900 rounded-xl bg-white p-4" style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}>
+    <div className="border-2 border-slate-900 rounded-xl bg-white p-3" style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}>
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-          <CalendarIcon className="w-5 h-5" />
-          Calendario de Notas
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+          <CalendarIcon className="w-4 h-4" />
+          Calendario
         </h3>
         <button
           onClick={goToToday}
-          className="px-3 py-1 text-xs font-bold border-2 border-slate-900 rounded-lg bg-white hover:bg-slate-50"
-          style={{ boxShadow: '2px 2px 0px 0px rgba(15,23,42,1)' }}
+          className="px-2 py-1 text-xs font-bold border-2 border-slate-900 rounded-lg bg-white hover:bg-slate-50"
+          style={{ boxShadow: '1px 1px 0px 0px rgba(15,23,42,1)' }}
         >
           Hoy
         </button>
       </div>
 
       {/* Month Navigation */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-3">
         <button
           onClick={goToPreviousMonth}
-          className="p-2 border-2 border-slate-900 rounded-lg hover:bg-slate-50"
+          className="p-1 border-2 border-slate-900 rounded-lg hover:bg-slate-50"
         >
-          <ChevronLeft className="w-4 h-4" />
+          <ChevronLeft className="w-3 h-3" />
         </button>
         
-        <span className="text-base font-bold text-slate-900">
+        <span className="text-xs font-bold text-slate-900">
           {MONTHS[currentDate.getMonth()]} {currentDate.getFullYear()}
         </span>
         
         <button
           onClick={goToNextMonth}
-          className="p-2 border-2 border-slate-900 rounded-lg hover:bg-slate-50"
+          className="p-1 border-2 border-slate-900 rounded-lg hover:bg-slate-50"
         >
-          <ChevronRight className="w-4 h-4" />
+          <ChevronRight className="w-3 h-3" />
         </button>
       </div>
 
       {/* Days of Week */}
-      <div className="grid grid-cols-7 gap-2 mb-2">
+      <div className="grid grid-cols-7 gap-1 mb-1">
         {DAYS.map((day) => (
-          <div key={day} className="text-center text-xs font-bold text-slate-600">
-            {day}
+          <div key={day} className="text-center text-[10px] font-bold text-slate-600">
+            {day.charAt(0)}
           </div>
         ))}
       </div>
 
       {/* Calendar Grid */}
-      <div className="grid grid-cols-7 gap-2">
+      <div className="grid grid-cols-7 gap-1">
         {days.map((day, index) => {
           const dayColor = day ? getDayColor(day) : null;
           const hasNotes = day && calendarData[day];
@@ -164,46 +164,45 @@ const NotesCalendar = ({ onDateSelect, selectedDate }) => {
               onClick={() => handleDayClick(day)}
               disabled={!day}
               className={`
-                aspect-square flex items-center justify-center rounded-lg text-sm font-bold
-                border-2 transition-all relative
+                aspect-square flex items-center justify-center rounded text-[10px] font-bold
+                border transition-all relative
                 ${!day ? 'invisible' : ''}
-                ${isToday(day) ? 'border-blue-500 border-4' : 'border-slate-900'}
-                ${isSelected(day) ? 'ring-4 ring-slate-900' : ''}
+                ${isToday(day) ? 'border-blue-500 border-2' : 'border-slate-900'}
+                ${isSelected(day) ? 'ring-2 ring-slate-900' : ''}
                 ${day && !hasNotes ? 'bg-white hover:bg-slate-50' : ''}
                 ${hasNotes ? 'hover:scale-105' : ''}
               `}
               style={{
                 backgroundColor: dayColor || 'white',
-                boxShadow: hasNotes ? '3px 3px 0px 0px rgba(15,23,42,1)' : '2px 2px 0px 0px rgba(15,23,42,0.2)'
+                boxShadow: hasNotes ? '1px 1px 0px 0px rgba(15,23,42,1)' : 'none'
               }}
             >
               {day}
               {hasNotes && (
-                <span className="absolute top-1 right-1 w-2 h-2 bg-slate-900 rounded-full animate-pulse"></span>
+                <span className="absolute top-0 right-0 w-1 h-1 bg-slate-900 rounded-full"></span>
               )}
             </button>
           );
         })}
       </div>
 
-      {/* Legend */}
-      <div className="mt-4 pt-4 border-t-2 border-slate-200">
-        <p className="text-xs font-bold text-slate-600 mb-2">Leyenda:</p>
-        <div className="grid grid-cols-2 gap-2 text-xs">
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded border-2 border-slate-900" style={{ backgroundColor: '#FFE5B4' }}></div>
+      {/* Legend - Compact */}
+      <div className="mt-3 pt-2 border-t border-slate-200">
+        <div className="grid grid-cols-2 gap-1 text-[10px]">
+          <div className="flex items-center gap-1">
+            <div className="w-2 h-2 rounded border border-slate-900" style={{ backgroundColor: '#FFE5B4' }}></div>
             <span>Sin leer</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded border-2 border-slate-900" style={{ backgroundColor: '#FADBB0' }}></div>
+          <div className="flex items-center gap-1">
+            <div className="w-2 h-2 rounded border border-slate-900" style={{ backgroundColor: '#FADBB0' }}></div>
             <span>Pendiente</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded border-2 border-slate-900" style={{ backgroundColor: '#E0E7FF' }}></div>
+          <div className="flex items-center gap-1">
+            <div className="w-2 h-2 rounded border border-slate-900" style={{ backgroundColor: '#E0E7FF' }}></div>
             <span>Leída</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 rounded border-2 border-slate-900" style={{ backgroundColor: '#D1FAE5' }}></div>
+          <div className="flex items-center gap-1">
+            <div className="w-2 h-2 rounded border border-slate-900" style={{ backgroundColor: '#D1FAE5' }}></div>
             <span>Completada</span>
           </div>
         </div>
