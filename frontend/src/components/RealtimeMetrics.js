@@ -1,7 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { DollarSign, TrendingUp, TrendingDown, Wallet, ChevronLeft, Calendar } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, Wallet, ChevronLeft, Calendar, BarChart3, LineChart as LineChartIcon } from 'lucide-react';
 import { useSettings } from '../context/SettingsContext';
+import { 
+  ComposedChart, 
+  Line, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  Legend, 
+  ResponsiveContainer 
+} from 'recharts';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -28,6 +39,9 @@ const RealtimeMetrics = ({ refreshTrigger }) => {
   const [showPeriod, setShowPeriod] = useState('month'); // 'month' or 'historic'
   const [selectedHistoricMonth, setSelectedHistoricMonth] = useState(null);
   const [historicMonths, setHistoricMonths] = useState([]);
+  const [dailyData, setDailyData] = useState([]);
+  const [chartType, setChartType] = useState('both'); // 'bars', 'lines', 'both'
+  const [loadingChart, setLoadingChart] = useState(false);
 
   useEffect(() => {
     fetchMetrics();
@@ -57,10 +71,20 @@ const RealtimeMetrics = ({ refreshTrigger }) => {
   const fetchHistoricData = async (year, month) => {
     try {
       setLoading(true);
+      setLoadingChart(true);
+      
+      // Fetch monthly metrics
       const response = await axios.get(`${API}/dashboard/historic-data?year=${year}&month=${month}`);
       setSelectedHistoricMonth({ year, month, data: response.data });
+      
+      // Fetch daily data for chart
+      const dailyResponse = await axios.get(`${API}/dashboard/historic-daily-data?year=${year}&month=${month}`);
+      setDailyData(dailyResponse.data);
+      
+      setLoadingChart(false);
     } catch (error) {
       console.error('Error fetching historic data:', error);
+      setLoadingChart(false);
     } finally {
       setLoading(false);
     }
@@ -190,6 +214,172 @@ const RealtimeMetrics = ({ refreshTrigger }) => {
               />
             </div>
           </div>
+        </div>
+
+        {/* Chart Section */}
+        <div className="mt-8">
+          {/* Chart Controls */}
+          <div className="flex items-center justify-between mb-4">
+            <h4 className="text-lg font-bold text-slate-900">
+              Gráfico de Ventas por Día
+            </h4>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setChartType('bars')}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-bold border-2 border-slate-900 transition-all ${
+                  chartType === 'bars' ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'
+                }`}
+                style={{ boxShadow: '2px 2px 0px 0px rgba(15,23,42,1)' }}
+              >
+                <BarChart3 className="w-4 h-4" />
+                Barras
+              </button>
+              <button
+                onClick={() => setChartType('lines')}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-bold border-2 border-slate-900 transition-all ${
+                  chartType === 'lines' ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'
+                }`}
+                style={{ boxShadow: '2px 2px 0px 0px rgba(15,23,42,1)' }}
+              >
+                <LineChartIcon className="w-4 h-4" />
+                Líneas
+              </button>
+              <button
+                onClick={() => setChartType('both')}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-bold border-2 border-slate-900 transition-all ${
+                  chartType === 'both' ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'
+                }`}
+                style={{ boxShadow: '2px 2px 0px 0px rgba(15,23,42,1)' }}
+              >
+                <BarChart3 className="w-4 h-4" />
+                <LineChartIcon className="w-4 h-4" />
+                Combinado
+              </button>
+            </div>
+          </div>
+
+          {/* Chart */}
+          {loadingChart ? (
+            <div className="text-center py-12 text-slate-500">Cargando gráfico...</div>
+          ) : dailyData.length > 0 ? (
+            <div className="border-2 border-slate-900 rounded-xl p-4 bg-slate-50">
+              <ResponsiveContainer width="100%" height={400}>
+                <ComposedChart data={dailyData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" />
+                  <XAxis 
+                    dataKey="day" 
+                    label={{ value: 'Día del Mes', position: 'insideBottom', offset: -5 }}
+                    tick={{ fontSize: 12 }}
+                  />
+                  <YAxis 
+                    label={{ value: 'Monto ($)', angle: -90, position: 'insideLeft' }}
+                    tick={{ fontSize: 12 }}
+                  />
+                  <Tooltip 
+                    formatter={(value) => `$${value.toLocaleString('es-CL')}`}
+                    contentStyle={{ 
+                      backgroundColor: 'white', 
+                      border: '2px solid #0f172a',
+                      borderRadius: '8px',
+                      fontWeight: 'bold'
+                    }}
+                  />
+                  <Legend 
+                    wrapperStyle={{ paddingTop: '20px' }}
+                    iconType="circle"
+                  />
+                  
+                  {/* Store A - Compras */}
+                  {(chartType === 'bars' || chartType === 'both') && (
+                    <Bar 
+                      dataKey="store_a.compras" 
+                      name={`${settings.store_a_name} - Compras`}
+                      fill="#D4F0A5" 
+                      stroke="#0f172a"
+                      strokeWidth={2}
+                    />
+                  )}
+                  {(chartType === 'lines' || chartType === 'both') && (
+                    <Line 
+                      type="monotone" 
+                      dataKey="store_a.compras" 
+                      name={chartType === 'lines' ? `${settings.store_a_name} - Compras` : undefined}
+                      stroke="#84cc16" 
+                      strokeWidth={3}
+                      dot={{ fill: '#84cc16', r: 4 }}
+                    />
+                  )}
+
+                  {/* Store A - Ganancia */}
+                  {(chartType === 'bars' || chartType === 'both') && (
+                    <Bar 
+                      dataKey="store_a.utilidades" 
+                      name={`${settings.store_a_name} - Ganancia`}
+                      fill="#D1FAE5" 
+                      stroke="#0f172a"
+                      strokeWidth={2}
+                    />
+                  )}
+                  {(chartType === 'lines' || chartType === 'both') && (
+                    <Line 
+                      type="monotone" 
+                      dataKey="store_a.utilidades" 
+                      name={chartType === 'lines' ? `${settings.store_a_name} - Ganancia` : undefined}
+                      stroke="#10b981" 
+                      strokeWidth={3}
+                      dot={{ fill: '#10b981', r: 4 }}
+                    />
+                  )}
+
+                  {/* Store B - Compras */}
+                  {(chartType === 'bars' || chartType === 'both') && (
+                    <Bar 
+                      dataKey="store_b.compras" 
+                      name={`${settings.store_b_name} - Compras`}
+                      fill="#FADBB0" 
+                      stroke="#0f172a"
+                      strokeWidth={2}
+                    />
+                  )}
+                  {(chartType === 'lines' || chartType === 'both') && (
+                    <Line 
+                      type="monotone" 
+                      dataKey="store_b.compras" 
+                      name={chartType === 'lines' ? `${settings.store_b_name} - Compras` : undefined}
+                      stroke="#f97316" 
+                      strokeWidth={3}
+                      dot={{ fill: '#f97316', r: 4 }}
+                    />
+                  )}
+
+                  {/* Store B - Ganancia */}
+                  {(chartType === 'bars' || chartType === 'both') && (
+                    <Bar 
+                      dataKey="store_b.utilidades" 
+                      name={`${settings.store_b_name} - Ganancia`}
+                      fill="#DBEAFE" 
+                      stroke="#0f172a"
+                      strokeWidth={2}
+                    />
+                  )}
+                  {(chartType === 'lines' || chartType === 'both') && (
+                    <Line 
+                      type="monotone" 
+                      dataKey="store_b.utilidades" 
+                      name={chartType === 'lines' ? `${settings.store_b_name} - Ganancia` : undefined}
+                      stroke="#3b82f6" 
+                      strokeWidth={3}
+                      dot={{ fill: '#3b82f6', r: 4 }}
+                    />
+                  )}
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="text-center py-12 text-slate-500">
+              No hay datos disponibles para este mes
+            </div>
+          )}
         </div>
       </div>
     );

@@ -983,6 +983,109 @@ async def get_historic_data(
         'general': calculate_general_metrics(month_income, month_expenses)
     }
 
+@api_router.get("/dashboard/historic-daily-data")
+async def get_historic_daily_data(
+    year: int, 
+    month: int, 
+    current_user: User = Depends(get_current_user)
+):
+    """Get daily metrics for a specific historic month for chart visualization"""
+    from calendar import monthrange
+    
+    # Calculate date range for the specified month
+    month_start = datetime(year, month, 1, tzinfo=timezone.utc)
+    if month == 12:
+        next_month_start = datetime(year + 1, 1, 1, tzinfo=timezone.utc)
+    else:
+        next_month_start = datetime(year, month + 1, 1, tzinfo=timezone.utc)
+    
+    # Get all sales for that month
+    month_sales = await db.sales.find({
+        'created_at': {'$gte': month_start.isoformat(), '$lt': next_month_start.isoformat()}
+    }, {'_id': 0}).to_list(100000)
+    
+    # Get number of days in month
+    days_in_month = monthrange(year, month)[1]
+    
+    # Initialize daily data
+    daily_data = []
+    
+    for day in range(1, days_in_month + 1):
+        day_start = datetime(year, month, day, tzinfo=timezone.utc)
+        day_end = day_start + timedelta(days=1)
+        
+        # Filter sales for this specific day
+        day_sales = [
+            s for s in month_sales 
+            if day_start.isoformat() <= s.get('created_at', '') < day_end.isoformat()
+        ]
+        
+        # Calculate metrics for Store A
+        store_a_sales = [s for s in day_sales if s.get('store') == 'A']
+        compras_a = sum(s.get('cost_price', 0) * s.get('quantity', 0) for s in store_a_sales)
+        
+        utilidades_a = 0
+        iva_a_favor_a = 0
+        for s in store_a_sales:
+            costo_total = s.get('cost_price', 0) * s.get('quantity', 0)
+            total = s.get('total', 0)
+            has_tax = s.get('has_tax', True)
+            
+            if not has_tax:
+                iva_a_favor_a += (total / 1.19) * 0.19
+            
+            if has_tax:
+                precio_sin_iva = total / 1.19
+            else:
+                precio_sin_iva = total
+            
+            ganancia_venta = precio_sin_iva - costo_total
+            utilidades_a += ganancia_venta
+        
+        # Calculate metrics for Store B
+        store_b_sales = [s for s in day_sales if s.get('store') == 'B']
+        compras_b = sum(s.get('cost_price', 0) * s.get('quantity', 0) for s in store_b_sales)
+        
+        utilidades_b = 0
+        iva_a_favor_b = 0
+        for s in store_b_sales:
+            costo_total = s.get('cost_price', 0) * s.get('quantity', 0)
+            total = s.get('total', 0)
+            has_tax = s.get('has_tax', True)
+            
+            if not has_tax:
+                iva_a_favor_b += (total / 1.19) * 0.19
+            
+            if has_tax:
+                precio_sin_iva = total / 1.19
+            else:
+                precio_sin_iva = total
+            
+            ganancia_venta = precio_sin_iva - costo_total
+            utilidades_b += ganancia_venta
+        
+        daily_data.append({
+            'day': day,
+            'date': f"{year}-{month:02d}-{day:02d}",
+            'store_a': {
+                'compras': int(compras_a),
+                'utilidades': int(utilidades_a),
+                'iva_a_favor': int(iva_a_favor_a)
+            },
+            'store_b': {
+                'compras': int(compras_b),
+                'utilidades': int(utilidades_b),
+                'iva_a_favor': int(iva_a_favor_b)
+            },
+            'total': {
+                'compras': int(compras_a + compras_b),
+                'utilidades': int(utilidades_a + utilidades_b),
+                'iva_a_favor': int(iva_a_favor_a + iva_a_favor_b)
+            }
+        })
+    
+    return daily_data
+
 # ============= DASHBOARD ROUTES =============
 
 @api_router.get("/dashboard/stats", response_model=DashboardStats)
