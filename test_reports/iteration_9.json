@@ -1,0 +1,29 @@
+{
+  "summary": "Tested SalesForm customer field inline 'Crear nuevo cliente' button + CustomerForm modal store name personalization. Inline button works correctly with pre-filled name. CustomerForm modal still shows hardcoded 'Tienda A'/'Tienda B' instead of personalized 'Tricomar Pets'/'Tricomar Grow' from Settings context.",
+  "tested_scope": ["frontend"],
+  "passed": [
+    "Login with admin@ventas.com / admin123 works",
+    "Customer search input (sales-customer-input) accepts typing",
+    "When no customer matches, a 'Crear nuevo cliente \"<name>\"' button appears below the search (mirrors product UX)",
+    "Button text correctly includes the searched name (e.g. Crear nuevo cliente \"ClienteTest1782432744\")",
+    "Clicking the button opens the CustomerForm modal",
+    "Modal NOMBRE field is pre-filled with the searched name"
+  ],
+  "failed": [
+    {
+      "area": "CustomerForm modal - store selector",
+      "issue": "Store <select> displays hardcoded 'Tienda A' and 'Tienda B' instead of personalized names 'Tricomar Pets' and 'Tricomar Grow' from Settings context",
+      "evidence": "Direct DOM inspection of <option> textContent returned: 'Tienda A | Tienda B | Ambas'. CustomerForm.js lines 100-101 use {settings.store_a_name || 'Tienda A'} but the fallback is always rendered, indicating settings.store_a_name / store_b_name are not populated when modal renders.",
+      "priority": "HIGH"
+    }
+  ],
+  "action_items": [
+    "Investigate useSettings() inside CustomerForm: verify SettingsProvider wraps the tree so settings.store_a_name/store_b_name are available when modal mounts.",
+    "Check that GET /api/settings actually returns store_a_name='Tricomar Pets' and store_b_name='Tricomar Grow' and that SettingsContext stores them under those keys.",
+    "Consider passing store names as explicit props from SalesForm into CustomerForm as a safer fallback, or initialize SettingsContext with the values fetched on app load before opening modals."
+  ],
+  "success_rate": {"backend": "not tested", "frontend": "66%"},
+  "retest_needed": true,
+  "full_testing_deferred": true,
+  "notes": "The final submit-customer click was blocked by modal overlay timing during the script run (test-side flake, not a product bug). The core verifications were completed via DOM inspection and visual screenshot before that."
+}

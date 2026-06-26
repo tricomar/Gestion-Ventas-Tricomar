@@ -291,7 +291,7 @@ const SalesForm = ({ onSuccess }) => {
           />
         </div>
 
-        {/* Customer */}
+        {/* Customer - Similar to Product */}
         <div className="relative">
           <label className="block text-xs font-bold tracking-widest uppercase text-slate-500 mb-2">
             Cliente (opcional)
@@ -302,21 +302,13 @@ const SalesForm = ({ onSuccess }) => {
               value={customerSearch}
               onChange={(e) => setCustomerSearch(e.target.value)}
               onFocus={() => customerSearch && setShowCustomerSuggestions(true)}
-              onBlur={() => setTimeout(() => setShowCustomerSuggestions(false), 200)}
               placeholder={selectedCustomer ? selectedCustomer.name : "Buscar cliente..."}
-              className="w-full bg-white border-2 border-slate-900 rounded-xl px-4 py-3 pr-20 font-medium text-slate-900 focus:ring-0 focus:outline-none focus:border-indigo-500 transition-all"
+              className="w-full bg-white border-2 border-slate-900 rounded-xl px-4 py-3 font-medium text-slate-900 focus:ring-0 focus:outline-none focus:border-indigo-500 transition-all"
               data-testid="sales-customer-input"
             />
-            <button
-              type="button"
-              onClick={() => setShowCustomerForm(true)}
-              className="absolute right-2 top-2 p-2 bg-lime-200 border-2 border-slate-900 rounded-lg hover:bg-lime-300"
-              style={{ boxShadow: '2px 2px 0px 0px rgba(15,23,42,1)' }}
-              title="Crear nuevo cliente"
-            >
-              <Plus className="w-4 h-4" />
-            </button>
+            <Search className="absolute right-4 top-3.5 w-5 h-5 text-slate-400" />
           </div>
+          
           {selectedCustomer && (
             <div className="mt-2 p-2 bg-lime-100 border-2 border-slate-900 rounded-lg flex justify-between items-center">
               <div className="text-sm">
@@ -337,27 +329,42 @@ const SalesForm = ({ onSuccess }) => {
               </button>
             </div>
           )}
-          {showCustomerSuggestions && customerSuggestions.length > 0 && (
+          
+          {showCustomerSuggestions && customerSearch && (
             <div className="absolute z-10 w-full mt-2 bg-white border-2 border-slate-900 rounded-xl shadow-lg max-h-48 overflow-y-auto">
-              {customerSuggestions.map((cust) => (
+              {customerSuggestions.length > 0 ? (
+                customerSuggestions.map((cust) => (
+                  <button
+                    key={cust.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedCustomer(cust);
+                      setCustomerSearch('');
+                      setShowCustomerSuggestions(false);
+                    }}
+                    className="w-full text-left px-4 py-2 hover:bg-slate-100 font-medium border-b border-slate-200 last:border-0"
+                  >
+                    <div>
+                      <p className="font-bold">{cust.name}</p>
+                      {cust.phone && (
+                        <p className="text-xs text-slate-600">{cust.phone}</p>
+                      )}
+                    </div>
+                  </button>
+                ))
+              ) : (
                 <button
-                  key={cust.id}
                   type="button"
                   onClick={() => {
-                    setSelectedCustomer(cust);
-                    setCustomerSearch('');
+                    setShowCustomerForm(true);
                     setShowCustomerSuggestions(false);
                   }}
-                  className="w-full text-left px-4 py-2 hover:bg-slate-100 font-medium border-b border-slate-200 last:border-0"
+                  className="w-full text-left px-4 py-3 hover:bg-lime-50 font-bold text-lime-700 flex items-center gap-2 border-2 border-dashed border-lime-500 m-2 rounded-lg"
                 >
-                  <div>
-                    <p className="font-bold">{cust.name}</p>
-                    {cust.phone && (
-                      <p className="text-xs text-slate-600">{cust.phone}</p>
-                    )}
-                  </div>
+                  <Plus className="w-5 h-5" />
+                  Crear nuevo cliente &quot;{customerSearch}&quot;
                 </button>
-              ))}
+              )}
             </div>
           )}
         </div>
@@ -445,7 +452,11 @@ const SalesForm = ({ onSuccess }) => {
       {/* Customer Form Modal */}
       {showCustomerForm && (
         <CustomerForm
-          onClose={() => setShowCustomerForm(false)}
+          initialName={customerSearch}
+          onClose={() => {
+            setShowCustomerForm(false);
+            setCustomerSearch('');
+          }}
           onSuccess={(newCustomer) => {
             setSelectedCustomer(newCustomer);
             setCustomerSearch('');

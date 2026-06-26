@@ -2,13 +2,15 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { X } from 'lucide-react';
+import { useSettings } from '../context/SettingsContext';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
-const CustomerForm = ({ customer, onClose, onSuccess }) => {
+const CustomerForm = ({ customer, initialName, onClose, onSuccess }) => {
+  const { settings } = useSettings();
   const [formData, setFormData] = useState({
-    name: customer?.name || '',
+    name: customer?.name || initialName || '',
     address: customer?.address || '',
     phone: customer?.phone || '',
     store: customer?.store || 'A'
@@ -95,8 +97,8 @@ const CustomerForm = ({ customer, onClose, onSuccess }) => {
               onChange={(e) => setFormData({ ...formData, store: e.target.value })}
               className="w-full px-3 py-2 border-2 border-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900"
             >
-              <option value="A">Tienda A</option>
-              <option value="B">Tienda B</option>
+              <option value="A">{settings.store_a_name || 'Tienda A'}</option>
+              <option value="B">{settings.store_b_name || 'Tienda B'}</option>
               <option value="Ambas">Ambas</option>
             </select>
           </div>
