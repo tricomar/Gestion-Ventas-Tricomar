@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
+import { useAuth } from './AuthContext';
 
 const SettingsContext = createContext();
 
@@ -15,6 +16,7 @@ export const useSettings = () => {
 };
 
 export const SettingsProvider = ({ children }) => {
+  const { token } = useAuth(); // Get token from AuthContext
   const [settings, setSettings] = useState({
     store_a_name: 'Tienda A',
     store_b_name: 'Tienda B'
@@ -23,9 +25,9 @@ export const SettingsProvider = ({ children }) => {
 
   const fetchSettings = async () => {
     try {
-      const token = localStorage.getItem('token');
-      if (token) {
-        axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      const authToken = token || localStorage.getItem('token');
+      if (authToken) {
+        axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
         const response = await axios.get(`${API}/settings`);
         setSettings({
           store_a_name: response.data.store_a_name,
@@ -40,9 +42,15 @@ export const SettingsProvider = ({ children }) => {
     }
   };
 
+  // Fetch settings when token changes (user logs in)
   useEffect(() => {
-    fetchSettings();
-  }, []);
+    if (token) {
+      setLoading(true);
+      fetchSettings();
+    } else {
+      setLoading(false);
+    }
+  }, [token]);
 
   const refreshSettings = () => {
     fetchSettings();

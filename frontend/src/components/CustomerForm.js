@@ -8,11 +8,7 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const CustomerForm = ({ customer, initialName, storeAName, storeBName, onClose, onSuccess }) => {
-  const { settings } = useSettings();
-  
-  // Use props as fallback if settings context isn't available
-  const finalStoreAName = storeAName || settings.store_a_name || 'Tienda A';
-  const finalStoreBName = storeBName || settings.store_b_name || 'Tienda B';
+  const { settings, loading: settingsLoading } = useSettings();
   
   const [formData, setFormData] = useState({
     name: customer?.name || initialName || '',
@@ -21,6 +17,26 @@ const CustomerForm = ({ customer, initialName, storeAName, storeBName, onClose, 
     store: customer?.store || 'A'
   });
   const [loading, setLoading] = useState(false);
+  
+  // Wait for settings to load before rendering form
+  if (settingsLoading) {
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl border-2 border-slate-900 p-6 w-full max-w-md" style={{ boxShadow: '8px 8px 0px 0px rgba(15,23,42,1)' }}>
+          <div className="flex items-center justify-center p-8">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-900 mx-auto mb-4"></div>
+              <p className="text-sm text-slate-600">Cargando configuración...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
+  // Calculate store names AFTER loading is complete
+  const finalStoreAName = storeAName || settings.store_a_name || 'Tienda A';
+  const finalStoreBName = storeBName || settings.store_b_name || 'Tienda B';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
