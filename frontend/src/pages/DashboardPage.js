@@ -94,119 +94,113 @@ const DashboardPage = () => {
           </div>
         </header>
 
-        {/* Main Content Area - Nuevo Layout */}
+        {/* Main Content Area - Layout Vertical */}
         <div className="flex-1 p-6 md:p-8 overflow-y-auto">
-          {/* Grid Layout: 2 columnas en desktop */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            {/* Columna Izquierda: Formularios de Registro */}
-            <div>
-              {/* Navigation Menu */}
-              <div className="mb-4 relative">
+          {/* Navigation Menu */}
+          <div className="mb-4 relative">
+            <button
+              onClick={() => setShowMenu(!showMenu)}
+              className="px-4 py-2 text-sm rounded-lg font-bold border-2 border-slate-900 bg-white hover:bg-slate-50 flex items-center gap-2"
+              style={{ boxShadow: '3px 3px 0px 0px rgba(15,23,42,1)' }}
+            >
+              <Menu className="w-4 h-4" />
+              Menú
+            </button>
+            
+            {showMenu && (
+              <div className="absolute z-50 mt-2 w-48 bg-white border-2 border-slate-900 rounded-xl shadow-lg" style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}>
                 <button
-                  onClick={() => setShowMenu(!showMenu)}
-                  className="px-4 py-2 text-sm rounded-lg font-bold border-2 border-slate-900 bg-white hover:bg-slate-50 flex items-center gap-2"
-                  style={{ boxShadow: '3px 3px 0px 0px rgba(15,23,42,1)' }}
+                  onClick={() => { navigate('/customers'); setShowMenu(false); }}
+                  className="w-full text-left px-4 py-2 hover:bg-slate-100 font-bold flex items-center gap-2 border-b-2 border-slate-200"
                 >
-                  <Menu className="w-4 h-4" />
-                  Menú
-                </button>
-                
-                {showMenu && (
-                  <div className="absolute z-50 mt-2 w-48 bg-white border-2 border-slate-900 rounded-xl shadow-lg" style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}>
-                    <button
-                      onClick={() => { navigate('/customers'); setShowMenu(false); }}
-                      className="w-full text-left px-4 py-2 hover:bg-slate-100 font-bold flex items-center gap-2 border-b-2 border-slate-200"
-                    >
-                      <Users className="w-4 h-4" />
-                      Clientes
-                    </button>
-                    <button
-                      onClick={() => { navigate('/inventory'); setShowMenu(false); }}
-                      className="w-full text-left px-4 py-2 hover:bg-slate-100 font-bold flex items-center gap-2 border-b-2 border-slate-200"
-                    >
-                      <Package className="w-4 h-4" />
-                      Inventario
-                    </button>
-                    <button
-                      onClick={() => { navigate('/reports'); setShowMenu(false); }}
-                      className="w-full text-left px-4 py-2 hover:bg-slate-100 font-bold flex items-center gap-2 border-b-2 border-slate-200"
-                    >
-                      <FileText className="w-4 h-4" />
-                      Reportes
-                    </button>
-                    <button
-                      onClick={() => { navigate('/settings'); setShowMenu(false); }}
-                      className="w-full text-left px-4 py-2 hover:bg-slate-100 font-bold flex items-center gap-2 rounded-b-lg"
-                    >
-                      <Settings className="w-4 h-4" />
-                      Configuración
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Tab Buttons for Forms */}
-              <div className="mb-4 flex gap-2 flex-wrap">
-                <button
-                  onClick={() => setActiveTab('sales')}
-                  className={`px-4 py-2 text-sm rounded-lg font-bold border-2 border-slate-900 transition-all ${
-                    activeTab === 'sales' ? 'text-slate-900' : 'bg-white text-slate-600 hover:bg-slate-50'
-                  }`}
-                  style={{
-                    backgroundColor: activeTab === 'sales' ? '#D4F0A5' : 'white',
-                    boxShadow: '3px 3px 0px 0px rgba(15,23,42,1)'
-                  }}
-                >
-                  <PlusCircle className="inline w-4 h-4 mr-1" />
-                  Ventas
+                  <Users className="w-4 h-4" />
+                  Clientes
                 </button>
                 <button
-                  onClick={() => setActiveTab('expenses')}
-                  className={`px-4 py-2 text-sm rounded-lg font-bold border-2 border-slate-900 transition-all ${
-                    activeTab === 'expenses' ? 'text-slate-900' : 'bg-white text-slate-600 hover:bg-slate-50'
-                  }`}
-                  style={{
-                    backgroundColor: activeTab === 'expenses' ? '#FFA8A8' : 'white',
-                    boxShadow: '3px 3px 0px 0px rgba(15,23,42,1)'
-                  }}
+                  onClick={() => { navigate('/inventory'); setShowMenu(false); }}
+                  className="w-full text-left px-4 py-2 hover:bg-slate-100 font-bold flex items-center gap-2 border-b-2 border-slate-200"
                 >
-                  <TrendingDown className="inline w-4 h-4 mr-1" />
-                  Egresos
+                  <Package className="w-4 h-4" />
+                  Inventario
                 </button>
                 <button
-                  onClick={() => setActiveTab('income')}
-                  className={`px-4 py-2 text-sm rounded-lg font-bold border-2 border-slate-900 transition-all ${
-                    activeTab === 'income' ? 'text-slate-900' : 'bg-white text-slate-600 hover:bg-slate-50'
-                  }`}
-                  style={{
-                    backgroundColor: activeTab === 'income' ? '#FADBB0' : 'white',
-                    boxShadow: '3px 3px 0px 0px rgba(15,23,42,1)'
-                  }}
+                  onClick={() => { navigate('/reports'); setShowMenu(false); }}
+                  className="w-full text-left px-4 py-2 hover:bg-slate-100 font-bold flex items-center gap-2 border-b-2 border-slate-200"
                 >
-                  <TrendingUp className="inline w-4 h-4 mr-1" />
-                  Otros Ingresos
+                  <FileText className="w-4 h-4" />
+                  Reportes
+                </button>
+                <button
+                  onClick={() => { navigate('/settings'); setShowMenu(false); }}
+                  className="w-full text-left px-4 py-2 hover:bg-slate-100 font-bold flex items-center gap-2 rounded-b-lg"
+                >
+                  <Settings className="w-4 h-4" />
+                  Configuración
                 </button>
               </div>
+            )}
+          </div>
 
-              {/* Form Content */}
-              <div>
-                {activeTab === 'sales' && <SalesForm onSuccess={refresh} />}
-                {activeTab === 'expenses' && <ExpenseForm onSuccess={refresh} />}
-                {activeTab === 'income' && <OtherIncomeForm onSuccess={refresh} />}
-              </div>
-            </div>
+          {/* Tab Buttons for Forms */}
+          <div className="mb-4 flex gap-2 flex-wrap">
+            <button
+              onClick={() => setActiveTab('sales')}
+              className={`px-4 py-2 text-sm rounded-lg font-bold border-2 border-slate-900 transition-all ${
+                activeTab === 'sales' ? 'text-slate-900' : 'bg-white text-slate-600 hover:bg-slate-50'
+              }`}
+              style={{
+                backgroundColor: activeTab === 'sales' ? '#D4F0A5' : 'white',
+                boxShadow: '3px 3px 0px 0px rgba(15,23,42,1)'
+              }}
+            >
+              <PlusCircle className="inline w-4 h-4 mr-1" />
+              Ventas
+            </button>
+            <button
+              onClick={() => setActiveTab('expenses')}
+              className={`px-4 py-2 text-sm rounded-lg font-bold border-2 border-slate-900 transition-all ${
+                activeTab === 'expenses' ? 'text-slate-900' : 'bg-white text-slate-600 hover:bg-slate-50'
+              }`}
+              style={{
+                backgroundColor: activeTab === 'expenses' ? '#FFA8A8' : 'white',
+                boxShadow: '3px 3px 0px 0px rgba(15,23,42,1)'
+              }}
+            >
+              <TrendingDown className="inline w-4 h-4 mr-1" />
+              Egresos
+            </button>
+            <button
+              onClick={() => setActiveTab('income')}
+              className={`px-4 py-2 text-sm rounded-lg font-bold border-2 border-slate-900 transition-all ${
+                activeTab === 'income' ? 'text-slate-900' : 'bg-white text-slate-600 hover:bg-slate-50'
+              }`}
+              style={{
+                backgroundColor: activeTab === 'income' ? '#FADBB0' : 'white',
+                boxShadow: '3px 3px 0px 0px rgba(15,23,42,1)'
+              }}
+            >
+              <TrendingUp className="inline w-4 h-4 mr-1" />
+              Otros Ingresos
+            </button>
+          </div>
 
-            {/* Columna Derecha: Calendario y Notas */}
-            <div className="space-y-6">
-              <NotesCalendar 
-                onDateSelect={setSelectedDate}
-                selectedDate={selectedDate}
-              />
-              <DailyNotes 
-                selectedDate={selectedDate}
-                onNoteChange={refresh}
-              />
-            </div>
+          {/* Form Content - Ocupa todo el ancho */}
+          <div className="mb-6">
+            {activeTab === 'sales' && <SalesForm onSuccess={refresh} />}
+            {activeTab === 'expenses' && <ExpenseForm onSuccess={refresh} />}
+            {activeTab === 'income' && <OtherIncomeForm onSuccess={refresh} />}
+          </div>
+
+          {/* Calendario y Notas - Abajo del formulario */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <NotesCalendar 
+              onDateSelect={setSelectedDate}
+              selectedDate={selectedDate}
+            />
+            <DailyNotes 
+              selectedDate={selectedDate}
+              onNoteChange={refresh}
+            />
           </div>
 
           {/* Métricas en Tiempo Real - Parte inferior */}
