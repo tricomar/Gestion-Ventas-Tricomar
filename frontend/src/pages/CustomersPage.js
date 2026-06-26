@@ -4,12 +4,14 @@ import { toast } from 'sonner';
 import { Users, Plus, Edit2, Trash2, Eye, Phone, MapPin, TrendingUp } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import CustomerForm from '../components/CustomerForm';
+import { useSettings } from '../context/SettingsContext';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const CustomersPage = () => {
   const navigate = useNavigate();
+  const { settings } = useSettings();
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -265,6 +267,8 @@ const CustomersPage = () => {
       {showForm && (
         <CustomerForm
           customer={editingCustomer}
+          storeAName={settings.store_a_name}
+          storeBName={settings.store_b_name}
           onClose={() => {
             setShowForm(false);
             setEditingCustomer(null);

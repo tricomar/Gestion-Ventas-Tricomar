@@ -7,8 +7,13 @@ import { useSettings } from '../context/SettingsContext';
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
-const CustomerForm = ({ customer, initialName, onClose, onSuccess }) => {
+const CustomerForm = ({ customer, initialName, storeAName, storeBName, onClose, onSuccess }) => {
   const { settings } = useSettings();
+  
+  // Use props as fallback if settings context isn't available
+  const finalStoreAName = storeAName || settings.store_a_name || 'Tienda A';
+  const finalStoreBName = storeBName || settings.store_b_name || 'Tienda B';
+  
   const [formData, setFormData] = useState({
     name: customer?.name || initialName || '',
     address: customer?.address || '',
@@ -97,8 +102,8 @@ const CustomerForm = ({ customer, initialName, onClose, onSuccess }) => {
               onChange={(e) => setFormData({ ...formData, store: e.target.value })}
               className="w-full px-3 py-2 border-2 border-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900"
             >
-              <option value="A">{settings.store_a_name || 'Tienda A'}</option>
-              <option value="B">{settings.store_b_name || 'Tienda B'}</option>
+              <option value="A">{finalStoreAName}</option>
+              <option value="B">{finalStoreBName}</option>
               <option value="Ambas">Ambas</option>
             </select>
           </div>

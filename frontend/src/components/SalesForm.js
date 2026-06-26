@@ -4,11 +4,13 @@ import { toast } from 'sonner';
 import { Search, Plus } from 'lucide-react';
 import ProductForm from './ProductForm';
 import CustomerForm from './CustomerForm';
+import { useSettings } from '../context/SettingsContext';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const SalesForm = ({ onSuccess }) => {
+  const { settings } = useSettings();
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [productSearch, setProductSearch] = useState('');
   const [quantity, setQuantity] = useState('');
@@ -453,6 +455,8 @@ const SalesForm = ({ onSuccess }) => {
       {showCustomerForm && (
         <CustomerForm
           initialName={customerSearch}
+          storeAName={settings.store_a_name}
+          storeBName={settings.store_b_name}
           onClose={() => {
             setShowCustomerForm(false);
             setCustomerSearch('');

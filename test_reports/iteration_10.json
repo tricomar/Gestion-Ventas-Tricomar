@@ -1,0 +1,28 @@
+{
+  "summary": "Tested Customer inline creation flow in SalesForm and store name customization in CustomerForm modal. The inline 'Crear nuevo cliente' button feature works perfectly. However, store dropdown still shows default 'Tienda A' / 'Tienda B' instead of custom names from settings.",
+  "tested_scope": ["frontend", "integration"],
+  "passed": [
+    "Login with admin@ventas.com works",
+    "Customer search field in SalesForm shows '+ Crear nuevo cliente \"<search>\"' button when no matches found (mirrors product behavior)",
+    "Clicking the inline create button opens CustomerForm modal with searched name pre-filled in NOMBRE field",
+    "Submitting the modal creates the customer successfully (toast 'Cliente creado exitosamente')",
+    "Newly created customer is auto-selected in the SalesForm after creation"
+  ],
+  "failed": [
+    {
+      "area": "CustomerForm Tienda dropdown (custom store names)",
+      "issue": "Store dropdown still displays default 'Tienda A' and 'Tienda B' instead of the custom names 'Tricomar Pets' / 'Tricomar Grow' configured in Settings. Test executed from SalesForm-triggered modal where storeAName/storeBName are explicitly passed as props from settings context.",
+      "evidence": "Playwright extracted dropdown options: ['Tienda A', 'Tienda B', 'Ambas']. Screenshot confirms 'Tienda A' visible in select.",
+      "priority": "HIGH"
+    }
+  ],
+  "action_items": [
+    "Verify that the SettingsContext actually contains store_a_name='Tricomar Pets' and store_b_name='Tricomar Grow' for the admin@ventas.com user in test_database. The custom names may not be persisted/loaded for this user — check GET /api/settings response and SettingsContext initial fetch.",
+    "If settings are loaded async, settings.store_a_name may be undefined at first render. Confirm the SettingsContext provides defaults of 'Tienda A'/'Tienda B' only after async fetch, or guard rendering until settings loaded.",
+    "Consider logging settings object inside SalesForm to confirm what values are being passed as props to CustomerForm at modal open time."
+  ],
+  "success_rate": {"backend": "n/a", "frontend": "80%"},
+  "retest_needed": true,
+  "full_testing_deferred": true,
+  "notes": "Skipped re-testing the CustomersPage modal store names because the same issue would manifest if root cause is settings not being populated. Inline create + prefill + auto-select work perfectly — that part of the fix is verified."
+}
