@@ -1,0 +1,81 @@
+{
+  "missing_collections": [
+    "income"
+  ],
+  "new_collections": [
+    "other_income"
+  ],
+  "missing_fields": {
+    "expenses": [
+      "category",
+      "description",
+      "store",
+      "date",
+      "amount",
+      "id",
+      "created_at"
+    ],
+    "products": [
+      "stock",
+      "category"
+    ],
+    "notes": [
+      "message",
+      "date",
+      "author_id",
+      "created_at",
+      "id",
+      "subject",
+      "status"
+    ],
+    "sales": [
+      "profit",
+      "date"
+    ]
+  },
+  "new_fields": {
+    "products": [
+      "usage_count",
+      "last_price"
+    ],
+    "sales": [
+      "price",
+      "user_id",
+      "user_name",
+      "product",
+      "customer"
+    ]
+  },
+  "collection_stats": {
+    "expenses": {
+      "count": 0,
+      "description": "Gastos del negocio"
+    },
+    "products": {
+      "count": 2,
+      "description": "Inventario de productos"
+    },
+    "customers": {
+      "count": 6,
+      "description": "Clientes del CRM"
+    },
+    "users": {
+      "count": 1,
+      "description": "Usuarios del sistema con autenticación"
+    },
+    "notes": {
+      "count": 0,
+      "description": "Notas y calendario diario"
+    },
+    "settings": {
+      "count": 1,
+      "description": "Configuración global de la aplicación"
+    },
+    "sales": {
+      "count": 2,
+      "description": "Registro de ventas"
+    }
+  },
+  "warnings": [],
+  "timestamp": "2026-06-27T09:15:43.363069"
+}
