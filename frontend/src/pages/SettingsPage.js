@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { Home, Settings as SettingsIcon, Save, User, Store, Users, Plus, Edit2, Trash2, X } from 'lucide-react';
+import { Home, Settings as SettingsIcon, Save, User, Store, Users, Plus, Edit2, Trash2, X, Database, AlertTriangle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useSettings } from '../context/SettingsContext';
 import { useAuth } from '../context/AuthContext';
@@ -19,8 +19,14 @@ const ROLES = [
 const SettingsPage = () => {
   const navigate = useNavigate();
   const { refreshSettings } = useSettings();
-  const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('stores'); // 'stores', 'profile', or 'users'
+  const { user, logout } = useAuth();
+  const [activeTab, setActiveTab] = useState('stores'); // 'stores', 'profile', 'users', or 'database'
+  
+  // Database reset
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [showCredentialsModal, setShowCredentialsModal] = useState(false);
+  const [resetCredentials, setResetCredentials] = useState(null);
+  const [resetConfirmation, setResetConfirmation] = useState('');
   
   // Store settings
   const [storeAName, setStoreAName] = useState('Tienda A');
@@ -213,6 +219,44 @@ const SettingsPage = () => {
     }
   };
 
+  const handleHardReset = async () => {
+    if (resetConfirmation !== 'RESETEAR') {
+      toast.error('Debes escribir "RESETEAR" para confirmar');
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      const response = await axios.post(`${API}/database/hard-reset`);
+      
+      // Guardar credenciales para mostrarlas
+      setResetCredentials(response.data.admin_credentials);
+      setShowResetModal(false);
+      setShowCredentialsModal(true);
+      
+      toast.success('Base de datos reseteada exitosamente');
+      
+      // Hacer logout después de 10 segundos
+      setTimeout(() => {
+        logout();
+        navigate('/login');
+      }, 10000);
+      
+    } catch (error) {
+      const errorMsg = error.response?.data?.detail || 'Error al resetear base de datos';
+      toast.error(errorMsg);
+    } finally {
+      setSaving(false);
+      setResetConfirmation('');
+    }
+  };
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    toast.success('Copiado al portapapeles');
+  };
+
   if (loading) {
     return <div className="p-8">Cargando...</div>;
   }
@@ -285,6 +329,21 @@ const SettingsPage = () => {
             >
               <Users className="w-5 h-5" />
               Gestión de Usuarios
+            </button>
+          )}
+          {isAdmin && (
+            <button
+              onClick={() => setActiveTab('database')}
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold border-2 border-slate-900 transition-all ${
+                activeTab === 'database' 
+                  ? 'bg-slate-900 text-white' 
+                  : 'bg-white text-slate-900 hover:bg-slate-50'
+              }`}
+              style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
+              data-testid="database-tab-btn"
+            >
+              <Database className="w-5 h-5" />
+              Base de Datos
             </button>
           )}
         </div>
@@ -525,6 +584,62 @@ const SettingsPage = () => {
           </div>
         )}
 
+        {/* Database Management Tab (Admin Only) */}
+        {activeTab === 'database' && isAdmin && (
+          <div 
+            className="bg-white border-2 border-slate-900 rounded-xl p-8"
+            style={{ boxShadow: '8px 8px 0px 0px rgba(15,23,42,1)' }}
+          >
+            <div className="flex items-center gap-3 mb-6">
+              <Database className="w-6 h-6" />
+              <h2 className="text-2xl font-bold text-slate-900">Gestión de Base de Datos</h2>
+            </div>
+
+            {/* Warning Section */}
+            <div className="bg-red-50 border-2 border-red-500 rounded-xl p-6 mb-6">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="w-6 h-6 text-red-600 flex-shrink-0 mt-1" />
+                <div>
+                  <h3 className="text-lg font-bold text-red-900 mb-2">
+                    ⚠️ Zona de Peligro
+                  </h3>
+                  <p className="text-sm text-red-800 mb-3">
+                    El <strong>Hard Reset</strong> es una operación destructiva que:
+                  </p>
+                  <ul className="text-sm text-red-800 space-y-1 ml-4 list-disc">
+                    <li>Borrará TODOS los datos de la base de datos</li>
+                    <li>Eliminará todos los usuarios, productos, ventas, gastos e ingresos</li>
+                    <li>Eliminará todos los clientes y notas del sistema</li>
+                    <li>Creará un nuevo usuario administrador con credenciales aleatorias</li>
+                    <li>Esta acción NO SE PUEDE DESHACER</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* Hard Reset Section */}
+            <div className="border-2 border-slate-900 rounded-xl p-6">
+              <h3 className="text-xl font-bold text-slate-900 mb-3">
+                Hard Reset de Base de Datos
+              </h3>
+              <p className="text-slate-600 mb-4">
+                Utiliza esta opción solo si necesitas reiniciar completamente el sistema.
+                Se creará un nuevo usuario administrador y recibirás las credenciales en pantalla.
+              </p>
+              
+              <button
+                onClick={() => setShowResetModal(true)}
+                className="flex items-center gap-2 px-6 py-3 bg-red-600 text-white border-2 border-slate-900 rounded-xl font-bold hover:bg-red-700 transition-all"
+                style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
+                data-testid="hard-reset-btn"
+              >
+                <Database className="w-5 h-5" />
+                Ejecutar Hard Reset
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* User Modal */}
         {showUserModal && (
           <div 
@@ -624,6 +739,175 @@ const SettingsPage = () => {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Hard Reset Confirmation Modal */}
+        {showResetModal && (
+          <div 
+            className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            onClick={() => setShowResetModal(false)}
+          >
+            <div 
+              className="bg-white border-2 border-slate-900 rounded-xl p-6 max-w-md w-full"
+              style={{ boxShadow: '8px 8px 0px 0px rgba(15,23,42,1)' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold text-slate-900">
+                  ⚠️ Confirmar Hard Reset
+                </h3>
+                <button
+                  onClick={() => setShowResetModal(false)}
+                  className="p-1 hover:bg-slate-100 rounded"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="bg-red-50 border-2 border-red-500 rounded-lg p-4 mb-4">
+                <p className="text-sm text-red-900 font-bold mb-2">
+                  Esta acción borrará TODA la información de la base de datos
+                </p>
+                <ul className="text-xs text-red-800 space-y-1 ml-4 list-disc">
+                  <li>Todos los usuarios (excepto el nuevo admin)</li>
+                  <li>Todos los productos e inventario</li>
+                  <li>Todas las ventas registradas</li>
+                  <li>Todos los gastos e ingresos</li>
+                  <li>Todos los clientes del CRM</li>
+                  <li>Todas las notas y calendario</li>
+                </ul>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-bold text-slate-700 mb-2">
+                  Para confirmar, escribe: <span className="text-red-600">RESETEAR</span>
+                </label>
+                <input
+                  type="text"
+                  value={resetConfirmation}
+                  onChange={(e) => setResetConfirmation(e.target.value)}
+                  className="w-full px-3 py-2 border-2 border-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                  placeholder="Escribe RESETEAR"
+                  autoFocus
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowResetModal(false);
+                    setResetConfirmation('');
+                  }}
+                  className="flex-1 px-4 py-2 border-2 border-slate-900 rounded-lg font-bold hover:bg-slate-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleHardReset}
+                  disabled={saving || resetConfirmation !== 'RESETEAR'}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white border-2 border-slate-900 rounded-lg font-bold hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
+                >
+                  {saving ? 'Reseteando...' : 'Confirmar Reset'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Credentials Display Modal */}
+        {showCredentialsModal && resetCredentials && (
+          <div 
+            className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          >
+            <div 
+              className="bg-white border-2 border-slate-900 rounded-xl p-6 max-w-lg w-full"
+              style={{ boxShadow: '8px 8px 0px 0px rgba(15,23,42,1)' }}
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-3 bg-green-100 rounded-lg">
+                  <Database className="w-6 h-6 text-green-600" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900">
+                    ✅ Base de Datos Reseteada
+                  </h3>
+                  <p className="text-sm text-slate-600">
+                    Guarda estas credenciales ahora
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-yellow-50 border-2 border-yellow-500 rounded-lg p-4 mb-4">
+                <p className="text-sm font-bold text-yellow-900 mb-2">
+                  ⚠️ {resetCredentials.warning}
+                </p>
+                <p className="text-xs text-yellow-800">
+                  Copia estas credenciales antes de cerrar esta ventana. 
+                  Serás desconectado en 10 segundos.
+                </p>
+              </div>
+
+              <div className="space-y-3 mb-4">
+                <div className="border-2 border-slate-900 rounded-lg p-4">
+                  <label className="block text-xs font-bold text-slate-500 mb-1">
+                    EMAIL
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 text-lg font-mono font-bold text-slate-900">
+                      {resetCredentials.email}
+                    </code>
+                    <button
+                      onClick={() => copyToClipboard(resetCredentials.email)}
+                      className="px-3 py-1 bg-slate-100 border border-slate-900 rounded-lg text-xs font-bold hover:bg-slate-200"
+                    >
+                      Copiar
+                    </button>
+                  </div>
+                </div>
+
+                <div className="border-2 border-slate-900 rounded-lg p-4 bg-green-50">
+                  <label className="block text-xs font-bold text-slate-500 mb-1">
+                    CONTRASEÑA
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 text-lg font-mono font-bold text-green-900">
+                      {resetCredentials.password}
+                    </code>
+                    <button
+                      onClick={() => copyToClipboard(resetCredentials.password)}
+                      className="px-3 py-1 bg-green-600 text-white border border-slate-900 rounded-lg text-xs font-bold hover:bg-green-700"
+                    >
+                      Copiar
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    copyToClipboard(`Email: ${resetCredentials.email}\nContraseña: ${resetCredentials.password}`);
+                  }}
+                  className="flex-1 px-4 py-3 bg-slate-900 text-white border-2 border-slate-900 rounded-lg font-bold hover:bg-slate-800 transition-colors"
+                  style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
+                >
+                  Copiar Todo
+                </button>
+                <button
+                  onClick={() => {
+                    setShowCredentialsModal(false);
+                    logout();
+                    navigate('/login');
+                  }}
+                  className="px-4 py-3 border-2 border-slate-900 rounded-lg font-bold hover:bg-slate-50 transition-colors"
+                >
+                  Cerrar e Ir al Login
+                </button>
+              </div>
             </div>
           </div>
         )}
