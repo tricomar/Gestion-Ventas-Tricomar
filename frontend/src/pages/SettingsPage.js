@@ -28,6 +28,11 @@ const SettingsPage = () => {
   const [resetCredentials, setResetCredentials] = useState(null);
   const [resetConfirmation, setResetConfirmation] = useState('');
   
+  // Database validation
+  const [showValidationModal, setShowValidationModal] = useState(false);
+  const [validationReport, setValidationReport] = useState(null);
+  const [validating, setValidating] = useState(false);
+  
   // Store settings
   const [storeAName, setStoreAName] = useState('Tienda A');
   const [storeBName, setStoreBName] = useState('Tienda B');
@@ -255,6 +260,28 @@ const SettingsPage = () => {
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
     toast.success('Copiado al portapapeles');
+  };
+
+  const handleValidateSchema = async () => {
+    setValidating(true);
+    setValidationReport(null);
+
+    try {
+      const response = await axios.post(`${API}/database/validate-and-fix`);
+      setValidationReport(response.data);
+      setShowValidationModal(true);
+      
+      if (response.data.status === 'fixed') {
+        toast.success('Esquema corregido exitosamente');
+      } else {
+        toast.success('Esquema validado - Todo correcto');
+      }
+    } catch (error) {
+      const errorMsg = error.response?.data?.detail || 'Error al validar esquema';
+      toast.error(errorMsg);
+    } finally {
+      setValidating(false);
+    }
   };
 
   if (loading) {
@@ -617,6 +644,40 @@ const SettingsPage = () => {
               </div>
             </div>
 
+            {/* Schema Validation Section */}
+            <div className="border-2 border-blue-500 bg-blue-50 rounded-xl p-6 mb-6">
+              <h3 className="text-xl font-bold text-slate-900 mb-3">
+                🔍 Validar y Corregir Esquema
+              </h3>
+              <p className="text-slate-600 mb-4">
+                Verifica la estructura de la base de datos y crea automáticamente tablas, 
+                índices o campos faltantes. Esta operación es <strong>segura</strong> y no 
+                elimina datos existentes.
+              </p>
+              
+              <div className="bg-white border-2 border-slate-900 rounded-lg p-4 mb-4">
+                <h4 className="font-bold text-slate-900 mb-2">Esta acción:</h4>
+                <ul className="text-sm text-slate-700 space-y-1 ml-4 list-disc">
+                  <li>✅ Detecta colecciones faltantes y las crea</li>
+                  <li>✅ Crea índices necesarios para optimización</li>
+                  <li>✅ Inicializa el documento de configuración si no existe</li>
+                  <li>✅ NO elimina ni modifica datos existentes</li>
+                  <li>✅ Genera un reporte detallado de cambios realizados</li>
+                </ul>
+              </div>
+              
+              <button
+                onClick={handleValidateSchema}
+                disabled={validating}
+                className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white border-2 border-slate-900 rounded-xl font-bold hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
+                data-testid="validate-schema-btn"
+              >
+                <Database className="w-5 h-5" />
+                {validating ? 'Validando...' : 'Validar y Corregir Esquema'}
+              </button>
+            </div>
+
             {/* Hard Reset Section */}
             <div className="border-2 border-slate-900 rounded-xl p-6">
               <h3 className="text-xl font-bold text-slate-900 mb-3">
@@ -906,6 +967,135 @@ const SettingsPage = () => {
                   className="px-4 py-3 border-2 border-slate-900 rounded-lg font-bold hover:bg-slate-50 transition-colors"
                 >
                   Cerrar e Ir al Login
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Schema Validation Report Modal */}
+        {showValidationModal && validationReport && (
+          <div 
+            className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            onClick={() => setShowValidationModal(false)}
+          >
+            <div 
+              className="bg-white border-2 border-slate-900 rounded-xl p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto"
+              style={{ boxShadow: '8px 8px 0px 0px rgba(15,23,42,1)' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold text-slate-900">
+                  {validationReport.status === 'fixed' ? '🔧 Esquema Corregido' : '✅ Esquema Validado'}
+                </h3>
+                <button
+                  onClick={() => setShowValidationModal(false)}
+                  className="p-1 hover:bg-slate-100 rounded"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className={`border-2 ${validationReport.status === 'fixed' ? 'border-blue-500 bg-blue-50' : 'border-green-500 bg-green-50'} rounded-lg p-4 mb-4`}>
+                <p className="font-bold text-slate-900 mb-2">
+                  {validationReport.message}
+                </p>
+                <p className="text-sm text-slate-600">
+                  Timestamp: {new Date(validationReport.timestamp).toLocaleString('es-ES')}
+                </p>
+              </div>
+
+              {/* Collections Created */}
+              {validationReport.collections_created.length > 0 && (
+                <div className="mb-4">
+                  <h4 className="font-bold text-slate-900 mb-2">
+                    📦 Colecciones Creadas ({validationReport.collections_created.length})
+                  </h4>
+                  <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                    <ul className="space-y-1">
+                      {validationReport.collections_created.map((coll, idx) => (
+                        <li key={idx} className="text-sm text-slate-700">
+                          • <code className="bg-slate-200 px-2 py-0.5 rounded">{coll}</code>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
+
+              {/* Indexes Created */}
+              {validationReport.indexes_created.length > 0 && (
+                <div className="mb-4">
+                  <h4 className="font-bold text-slate-900 mb-2">
+                    🔍 Índices Creados ({validationReport.indexes_created.length})
+                  </h4>
+                  <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 max-h-60 overflow-y-auto">
+                    <ul className="space-y-2">
+                      {validationReport.indexes_created.map((idx, i) => (
+                        <li key={i} className="text-sm text-slate-700">
+                          • <code className="bg-slate-200 px-2 py-0.5 rounded">{idx.collection}</code>
+                          {' '} → {' '}
+                          <code className="bg-blue-100 px-2 py-0.5 rounded">{idx.field}</code>
+                          {idx.unique && <span className="ml-2 text-xs bg-yellow-200 px-2 py-0.5 rounded">UNIQUE</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
+
+              {/* Settings Initialized */}
+              {validationReport.settings_initialized && (
+                <div className="mb-4">
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                    <p className="text-sm text-green-900">
+                      ⚙️ <strong>Documento de configuración inicializado</strong> con valores por defecto
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Errors */}
+              {validationReport.errors && validationReport.errors.length > 0 && (
+                <div className="mb-4">
+                  <h4 className="font-bold text-red-900 mb-2">
+                    ⚠️ Errores Encontrados ({validationReport.errors.length})
+                  </h4>
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                    <ul className="space-y-1">
+                      {validationReport.errors.map((err, idx) => (
+                        <li key={idx} className="text-sm text-red-800">
+                          • {err.collection || 'General'}: {err.error}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              )}
+
+              {/* Summary */}
+              <div className="border-t-2 border-slate-200 pt-4">
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="bg-slate-100 p-3 rounded-lg">
+                    <p className="text-slate-600">Colecciones verificadas</p>
+                    <p className="text-2xl font-bold text-slate-900">{validationReport.collections_checked}</p>
+                  </div>
+                  <div className="bg-blue-100 p-3 rounded-lg">
+                    <p className="text-slate-600">Cambios realizados</p>
+                    <p className="text-2xl font-bold text-blue-900">
+                      {validationReport.collections_created.length + validationReport.indexes_created.length + (validationReport.settings_initialized ? 1 : 0)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end mt-4">
+                <button
+                  onClick={() => setShowValidationModal(false)}
+                  className="px-6 py-3 bg-slate-900 text-white border-2 border-slate-900 rounded-lg font-bold hover:bg-slate-800 transition-colors"
+                  style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
+                >
+                  Cerrar
                 </button>
               </div>
             </div>
