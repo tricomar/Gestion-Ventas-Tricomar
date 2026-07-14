@@ -37,6 +37,8 @@ const SalesForm = ({ onSuccess }) => {
           setShowProductSuggestions(true);
         } catch (error) {
           console.error('Error searching products:', error);
+          setProductSuggestions([]);
+          setShowProductSuggestions(true);
         }
       } else {
         setProductSuggestions([]);
@@ -61,6 +63,8 @@ const SalesForm = ({ onSuccess }) => {
           setShowCustomerSuggestions(true);
         } catch (error) {
           console.error('Error searching customers:', error);
+          setCustomerSuggestions([]);
+          setShowCustomerSuggestions(true);
         }
       } else {
         setCustomerSuggestions([]);
@@ -198,7 +202,6 @@ const SalesForm = ({ onSuccess }) => {
                 setProductSearch(e.target.value);
                 if (!e.target.value) setSelectedProduct(null);
               }}
-              onBlur={() => setTimeout(() => setShowProductSuggestions(false), 200)}
               className="w-full bg-white border-2 border-slate-900 rounded-xl px-4 py-3 font-medium text-slate-900 focus:ring-0 focus:outline-none focus:border-indigo-500 transition-all"
               placeholder="Buscar producto..."
               required
@@ -212,7 +215,10 @@ const SalesForm = ({ onSuccess }) => {
                 <button
                   key={prod.id}
                   type="button"
-                  onClick={() => selectProduct(prod)}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    selectProduct(prod);
+                  }}
                   className="w-full text-left px-4 py-3 hover:bg-slate-100 font-medium border-b border-slate-200 last:border-b-0"
                 >
                   <div className="flex justify-between items-center">
@@ -238,7 +244,8 @@ const SalesForm = ({ onSuccess }) => {
                 </p>
                 <button
                   type="button"
-                  onClick={() => {
+                  onMouseDown={(e) => {
+                    e.preventDefault();
                     setShowProductSuggestions(false);
                     setShowProductForm(true);
                   }}
@@ -306,7 +313,6 @@ const SalesForm = ({ onSuccess }) => {
                 setCustomerSearch(e.target.value);
                 if (!e.target.value) setSelectedCustomer(null);
               }}
-              onBlur={() => setTimeout(() => setShowCustomerSuggestions(false), 200)}
               className="w-full bg-white border-2 border-slate-900 rounded-xl px-4 py-3 font-medium text-slate-900 focus:ring-0 focus:outline-none focus:border-indigo-500 transition-all"
               placeholder="Buscar cliente..."
               data-testid="sales-customer-input"
@@ -320,7 +326,8 @@ const SalesForm = ({ onSuccess }) => {
                 <button
                   key={cust.id}
                   type="button"
-                  onClick={() => {
+                  onMouseDown={(e) => {
+                    e.preventDefault();
                     setSelectedCustomer(cust);
                     setCustomerSearch('');
                     setShowCustomerSuggestions(false);
@@ -352,7 +359,8 @@ const SalesForm = ({ onSuccess }) => {
                 </p>
                 <button
                   type="button"
-                  onClick={() => {
+                  onMouseDown={(e) => {
+                    e.preventDefault();
                     setShowCustomerSuggestions(false);
                     setShowCustomerForm(true);
                   }}
