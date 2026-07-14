@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { Search, Plus } from 'lucide-react';
@@ -27,6 +27,10 @@ const SalesForm = ({ onSuccess }) => {
   const [customerSuggestions, setCustomerSuggestions] = useState([]);
   const [showProductSuggestions, setShowProductSuggestions] = useState(false);
   const [showCustomerSuggestions, setShowCustomerSuggestions] = useState(false);
+
+  // Refs para detectar clicks fuera de los dropdowns
+  const productDropdownRef = useRef(null);
+  const customerDropdownRef = useRef(null);
 
   useEffect(() => {
     const searchProducts = async () => {
@@ -75,6 +79,29 @@ const SalesForm = ({ onSuccess }) => {
     const timer = setTimeout(searchCustomers, 300);
     return () => clearTimeout(timer);
   }, [customerSearch]);
+
+  // Hook para cerrar dropdowns al hacer click fuera
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      // Cerrar dropdown de productos si el click es fuera
+      if (productDropdownRef.current && !productDropdownRef.current.contains(event.target)) {
+        setShowProductSuggestions(false);
+      }
+      
+      // Cerrar dropdown de clientes si el click es fuera
+      if (customerDropdownRef.current && !customerDropdownRef.current.contains(event.target)) {
+        setShowCustomerSuggestions(false);
+      }
+    };
+
+    // Agregar event listener al documento
+    document.addEventListener('mousedown', handleClickOutside);
+    
+    // Cleanup al desmontar
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -190,7 +217,7 @@ const SalesForm = ({ onSuccess }) => {
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Product Search */}
-        <div className="relative">
+        <div className="relative" ref={productDropdownRef}>
           <label className="block text-xs font-bold tracking-widest uppercase text-slate-500 mb-2">
             Producto *
           </label>
@@ -301,7 +328,7 @@ const SalesForm = ({ onSuccess }) => {
         </div>
 
         {/* Customer - Similar to Product */}
-        <div className="relative">
+        <div className="relative" ref={customerDropdownRef}>
           <label className="block text-xs font-bold tracking-widest uppercase text-slate-500 mb-2">
             Cliente (opcional)
           </label>
