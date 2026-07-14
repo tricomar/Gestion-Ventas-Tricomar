@@ -233,7 +233,23 @@ const SettingsPage = () => {
     setSaving(true);
 
     try {
-      const response = await axios.post(`${API}/database/hard-reset`);
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast.error('No hay sesión activa. Por favor, inicia sesión nuevamente.');
+        setSaving(false);
+        return;
+      }
+
+      const response = await axios.post(
+        `${API}/database/hard-reset`,
+        {},
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
       
       // Guardar credenciales para mostrarlas
       setResetCredentials(response.data.admin_credentials);
@@ -249,8 +265,16 @@ const SettingsPage = () => {
       }, 10000);
       
     } catch (error) {
-      const errorMsg = error.response?.data?.detail || 'Error al resetear base de datos';
-      toast.error(errorMsg);
+      console.error('Error during hard reset:', error);
+      
+      if (error.response?.status === 404) {
+        toast.error('Endpoint no encontrado. Verifica que el backend esté actualizado.');
+      } else if (error.response?.status === 401 || error.response?.status === 403) {
+        toast.error('No tienes permisos para realizar esta acción.');
+      } else {
+        const errorMsg = error.response?.data?.detail || error.message || 'Error al resetear base de datos';
+        toast.error(errorMsg);
+      }
     } finally {
       setSaving(false);
       setResetConfirmation('');
@@ -267,7 +291,24 @@ const SettingsPage = () => {
     setValidationReport(null);
 
     try {
-      const response = await axios.post(`${API}/database/validate-and-fix`);
+      // Asegurarse de que el token esté presente
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast.error('No hay sesión activa. Por favor, inicia sesión nuevamente.');
+        return;
+      }
+
+      const response = await axios.post(
+        `${API}/database/validate-and-fix`,
+        {},
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
       setValidationReport(response.data);
       setShowValidationModal(true);
       
@@ -277,8 +318,16 @@ const SettingsPage = () => {
         toast.success('Esquema validado - Todo correcto');
       }
     } catch (error) {
-      const errorMsg = error.response?.data?.detail || 'Error al validar esquema';
-      toast.error(errorMsg);
+      console.error('Error validating schema:', error);
+      
+      if (error.response?.status === 404) {
+        toast.error('Endpoint no encontrado. Verifica que el backend esté actualizado.');
+      } else if (error.response?.status === 401 || error.response?.status === 403) {
+        toast.error('No tienes permisos para realizar esta acción.');
+      } else {
+        const errorMsg = error.response?.data?.detail || error.message || 'Error al validar esquema';
+        toast.error(errorMsg);
+      }
     } finally {
       setValidating(false);
     }
