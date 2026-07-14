@@ -302,71 +302,92 @@ const SalesForm = ({ onSuccess }) => {
             <input
               type="text"
               value={customerSearch}
-              onChange={(e) => setCustomerSearch(e.target.value)}
-              onFocus={() => customerSearch && setShowCustomerSuggestions(true)}
-              placeholder={selectedCustomer ? selectedCustomer.name : "Buscar cliente..."}
+              onChange={(e) => {
+                setCustomerSearch(e.target.value);
+                if (!e.target.value) setSelectedCustomer(null);
+              }}
+              onBlur={() => setTimeout(() => setShowCustomerSuggestions(false), 200)}
               className="w-full bg-white border-2 border-slate-900 rounded-xl px-4 py-3 font-medium text-slate-900 focus:ring-0 focus:outline-none focus:border-indigo-500 transition-all"
+              placeholder="Buscar cliente..."
               data-testid="sales-customer-input"
             />
             <Search className="absolute right-4 top-3.5 w-5 h-5 text-slate-400" />
           </div>
           
-          {selectedCustomer && (
-            <div className="mt-2 p-2 bg-lime-100 border-2 border-slate-900 rounded-lg flex justify-between items-center">
-              <div className="text-sm">
-                <p className="font-bold">{selectedCustomer.name}</p>
-                {selectedCustomer.phone && (
-                  <p className="text-xs text-slate-600">{selectedCustomer.phone}</p>
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedCustomer(null);
-                  setCustomerSearch('');
-                }}
-                className="text-xs font-bold text-red-600 hover:text-red-800"
-              >
-                Quitar
-              </button>
-            </div>
-          )}
-          
-          {showCustomerSuggestions && customerSearch && (
+          {showCustomerSuggestions && customerSuggestions.length > 0 && (
             <div className="absolute z-10 w-full mt-2 bg-white border-2 border-slate-900 rounded-xl shadow-lg max-h-48 overflow-y-auto">
-              {customerSuggestions.length > 0 ? (
-                customerSuggestions.map((cust) => (
-                  <button
-                    key={cust.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedCustomer(cust);
-                      setCustomerSearch('');
-                      setShowCustomerSuggestions(false);
-                    }}
-                    className="w-full text-left px-4 py-2 hover:bg-slate-100 font-medium border-b border-slate-200 last:border-0"
-                  >
+              {customerSuggestions.map((cust) => (
+                <button
+                  key={cust.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedCustomer(cust);
+                    setCustomerSearch('');
+                    setShowCustomerSuggestions(false);
+                  }}
+                  className="w-full text-left px-4 py-3 hover:bg-slate-100 font-medium border-b border-slate-200 last:border-b-0"
+                >
+                  <div className="flex justify-between items-center">
                     <div>
                       <p className="font-bold">{cust.name}</p>
                       {cust.phone && (
-                        <p className="text-xs text-slate-600">{cust.phone}</p>
+                        <p className="text-xs text-slate-500">{cust.phone}</p>
                       )}
                     </div>
-                  </button>
-                ))
-              ) : (
+                    {cust.address && (
+                      <span className="text-xs text-slate-500">{cust.address}</span>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+          
+          {/* No results - Show create button */}
+          {showCustomerSuggestions && customerSuggestions.length === 0 && customerSearch.length > 1 && (
+            <div className="absolute z-10 w-full mt-2 bg-white border-2 border-slate-900 rounded-xl shadow-lg overflow-hidden">
+              <div className="p-4 text-center">
+                <p className="text-sm text-slate-600 mb-3">
+                  No se encontró &quot;{customerSearch}&quot;
+                </p>
                 <button
                   type="button"
                   onClick={() => {
-                    setShowCustomerForm(true);
                     setShowCustomerSuggestions(false);
+                    setShowCustomerForm(true);
                   }}
-                  className="w-full text-left px-4 py-3 hover:bg-lime-50 font-bold text-lime-700 flex items-center gap-2 border-2 border-dashed border-lime-500 m-2 rounded-lg"
+                  className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-[#D4F0A5] border-2 border-slate-900 rounded-xl font-bold hover:bg-[#c5e196] transition-all"
+                  style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
+                  data-testid="create-customer-from-sales-btn"
                 >
                   <Plus className="w-5 h-5" />
-                  Crear nuevo cliente &quot;{customerSearch}&quot;
+                  Crear Cliente Nuevo
                 </button>
-              )}
+              </div>
+            </div>
+          )}
+          
+          {/* Selected Customer Info */}
+          {selectedCustomer && (
+            <div className="mt-2 p-3 bg-slate-100 border-2 border-slate-900 rounded-xl">
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="font-bold">{selectedCustomer.name}</p>
+                  {selectedCustomer.phone && (
+                    <p className="text-xs text-slate-500">{selectedCustomer.phone}</p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedCustomer(null);
+                    setCustomerSearch('');
+                  }}
+                  className="px-3 py-1 rounded-lg text-xs font-bold uppercase border-2 border-slate-900 bg-red-100 hover:bg-red-200 transition-all"
+                >
+                  Quitar
+                </button>
+              </div>
             </div>
           )}
         </div>
