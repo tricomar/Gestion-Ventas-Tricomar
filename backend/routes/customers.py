@@ -14,6 +14,20 @@ from models.users import User
 
 router = APIRouter(prefix="/customers", tags=["customers"])
 
+@router.get("", response_model=List[Customer])
+async def get_customers(current_user: User = Depends(get_current_user)):
+    """Obtener todos los clientes"""
+    customers = await db.customers.find({}, {'_id': 0}).sort('name', 1).to_list(1000)
+    
+    result = []
+    for customer in customers:
+        # Convertir created_at si es string
+        if isinstance(customer.get('created_at'), str):
+            customer['created_at'] = datetime.fromisoformat(customer['created_at'])
+        result.append(Customer(**customer))
+    
+    return result
+
 @router.get("/search")
 async def search_customers(q: str, current_user: User = Depends(get_current_user)):
     customers = await db.customers.find(

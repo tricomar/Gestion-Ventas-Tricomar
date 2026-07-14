@@ -178,7 +178,7 @@ async def get_sales(date: Optional[str] = None, current_user: User = Depends(get
     
     return result
 
-@router.put("/sales/{sale_id}", response_model=Sale)
+@router.put("/{sale_id}", response_model=Sale)
 async def update_sale(sale_id: str, sale_input: SaleCreate, current_user: User = Depends(get_current_user)):
     existing = await db.sales.find_one({'id': sale_id}, {'_id': 0})
     if not existing:
@@ -199,7 +199,7 @@ async def update_sale(sale_id: str, sale_input: SaleCreate, current_user: User =
     
     return Sale(**updated)
 
-@router.delete("/sales/{sale_id}")
+@router.delete("/{sale_id}")
 async def delete_sale(sale_id: str, current_user: User = Depends(get_current_user)):
     result = await db.sales.delete_one({'id': sale_id})
     if result.deleted_count == 0:

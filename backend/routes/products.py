@@ -57,7 +57,7 @@ async def get_products(current_user: User = Depends(get_current_user)):
     
     return result
 
-@router.get("/products/search")
+@router.get("/search")
 async def search_products(q: str, current_user: User = Depends(get_current_user)):
     products = await db.products.find(
         {'name': {'$regex': q, '$options': 'i'}},
@@ -80,7 +80,7 @@ async def create_product(product_input: ProductCreate, current_user: User = Depe
     
     return product
 
-@router.put("/products/{product_id}", response_model=Product)
+@router.put("/{product_id}", response_model=Product)
 async def update_product(product_id: str, product_input: ProductCreate, current_user: User = Depends(get_current_user)):
     existing = await db.products.find_one({'id': product_id}, {'_id': 0})
     if not existing:
@@ -95,7 +95,7 @@ async def update_product(product_id: str, product_input: ProductCreate, current_
     
     return Product(**updated)
 
-@router.delete("/products/{product_id}")
+@router.delete("/{product_id}")
 async def delete_product(product_id: str, current_user: User = Depends(get_current_user)):
     result = await db.products.delete_one({'id': product_id})
     if result.deleted_count == 0:
