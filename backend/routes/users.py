@@ -13,7 +13,7 @@ from utils import db, get_current_user, require_admin
 
 router = APIRouter(prefix="/users", tags=["users"])
 
-@router.get("/users", response_model=List[User])
+@router.get("", response_model=List[User])
 async def get_all_users(admin: User = Depends(require_admin)):
     """Get all users (admin only)"""
     users = await db.users.find({}, {'_id': 0, 'password_hash': 0}).sort('created_at', -1).to_list(1000)
@@ -26,7 +26,7 @@ async def get_all_users(admin: User = Depends(require_admin)):
     
     return result
 
-@router.post("/users", response_model=User)
+@router.post("", response_model=User)
 async def create_user(user_data: UserCreate, admin: User = Depends(require_admin)):
     """Create a new user (admin only)"""
     # Check if email already exists
@@ -57,7 +57,7 @@ async def create_user(user_data: UserCreate, admin: User = Depends(require_admin
         created_at=datetime.fromisoformat(new_user['created_at'])
     )
 
-@router.put("/users/{user_id}", response_model=User)
+@router.put("/{user_id}", response_model=User)
 async def update_user(
     user_id: str,
     user_data: UserUpdate,
@@ -109,7 +109,7 @@ async def update_user(
     
     return User(**updated_user)
 
-@router.delete("/users/{user_id}")
+@router.delete("/{user_id}")
 async def delete_user(user_id: str, admin: User = Depends(require_admin)):
     """Delete a user (admin only)"""
     # Prevent admin from deleting themselves

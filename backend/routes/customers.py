@@ -14,7 +14,7 @@ from models.users import User
 
 router = APIRouter(prefix="/customers", tags=["customers"])
 
-@router.get("/customers/search")
+@router.get("/search")
 async def search_customers(q: str, current_user: User = Depends(get_current_user)):
     customers = await db.customers.find(
         {'name': {'$regex': q, '$options': 'i'}},
@@ -22,7 +22,7 @@ async def search_customers(q: str, current_user: User = Depends(get_current_user
     ).sort('purchase_count', -1).limit(10).to_list(10)
     return customers
 
-@router.post("/customers", response_model=Customer)
+@router.post("", response_model=Customer)
 async def create_or_get_customer(customer_input: CustomerBase, current_user: User = Depends(get_current_user)):
     # Check if customer exists
     existing = await db.customers.find_one({'name': customer_input.name}, {'_id': 0})

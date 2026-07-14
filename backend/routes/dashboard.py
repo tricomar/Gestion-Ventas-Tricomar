@@ -22,7 +22,7 @@ indicators_cache = {
 }
 CACHE_DURATION = timedelta(hours=1)
 
-@router.get("/dashboard/realtime-metrics", response_model=RealtimeMetrics)
+@router.get("/realtime-metrics", response_model=RealtimeMetrics)
 async def get_realtime_metrics(current_user: User = Depends(get_current_user)):
     now = datetime.now(timezone.utc)
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -117,7 +117,7 @@ async def get_realtime_metrics(current_user: User = Depends(get_current_user)):
         general_month=calculate_general_metrics(month_income, month_expenses)
     )
 
-@router.get("/dashboard/historic-months")
+@router.get("/historic-months")
 async def get_historic_months(current_user: User = Depends(get_current_user)):
     """Get list of months with data from last 2 years"""
     now = datetime.now(timezone.utc)
@@ -145,7 +145,7 @@ async def get_historic_months(current_user: User = Depends(get_current_user)):
     
     return months_list
 
-@router.get("/dashboard/historic-data")
+@router.get("/historic-data")
 async def get_historic_data(
     year: int, 
     month: int, 
@@ -216,7 +216,7 @@ async def get_historic_data(
         'general': calculate_general_metrics(month_income, month_expenses)
     }
 
-@router.get("/dashboard/historic-daily-data")
+@router.get("/historic-daily-data")
 async def get_historic_daily_data(
     year: int, 
     month: int, 

@@ -14,7 +14,7 @@ from models.users import User
 
 router = APIRouter(prefix="/expenses", tags=["expenses"])
 
-@router.post("/expenses", response_model=Expense)
+@router.post("", response_model=Expense)
 async def create_expense(expense_input: ExpenseCreate, current_user: User = Depends(get_current_user)):
     expense_dict = expense_input.model_dump()
     expense_dict['user_id'] = current_user.id
@@ -27,7 +27,7 @@ async def create_expense(expense_input: ExpenseCreate, current_user: User = Depe
     
     return expense
 
-@router.get("/expenses", response_model=List[Expense])
+@router.get("", response_model=List[Expense])
 async def get_expenses(date: Optional[str] = None, current_user: User = Depends(get_current_user)):
     query = {}
     if date:
@@ -46,7 +46,7 @@ async def get_expenses(date: Optional[str] = None, current_user: User = Depends(
     
     return expenses
 
-@router.put("/expenses/{expense_id}", response_model=Expense)
+@router.put("/{expense_id}", response_model=Expense)
 async def update_expense(expense_id: str, expense_input: ExpenseCreate, current_user: User = Depends(get_current_user)):
     existing = await db.expenses.find_one({'id': expense_id}, {'_id': 0})
     if not existing:
@@ -67,7 +67,7 @@ async def update_expense(expense_id: str, expense_input: ExpenseCreate, current_
     
     return Expense(**updated)
 
-@router.delete("/expenses/{expense_id}")
+@router.delete("/{expense_id}")
 async def delete_expense(expense_id: str, current_user: User = Depends(get_current_user)):
     result = await db.expenses.delete_one({'id': expense_id})
     if result.deleted_count == 0:

@@ -14,7 +14,7 @@ from models.users import User
 
 router = APIRouter(prefix="/products", tags=["products"])
 
-@router.get("/products", response_model=List[Product])
+@router.get("", response_model=List[Product])
 async def get_products(current_user: User = Depends(get_current_user)):
     products = await db.products.find({}, {'_id': 0}).sort('name', 1).to_list(10000)
     
@@ -65,7 +65,7 @@ async def search_products(q: str, current_user: User = Depends(get_current_user)
     ).sort('usage_count', -1).limit(10).to_list(10)
     return products
 
-@router.post("/products", response_model=Product)
+@router.post("", response_model=Product)
 async def create_product(product_input: ProductCreate, current_user: User = Depends(get_current_user)):
     # Check if product exists
     existing = await db.products.find_one({'name': product_input.name}, {'_id': 0})
@@ -102,7 +102,7 @@ async def delete_product(product_id: str, current_user: User = Depends(get_curre
         raise HTTPException(status_code=404, detail="Product not found")
     return {"message": "Product deleted"}
 
-@router.get("/products/{product_id}", response_model=Product)
+@router.get("/{product_id}", response_model=Product)
 async def get_product(product_id: str, current_user: User = Depends(get_current_user)):
     product = await db.products.find_one({'id': product_id}, {'_id': 0})
     if not product:

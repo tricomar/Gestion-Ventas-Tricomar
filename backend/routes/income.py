@@ -14,7 +14,7 @@ from models.users import User
 
 router = APIRouter(prefix="/other-income", tags=["income"])
 
-@router.post("/other-income", response_model=OtherIncome)
+@router.post("", response_model=OtherIncome)
 async def create_other_income(income_input: OtherIncomeCreate, current_user: User = Depends(get_current_user)):
     income_dict = income_input.model_dump()
     income_dict['user_id'] = current_user.id
@@ -27,7 +27,7 @@ async def create_other_income(income_input: OtherIncomeCreate, current_user: Use
     
     return income
 
-@router.get("/other-income", response_model=List[OtherIncome])
+@router.get("", response_model=List[OtherIncome])
 async def get_other_income(date: Optional[str] = None, current_user: User = Depends(get_current_user)):
     query = {}
     if date:
@@ -46,7 +46,7 @@ async def get_other_income(date: Optional[str] = None, current_user: User = Depe
     
     return income_list
 
-@router.put("/other-income/{income_id}", response_model=OtherIncome)
+@router.put("/{income_id}", response_model=OtherIncome)
 async def update_other_income(income_id: str, income_input: OtherIncomeCreate, current_user: User = Depends(get_current_user)):
     existing = await db.other_income.find_one({'id': income_id}, {'_id': 0})
     if not existing:
@@ -67,7 +67,7 @@ async def update_other_income(income_id: str, income_input: OtherIncomeCreate, c
     
     return OtherIncome(**updated)
 
-@router.delete("/other-income/{income_id}")
+@router.delete("/{income_id}")
 async def delete_other_income(income_id: str, current_user: User = Depends(get_current_user)):
     result = await db.other_income.delete_one({'id': income_id})
     if result.deleted_count == 0:
