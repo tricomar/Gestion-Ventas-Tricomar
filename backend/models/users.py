@@ -23,7 +23,7 @@ class UserUpdate(BaseModel):
     password: Optional[str] = None
 
 class UserLogin(BaseModel):
-    email: EmailStr
+    email: str  # Puede ser "admin" o un email completo
     password: str
 
 class TokenResponse(BaseModel):

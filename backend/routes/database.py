@@ -260,15 +260,48 @@ async def hard_reset_database(current_user: User = Depends(get_current_user)):
         await db.notes.create_index("id", unique=True)
         await db.settings.create_index("id", unique=True)
         
-        # 7. Retornar credenciales del nuevo admin
+        # 7. Guardar credenciales en archivo de texto en la raíz
+        credentials_file_path = "/app/ADMIN_CREDENTIALS.txt"
+        timestamp_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+        
+        credentials_content = f"""
+╔═══════════════════════════════════════════════════════════════╗
+║          CREDENCIALES DE ADMINISTRADOR - HARD RESET           ║
+╚═══════════════════════════════════════════════════════════════╝
+
+⚠️  IMPORTANTE: Estas son las credenciales del super administrador
+    creadas después de un Hard Reset de la base de datos.
+
+📧 Usuario (para login):  admin
+🔑 Contraseña:           {admin_password}
+
+ℹ️  Nota: El super administrador puede iniciar sesión con "admin"
+   (sin @ventas.com). Los demás usuarios deben usar email completo.
+
+📅 Fecha de creación: {timestamp_str}
+
+═══════════════════════════════════════════════════════════════
+⚠️  GUARDA ESTAS CREDENCIALES EN UN LUGAR SEGURO
+⚠️  Elimina este archivo después de guardar la información
+═══════════════════════════════════════════════════════════════
+"""
+        
+        with open(credentials_file_path, "w", encoding="utf-8") as f:
+            f.write(credentials_content)
+        
+        logger.info(f"Credenciales guardadas en {credentials_file_path}")
+        
+        # 8. Retornar credenciales del nuevo admin
         return {
             "success": True,
             "message": "Base de datos reseteada exitosamente",
             "admin_credentials": {
+                "username": "admin",
                 "email": admin_email,
                 "password": admin_password,
-                "warning": "GUARDA ESTAS CREDENCIALES - No se volverán a mostrar"
+                "warning": "GUARDA ESTAS CREDENCIALES - También guardadas en /app/ADMIN_CREDENTIALS.txt"
             },
+            "credentials_file": credentials_file_path,
             "collections_deleted": len(collections),
             "timestamp": datetime.now(timezone.utc).isoformat()
         }

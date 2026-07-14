@@ -38,8 +38,17 @@ async def register(user_input: UserCreate):
 
 @router.post("/login", response_model=TokenResponse)
 async def login(credentials: UserLogin):
-    """Iniciar sesión"""
-    user_doc = await db.users.find_one({'email': credentials.email}, {'_id': 0})
+    """
+    Iniciar sesión
+    - Si el usuario es exactamente "admin" (sin @ventas.com), busca admin@ventas.com
+    - Para el resto de usuarios, requiere email completo
+    """
+    # Permitir login con "admin" (sin @ventas.com) solo para el super administrador
+    search_email = credentials.email
+    if credentials.email == "admin":
+        search_email = "admin@ventas.com"
+    
+    user_doc = await db.users.find_one({'email': search_email}, {'_id': 0})
     if not user_doc:
         raise HTTPException(status_code=401, detail="Invalid credentials")
     

@@ -84,19 +84,25 @@ const LoginPage = () => {
 
             <div>
               <label className="block text-xs font-bold tracking-widest uppercase text-slate-500 mb-2">
-                Email
+                {isRegister ? 'Email' : 'Usuario / Email'}
               </label>
               <input
-                type="email"
+                type={isRegister ? "email" : "text"}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full bg-white border-2 border-slate-900 rounded-xl px-4 py-3 font-medium text-slate-900 focus:ring-0 focus:outline-none focus:border-indigo-500 transition-all"
                 style={{ boxShadow: 'none' }}
                 onFocus={(e) => e.target.style.boxShadow = '4px 4px 0px 0px rgba(99,102,241,1)'}
                 onBlur={(e) => e.target.style.boxShadow = 'none'}
+                placeholder={isRegister ? "" : "admin o tu@email.com"}
                 required
                 data-testid="login-email-input"
               />
+              {!isRegister && (
+                <p className="text-xs text-slate-500 mt-1.5">
+                  💡 Super admin puede usar solo "admin"
+                </p>
+              )}
             </div>
 
             <div>
