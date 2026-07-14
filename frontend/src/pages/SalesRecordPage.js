@@ -292,32 +292,63 @@ const SalesRecordPage = () => {
                     No hay ventas registradas
                   </p>
                 ) : (
-                  <div className="space-y-3 max-h-96 overflow-y-auto">
-                    {daySales.map((sale, index) => (
-                      <div 
-                        key={index}
-                        className="p-3 border-2 border-slate-900 rounded-lg bg-slate-50"
-                      >
-                        <div className="flex justify-between items-start mb-2">
-                          <div className="font-bold text-sm">{sale.product_name}</div>
-                          <div 
-                            className="text-sm font-mono font-bold"
-                            style={{ fontFamily: 'JetBrains Mono, monospace' }}
-                          >
-                            ${sale.total.toLocaleString('es-CL')}
+                  <>
+                    <div className="mb-3 p-2 bg-slate-100 border border-slate-300 rounded-lg">
+                      <p className="text-xs font-bold text-slate-600">
+                        📦 {daySales.length} {daySales.length === 1 ? 'venta registrada' : 'ventas registradas'}
+                      </p>
+                    </div>
+                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                    {daySales.map((sale, index) => {
+                      // Extraer hora de la fecha
+                      let timeStr = '';
+                      if (sale.date) {
+                        try {
+                          const dateObj = new Date(sale.date);
+                          timeStr = dateObj.toLocaleTimeString('es-CL', { 
+                            hour: '2-digit', 
+                            minute: '2-digit',
+                            hour12: false 
+                          });
+                        } catch (e) {
+                          timeStr = '';
+                        }
+                      }
+                      
+                      return (
+                        <div 
+                          key={index}
+                          className="p-3 border-2 border-slate-900 rounded-lg bg-slate-50"
+                        >
+                          <div className="flex justify-between items-start mb-2">
+                            <div>
+                              <div className="font-bold text-sm">{sale.product_name}</div>
+                              {timeStr && (
+                                <div className="text-xs text-indigo-600 font-mono font-bold mt-0.5">
+                                  🕐 {timeStr}
+                                </div>
+                              )}
+                            </div>
+                            <div 
+                              className="text-sm font-mono font-bold"
+                              style={{ fontFamily: 'JetBrains Mono, monospace' }}
+                            >
+                              ${sale.total.toLocaleString('es-CL')}
+                            </div>
                           </div>
-                        </div>
-                        <div className="text-xs text-slate-600">
-                          Cantidad: {sale.quantity} • {sale.payment_method}
-                        </div>
-                        {sale.customer_name && (
-                          <div className="text-xs text-slate-600 mt-1">
-                            Cliente: {sale.customer_name}
+                          <div className="text-xs text-slate-600">
+                            Cantidad: {sale.quantity} • {sale.payment_method}
                           </div>
-                        )}
-                      </div>
-                    ))}
+                          {sale.customer_name && (
+                            <div className="text-xs text-slate-600 mt-1">
+                              Cliente: {sale.customer_name}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
+                  </>
                 )}
               </div>
             )}
