@@ -29,9 +29,10 @@ EXPECTED_SCHEMA = {
         'indexes': [
             {'key': 'id', 'unique': True},
             {'key': 'name', 'unique': False},
-            {'key': 'store', 'unique': False}
+            {'key': 'store', 'unique': False},
+            {'key': 'barcode', 'unique': False}
         ],
-        'required_fields': ['id', 'name', 'cost_price', 'sale_price', 'store', 'created_at']
+        'required_fields': ['id', 'name', 'cost_price', 'sale_price', 'store', 'stock', 'created_at']
     },
     'sales': {
         'indexes': [
@@ -39,9 +40,10 @@ EXPECTED_SCHEMA = {
             {'key': 'product_id', 'unique': False},
             {'key': 'customer_id', 'unique': False},
             {'key': 'date', 'unique': False},
-            {'key': 'store', 'unique': False}
+            {'key': 'store', 'unique': False},
+            {'key': 'user_id', 'unique': False}  # Para filtrar ventas por usuario
         ],
-        'required_fields': ['id', 'product_id', 'product_name', 'quantity', 'total', 'store', 'payment_method', 'created_at']
+        'required_fields': ['id', 'product_id', 'product_name', 'quantity', 'price', 'total', 'store', 'payment_method', 'user_id', 'user_name', 'created_at', 'date']
     },
     'expenses': {
         'indexes': [
@@ -62,9 +64,10 @@ EXPECTED_SCHEMA = {
         'indexes': [
             {'key': 'id', 'unique': True},
             {'key': 'name', 'unique': False},
-            {'key': 'store', 'unique': False}
+            {'key': 'store', 'unique': False},
+            {'key': 'email', 'unique': False}
         ],
-        'required_fields': ['id', 'name', 'store', 'total_spent', 'created_at']
+        'required_fields': ['id', 'name', 'store', 'total_spent', 'purchase_count', 'created_at']
     },
     'notes': {
         'indexes': [
