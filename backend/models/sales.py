@@ -16,10 +16,15 @@ class SaleCreate(BaseModel):
     customer_name: Optional[str] = None
     payment_method: str  # Efectivo, Tarjeta, Transferencia
 
+class SaleCreateWithDate(SaleCreate):
+    """Modelo para crear ventas con fecha personalizada (solo admin/supervisor)"""
+    custom_date: str  # Formato: YYYY-MM-DD o YYYY-MM-DDTHH:MM:SS
+
 class Sale(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    date: Optional[str] = None  # Campo adicional para fecha de la venta
     user_id: str
     user_name: str
     # Core fields (with defaults for legacy documents)

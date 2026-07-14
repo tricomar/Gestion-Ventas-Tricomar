@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
-import { ChevronLeft, ChevronRight, ArrowLeft, Calendar as CalendarIcon, TrendingUp, DollarSign } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ArrowLeft, Calendar as CalendarIcon, TrendingUp, DollarSign, Plus } from 'lucide-react';
 import { toast } from 'sonner';
+import PastSaleForm from '../components/PastSaleForm';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -23,6 +24,7 @@ const SalesRecordPage = () => {
   const [selectedDay, setSelectedDay] = useState(null);
   const [daySales, setDaySales] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [showPastSaleForm, setShowPastSaleForm] = useState(false);
 
   const currentYear = currentDate.getFullYear();
   const currentMonth = currentDate.getMonth() + 1;
@@ -67,6 +69,13 @@ const SalesRecordPage = () => {
   const handleNextMonth = () => {
     setCurrentDate(new Date(currentYear, currentMonth, 1));
     setSelectedDay(null);
+  };
+
+  const handlePastSaleSuccess = () => {
+    fetchCalendarData();
+    if (selectedDay) {
+      fetchDaySales(selectedDay);
+    }
   };
 
   const getDaysInMonth = () => {
@@ -149,7 +158,16 @@ const SalesRecordPage = () => {
             </div>
           </div>
           
-          {!canEdit && (
+          {canEdit ? (
+            <button
+              onClick={() => setShowPastSaleForm(true)}
+              className="px-4 py-2 bg-[#D4F0A5] border-2 border-slate-900 rounded-lg font-bold hover:bg-[#c5e196] transition-all flex items-center gap-2"
+              style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
+            >
+              <Plus className="w-5 h-5" />
+              Registrar Venta Pasada
+            </button>
+          ) : (
             <div className="text-xs bg-amber-100 border-2 border-slate-900 rounded-lg px-3 py-2">
               📖 Solo lectura
             </div>
@@ -306,6 +324,15 @@ const SalesRecordPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Modal de Registrar Venta Pasada */}
+      {showPastSaleForm && (
+        <PastSaleForm
+          onClose={() => setShowPastSaleForm(false)}
+          onSuccess={handlePastSaleSuccess}
+          initialDate={`${currentYear}-${currentMonth.toString().padStart(2, '0')}-${new Date().getDate().toString().padStart(2, '0')}`}
+        />
+      )}
     </div>
   );
 };

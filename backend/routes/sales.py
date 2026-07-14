@@ -8,13 +8,13 @@ from datetime import datetime, timezone, timedelta
 import uuid
 import bcrypt
 
-from models.sales import Sale, SaleCreate
+from models.sales import Sale, SaleCreate, SaleCreateWithDate
 from utils import db, get_current_user, require_admin
 from models.users import User
 
 router = APIRouter(prefix="/sales", tags=["sales"])
 
-@router.post("/sales", response_model=Sale)
+@router.post("", response_model=Sale)
 async def create_sale(sale_input: SaleCreate, current_user: User = Depends(get_current_user)):
     # Create sale with user-provided total
     sale_dict = sale_input.model_dump()
@@ -25,6 +25,7 @@ async def create_sale(sale_input: SaleCreate, current_user: User = Depends(get_c
     # Save to database
     doc = sale.model_dump()
     doc['created_at'] = doc['created_at'].isoformat()
+    doc['date'] = doc['created_at']  # Usar created_at como fecha de la venta
     await db.sales.insert_one(doc)
     
     # Update product usage count
@@ -52,7 +53,87 @@ async def create_sale(sale_input: SaleCreate, current_user: User = Depends(get_c
     
     return sale
 
-@router.get("/sales", response_model=List[Sale])
+@router.post("/past", response_model=Sale)
+async def create_past_sale(
+    sale_input: SaleCreateWithDate, 
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Crear venta con fecha personalizada (pasada)
+    Solo disponible para admin y supervisor
+    """
+    # Validar permisos
+    if current_user.role not in ['admin', 'supervisor']:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Solo administradores y supervisores pueden registrar ventas pasadas"
+        )
+    
+    # Validar y parsear fecha personalizada
+    try:
+        if 'T' in sale_input.custom_date:
+            custom_datetime = datetime.fromisoformat(sale_input.custom_date.replace('Z', '+00:00'))
+        else:
+            # Si solo es fecha (YYYY-MM-DD), agregar hora actual
+            custom_datetime = datetime.fromisoformat(f"{sale_input.custom_date}T{datetime.now(timezone.utc).strftime('%H:%M:%S')}")
+        
+        # Asegurar que la fecha tenga timezone UTC
+        if custom_datetime.tzinfo is None:
+            custom_datetime = custom_datetime.replace(tzinfo=timezone.utc)
+            
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Formato de fecha inválido. Use YYYY-MM-DD o YYYY-MM-DDTHH:MM:SS"
+        )
+    
+    # Validar que la fecha no sea futura
+    if custom_datetime > datetime.now(timezone.utc):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No se puede registrar una venta con fecha futura"
+        )
+    
+    # Crear venta con la fecha personalizada
+    sale_dict = sale_input.model_dump(exclude={'custom_date'})
+    sale_dict['user_id'] = current_user.id
+    sale_dict['user_name'] = current_user.name
+    sale_dict['created_at'] = custom_datetime
+    sale_dict['date'] = custom_datetime.isoformat()
+    
+    sale = Sale(**sale_dict)
+    
+    # Save to database
+    doc = sale.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    await db.sales.insert_one(doc)
+    
+    # Update product usage count
+    await db.products.update_one(
+        {'id': sale_input.product_id},
+        {'$inc': {'usage_count': 1}},
+        upsert=False
+    )
+    
+    # Update customer stats if customer_id provided
+    if sale_input.customer_id:
+        sale_date = custom_datetime.strftime('%Y-%m-%d')
+        await db.customers.update_one(
+            {'id': sale_input.customer_id},
+            {
+                '$inc': {
+                    'purchase_count': 1,
+                    'total_spent': sale_input.total
+                },
+                '$set': {
+                    'last_purchase_date': sale_date
+                }
+            }
+        )
+    
+    return sale
+
+@router.get("", response_model=List[Sale])
 async def get_sales(date: Optional[str] = None, current_user: User = Depends(get_current_user)):
     query = {}
     if date:
