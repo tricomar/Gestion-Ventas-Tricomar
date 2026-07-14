@@ -64,7 +64,7 @@ const DashboardPage = () => {
               <p className="text-sm font-medium text-slate-600">Bienvenido, {user?.name}</p>
             </div>
             
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-4">
               <div className="text-right">
                 <p className="text-xs font-bold tracking-widest uppercase text-slate-500">Total Hoy</p>
                 <p 
@@ -75,6 +75,20 @@ const DashboardPage = () => {
                   ${todayTotal.toLocaleString('es-CL')}
                 </p>
               </div>
+              
+              <button
+                onClick={() => navigate('/sales-records')}
+                className="px-4 py-2 bg-white border-2 border-slate-900 rounded-xl hover:bg-slate-50 transition-all font-bold text-sm flex items-center gap-2"
+                style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
+                onMouseEnter={(e) => e.target.style.transform = 'translateY(-2px)'}
+                onMouseLeave={(e) => e.target.style.transform = 'translateY(0)'}
+                data-testid="sales-records-btn"
+              >
+                <Menu className="w-4 h-4" />
+                <span className="hidden sm:inline">REGISTRO DE VENTAS</span>
+                <span className="sm:hidden">REGISTRO</span>
+              </button>
+              
               <button
                 onClick={logout}
                 className="p-3 bg-white border-2 border-slate-900 rounded-xl hover:bg-slate-50 transition-all"

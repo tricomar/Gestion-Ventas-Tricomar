@@ -7,6 +7,7 @@ import InventoryPage from './pages/InventoryPage';
 import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
 import CustomersPage from './pages/CustomersPage';
+import SalesRecordPage from './pages/SalesRecordPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SettingsProvider } from './context/SettingsContext';
 import './App.css';
@@ -70,6 +71,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <CustomersPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/sales-records"
+          element={
+            <ProtectedRoute>
+              <SalesRecordPage />
             </ProtectedRoute>
           }
         />
