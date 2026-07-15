@@ -1,347 +1,158 @@
-# 🚀 Guía de Despliegue - Sistema de Gestión de Ventas
+# 🚀 Deployment Scripts - Negocio Feliz
 
-## 📋 Requisitos Previos
+## Scripts Disponibles
 
-- **Servidor**: VPS con Ubuntu 24.04
-- **Dominio**: tricomar.store apuntando a la IP del servidor
-- **Acceso**: SSH con privilegios root/sudo
-- **RAM**: Mínimo 2GB
-- **Disco**: Mínimo 20GB
-
----
-
-## 🔧 Instalación Paso a Paso
-
-### 1️⃣ Preparar el Servidor
+### 1. `install_dependencies.sh`
+Instala todas las dependencias necesarias del proyecto.
 
 ```bash
-# Conectarse al servidor via SSH
-ssh root@tu-servidor-ip
-
-# Actualizar sistema
-sudo apt update && sudo apt upgrade -y
-
-# Crear directorio temporal
-mkdir -p /tmp/deploy && cd /tmp/deploy
+chmod +x install_dependencies.sh
+./install_dependencies.sh
 ```
 
-### 2️⃣ Subir Archivos al Servidor
-
-**Opción A: Desde tu máquina local**
-```bash
-# Comprimir el proyecto
-cd /app
-tar -czf ventas-app.tar.gz backend/ frontend/ deploy/
-
-# Subir al servidor
-scp ventas-app.tar.gz root@tu-servidor-ip:/tmp/deploy/
-
-# En el servidor, descomprimir
-cd /tmp/deploy
-tar -xzf ventas-app.tar.gz
-```
-
-**Opción B: Usando Git (si tienes repositorio)**
-```bash
-cd /tmp/deploy
-git clone tu-repositorio-url
-cd tu-repositorio
-```
-
-### 3️⃣ Ejecutar Script de Instalación
+### 2. `start_production.sh`
+Inicia la aplicación en modo producción.
 
 ```bash
-cd /tmp/deploy
-sudo bash deploy/install.sh
+chmod +x start_production.sh
+./start_production.sh
 ```
 
-El script instalará:
-- ✅ Node.js 20.x y Yarn
-- ✅ Python 3.11
-- ✅ MongoDB 7.0
-- ✅ Nginx
-- ✅ Backend FastAPI (systemd service)
-- ✅ Frontend React (build)
-
-**⏱️ Tiempo estimado: 10-15 minutos**
-
-### 4️⃣ Configurar DNS
-
-Antes de continuar, asegúrate de que tu dominio apunte al servidor:
+### 3. `docker-compose.yml`
+Configuración de Docker Compose para deployment con contenedores.
 
 ```bash
-# Verificar IP del servidor
-curl ifconfig.me
-
-# Verificar que el DNS apunta correctamente
-dig +short tricomar.store
+docker-compose up -d
 ```
 
-**Configuración en tu proveedor de DNS:**
+## Requisitos del Sistema
+
+### Backend
+- Python 3.9+
+- MongoDB 7.0+
+- Dependencias en `/app/backend/requirements.txt`
+
+### Frontend
+- Node.js 18+
+- Yarn
+- Dependencias en `/app/frontend/package.json`
+
+## Variables de Entorno
+
+### Backend (`/app/backend/.env`)
 ```
-Tipo: A
-Nombre: @ (o vacío)
-Valor: [IP-de-tu-servidor]
-TTL: 3600
+MONGO_URL=mongodb://localhost:27017
+DB_NAME=test_database
+JWT_SECRET=your-secret-key-here
 ```
 
-### 5️⃣ Instalar Certificado SSL
+### Frontend (`/app/frontend/.env`)
+```
+REACT_APP_BACKEND_URL=http://your-domain.com
+```
 
+## Deployment a Producción
+
+### Opción 1: Servidor Linux (Ubuntu/Debian)
+
+1. **Instalar dependencias del sistema**:
 ```bash
-cd /var/www/ventas-app
-sudo bash deploy/setup-ssl.sh
+sudo apt update
+sudo apt install -y python3 python3-pip nodejs npm mongodb
+npm install -g yarn
 ```
 
-Esto configurará:
-- ✅ Certificado SSL gratuito (Let's Encrypt)
-- ✅ HTTPS automático
-- ✅ Renovación automática de certificado
-- ✅ Redirección HTTP → HTTPS
-
----
-
-## 🔍 Diagnóstico de Problemas
-
-### ❌ "Error al registrar usuario"
-
-**Paso 1: Ejecutar diagnóstico completo**
+2. **Clonar repositorio**:
 ```bash
-cd /var/www/ventas-app
-sudo bash deploy/diagnostic.sh
+git clone <tu-repositorio>
+cd <tu-proyecto>
 ```
 
-Este script verificará:
-- Estado de servicios (MongoDB, Backend, Nginx)
-- Conectividad de puertos
-- Logs de errores
-- Pruebas de endpoints
-- Configuración CORS
-- Variables de entorno
-
-**Paso 2: Aplicar soluciones automáticas**
+3. **Configurar variables de entorno**:
 ```bash
-cd /var/www/ventas-app
-sudo bash deploy/fix-common-issues.sh
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env
+# Editar los archivos .env con tus valores
 ```
 
-Opciones disponibles:
-1. Reiniciar todos los servicios
-2. Reparar permisos de archivos
-3. Reinstalar dependencias de Python
-4. Verificar y reparar MongoDB
-5. Recrear archivo .env del backend
-6. Reparar configuración de Nginx
-7. Recrear usuario administrador
-8. **Aplicar TODAS las soluciones (recomendado si persiste el error)**
-
----
-
-## 📊 Comandos Útiles
-
-### Ver Estado de Servicios
+4. **Instalar dependencias**:
 ```bash
-# Backend
-sudo systemctl status ventas-app-backend
-
-# MongoDB
-sudo systemctl status mongod
-
-# Nginx
-sudo systemctl status nginx
+cd deploy
+./install_dependencies.sh
 ```
 
-### Ver Logs en Tiempo Real
+5. **Iniciar aplicación**:
 ```bash
-# Backend (más útil para errores)
-sudo journalctl -u ventas-app-backend -f
-
-# Nginx
-sudo tail -f /var/log/nginx/ventas-app-error.log
+./start_production.sh
 ```
 
-### Reiniciar Servicios
+### Opción 2: Docker
+
+1. **Instalar Docker y Docker Compose**
+
+2. **Configurar variables de entorno**:
 ```bash
-# Backend
-sudo systemctl restart ventas-app-backend
-
-# Todos
-sudo systemctl restart mongod ventas-app-backend nginx
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env
 ```
 
-### Probar Endpoints Manualmente
+3. **Iniciar contenedores**:
 ```bash
-# Test de registro
-curl -X POST https://tricomar.store/appventas/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "test@test.com",
-    "password": "test123",
-    "name": "Test Usuario",
-    "role": "operator"
-  }'
-
-# Test de login
-curl -X POST https://tricomar.store/appventas/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "admin@ventas.com",
-    "password": "admin123"
-  }'
+cd deploy
+docker-compose up -d
 ```
 
----
-
-## 🔐 Credenciales por Defecto
-
-**Usuario Administrador:**
-- Email: `admin@ventas.com`
-- Password: `admin123`
-
-⚠️ **IMPORTANTE**: Cambia la contraseña después del primer login.
-
----
-
-## 🌐 Acceso a la Aplicación
-
-Una vez instalado correctamente:
-
-**URL:** https://tricomar.store/appventas
-
----
-
-## 🐛 Problemas Comunes y Soluciones
-
-### 1. "502 Bad Gateway"
-**Causa:** Backend no está corriendo
+4. **Ver logs**:
 ```bash
-sudo systemctl start ventas-app-backend
-sudo systemctl status ventas-app-backend
+docker-compose logs -f
 ```
 
-### 2. "500 Internal Server Error"
-**Causa:** Error en el código del backend
-```bash
-# Ver logs detallados
-sudo journalctl -u ventas-app-backend -n 50 --no-pager
+## Nginx (Opcional)
+
+Para servir la aplicación con Nginx:
+
+```nginx
+server {
+    listen 80;
+    server_name tu-dominio.com;
+
+    # Frontend
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    # Backend API
+    location /api {
+        proxy_pass http://localhost:8001;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}
 ```
 
-### 3. "Connection refused"
-**Causa:** MongoDB no está activo
-```bash
-sudo systemctl start mongod
-sudo systemctl status mongod
-```
+## Notas Importantes
 
-### 4. "CORS Error" en el navegador
-**Causa:** Configuración CORS incorrecta
-```bash
-# Verificar archivo .env
-cat /var/www/ventas-app/backend/.env
+⚠️ **Seguridad**:
+- Cambia `JWT_SECRET` en producción
+- Usa HTTPS en producción
+- Configura firewall para proteger MongoDB
+- No expongas MongoDB públicamente
 
-# Debe contener:
-# CORS_ORIGINS=https://tricomar.store
-```
+📝 **Mantenimiento**:
+- Haz backups regulares de MongoDB
+- Monitorea logs del sistema
+- Actualiza dependencias regularmente
 
-### 5. Frontend muestra página en blanco
-**Causa:** Build incorrecto o ruta mal configurada
-```bash
-# Reconstruir frontend
-cd /var/www/ventas-app/frontend
-yarn build
-
-# Verificar configuración de Nginx
-sudo nginx -t
-```
-
----
-
-## 📁 Estructura de Archivos en el Servidor
-
-```
-/var/www/ventas-app/
-├── backend/
-│   ├── venv/                    # Entorno virtual Python
-│   ├── server.py               # Backend FastAPI
-│   ├── requirements.txt
-│   └── .env                    # Variables de entorno
-├── frontend/
-│   ├── build/                  # Build de React (servido por Nginx)
-│   ├── src/
-│   └── package.json
-└── deploy/
-    ├── install.sh              # Script de instalación
-    ├── setup-ssl.sh            # Configuración SSL
-    ├── diagnostic.sh           # Diagnóstico
-    └── fix-common-issues.sh    # Soluciones rápidas
-
-/etc/nginx/sites-available/
-└── ventas-app                  # Configuración de Nginx
-
-/etc/systemd/system/
-└── ventas-app-backend.service  # Servicio del backend
-
-/var/log/nginx/
-├── ventas-app-access.log       # Logs de acceso
-└── ventas-app-error.log        # Logs de errores
-```
-
----
-
-## 🔄 Actualización de la Aplicación
-
-```bash
-# 1. Hacer backup
-sudo cp -r /var/www/ventas-app /var/www/ventas-app.backup
-
-# 2. Subir nueva versión del código
-# (usar scp o git pull)
-
-# 3. Actualizar backend
-cd /var/www/ventas-app/backend
-source venv/bin/activate
-pip install -r requirements.txt --upgrade
-deactivate
-
-# 4. Reconstruir frontend
-cd /var/www/ventas-app/frontend
-yarn install
-yarn build
-
-# 5. Reiniciar servicios
-sudo systemctl restart ventas-app-backend
-sudo systemctl reload nginx
-```
-
----
-
-## 📞 Soporte
-
-Si después de seguir todos los pasos el problema persiste:
-
-1. Ejecuta el diagnóstico completo y guarda la salida:
-```bash
-sudo bash /var/www/ventas-app/deploy/diagnostic.sh > diagnostico.txt
-```
-
-2. Revisa los logs completos del backend:
-```bash
-sudo journalctl -u ventas-app-backend -n 100 --no-pager > logs-backend.txt
-```
-
-3. Comparte ambos archivos para análisis detallado.
-
----
-
-## ✅ Checklist de Verificación Post-Instalación
-
-- [ ] Todos los servicios están corriendo (`systemctl status`)
-- [ ] MongoDB acepta conexiones (`mongosh --eval "db.adminCommand('ping')"`)
-- [ ] Backend responde (`curl http://localhost:8001/api/auth/me`)
-- [ ] Nginx sirve la aplicación (`curl https://tricomar.store/appventas`)
-- [ ] SSL está activo (candado verde en el navegador)
-- [ ] Puedes hacer login con admin@ventas.com / admin123
-- [ ] Puedes registrar nuevos usuarios
-
----
-
-**¡Listo! Tu sistema está desplegado y funcionando. 🎉**
+🔄 **Actualizaciones**:
+Cuando agregues nuevas dependencias, actualiza:
+- `/app/backend/requirements.txt` (Python)
+- `/app/frontend/package.json` (Node.js)
+- Este README si es necesario

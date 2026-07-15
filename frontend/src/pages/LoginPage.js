@@ -35,14 +35,20 @@ const LoginPage = () => {
 
   return (
     <div className="min-h-screen flex" style={{ backgroundColor: '#F4F4F0' }}>
-      {/* Left Side - Image */}
+      {/* Left Side - Branding */}
       <div 
-        className="hidden md:flex md:w-1/2 bg-cover bg-center relative"
-        style={{
-          backgroundImage: 'url(https://images.unsplash.com/photo-1627037558426-c2d07beda3af?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2Mzl8MHwxfHNlYXJjaHwxfHxtaW5pbWFsaXN0JTIwYWJzdHJhY3QlMjBnZW9tZXRyaWMlMjBsaWdodCUyMGJhY2tncm91bmR8ZW58MHx8fHwxNzgyMTk4NTI3fDA&ixlib=rb-4.1.0&q=85)'
-        }}
+        className="hidden md:flex md:w-1/2 bg-white relative items-center justify-center p-12"
       >
-        <div className="absolute inset-0 bg-slate-900 opacity-10"></div>
+        <div className="text-center w-full max-w-xl">
+          <img 
+            src="/negocio-feliz-logo.png" 
+            alt="Negocio Feliz" 
+            className="w-full mx-auto mb-12"
+          />
+          <h2 className="text-4xl font-black text-slate-900 leading-tight">
+            La Tecnología que Ordena tu Venta<br />y Aumenta tus Ganancias
+          </h2>
+        </div>
       </div>
 
       {/* Right Side - Form */}
@@ -94,15 +100,10 @@ const LoginPage = () => {
                 style={{ boxShadow: 'none' }}
                 onFocus={(e) => e.target.style.boxShadow = '4px 4px 0px 0px rgba(99,102,241,1)'}
                 onBlur={(e) => e.target.style.boxShadow = 'none'}
-                placeholder={isRegister ? "" : "admin o tu@email.com"}
+                placeholder={isRegister ? "" : "usuario o email"}
                 required
                 data-testid="login-email-input"
               />
-              {!isRegister && (
-                <p className="text-xs text-slate-500 mt-1.5">
-                  💡 Super admin puede usar solo "admin"
-                </p>
-              )}
             </div>
 
             <div>
