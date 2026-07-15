@@ -35,8 +35,7 @@ async def get_economic_indicators():
                 {'code': 'dolar', 'name': 'Dólar'},
                 {'code': 'euro', 'name': 'Euro'},
                 {'code': 'bitcoin', 'name': 'Bitcoin'},
-                {'code': 'utm', 'name': 'UTM'},
-                {'code': 'libra_cobre', 'name': 'Libra Cobre'}
+                {'code': 'utm', 'name': 'UTM'}
             ]
             
             results = []
