@@ -37,7 +37,8 @@ const LoginPage = () => {
     <div className="min-h-screen flex" style={{ backgroundColor: '#F4F4F0' }}>
       {/* Left Side - Branding */}
       <div 
-        className="hidden md:flex md:w-1/2 bg-white relative items-center justify-center p-12"
+        className="hidden md:flex md:w-1/2 relative items-center justify-center p-12"
+        style={{ backgroundColor: '#FFD93D' }}
       >
         <div className="text-center w-full max-w-xl">
           <img 
@@ -45,8 +46,8 @@ const LoginPage = () => {
             alt="Sistema de Ventas" 
             className="w-full mx-auto mb-12"
           />
-          <h2 className="text-4xl font-black text-slate-900 leading-tight">
-            Tecnología que Ordena tus Ventas<br />y Aumenta tus Ganancias
+          <h2 className="text-5xl font-black text-slate-900 leading-tight">
+            Negocio Feliz
           </h2>
         </div>
       </div>
