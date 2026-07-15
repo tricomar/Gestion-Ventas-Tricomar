@@ -43,13 +43,17 @@ async def get_economic_indicators():
             
             for indicator in indicators_config:
                 try:
-                    response = await client.get(f'https://api.findic.cl/{indicator["code"]}')
+                    response = await client.get(f'https://findic.cl/api/{indicator["code"]}')
                     if response.status_code == 200:
                         data = response.json()
-                        # Agregar el nombre para el frontend
-                        if isinstance(data, dict):
-                            data['name'] = indicator['name']
-                            results.append(data)
+                        # Extraer el valor más reciente de la serie
+                        if isinstance(data, dict) and 'serie' in data and len(data['serie']) > 0:
+                            latest = data['serie'][0]
+                            results.append({
+                                'name': indicator['name'],
+                                'value': latest['valor'],
+                                'date': latest['fecha']
+                            })
                 except Exception as e:
                     print(f"Error fetching {indicator['code']}: {e}")
                     continue
