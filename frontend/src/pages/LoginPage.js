@@ -41,8 +41,8 @@ const LoginPage = () => {
       >
         <div className="text-center w-full max-w-xl">
           <img 
-            src="/negocio-feliz-logo.png" 
-            alt="Negocio Feliz" 
+            src="/negocio-feliz-logo.jpg" 
+            alt="Sistema de Ventas" 
             className="w-full mx-auto mb-12"
           />
           <h2 className="text-4xl font-black text-slate-900 leading-tight">
