@@ -295,7 +295,7 @@ const ExpensesRecordPage = () => {
                   <>
                     <div className="mb-3 p-2 bg-slate-100 border border-slate-300 rounded-lg">
                       <p className="text-xs font-bold text-slate-600">
-                        📦 {dayExpenses.length} {dayExpenses.length === 1 ? 'venta registrada' : 'egresos registradas'}
+                        📦 {dayExpenses.length} {dayExpenses.length === 1 ? 'egreso registrado' : 'egresos registrados'}
                       </p>
                     </div>
                     <div className="space-y-3 max-h-96 overflow-y-auto">
@@ -333,17 +333,12 @@ const ExpensesRecordPage = () => {
                               className="text-sm font-mono font-bold"
                               style={{ fontFamily: 'JetBrains Mono, monospace' }}
                             >
-                              ${sale.total.toLocaleString('es-CL')}
+                              ${sale.amount.toLocaleString('es-CL')}
                             </div>
                           </div>
                           <div className="text-xs text-slate-600">
-                            Monto: {sale.quantity} • {sale.payment_method}
+                            Categoría: {sale.category}
                           </div>
-                          {sale.customer_name && (
-                            <div className="text-xs text-slate-600 mt-1">
-                              Cliente: {sale.customer_name}
-                            </div>
-                          )}
                         </div>
                       );
                     })}

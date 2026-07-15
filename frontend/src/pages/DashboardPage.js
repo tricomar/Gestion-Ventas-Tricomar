@@ -32,7 +32,10 @@ const DashboardPage = () => {
   // Cerrar dropdown de registros al hacer clic fuera
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (showRecordsMenu && !event.target.closest('[data-testid="records-dropdown-btn"]')) {
+      const dropdownBtn = event.target.closest('[data-testid="records-dropdown-btn"]');
+      const dropdownMenu = event.target.closest('.records-dropdown-menu');
+      
+      if (showRecordsMenu && !dropdownBtn && !dropdownMenu) {
         setShowRecordsMenu(false);
       }
     };
@@ -107,12 +110,13 @@ const DashboardPage = () => {
 
                 {showRecordsMenu && (
                   <div
-                    className="absolute right-0 mt-2 w-64 bg-white border-2 border-slate-900 rounded-xl shadow-lg z-50"
+                    className="records-dropdown-menu absolute right-0 mt-2 w-64 bg-white border-2 border-slate-900 rounded-xl shadow-lg z-50"
                     style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
                   >
                     <div className="py-2">
                       <button
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           navigate('/sales-records');
                           setShowRecordsMenu(false);
                         }}
@@ -122,7 +126,8 @@ const DashboardPage = () => {
                         <span>Registro de Ventas</span>
                       </button>
                       <button
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           navigate('/expenses-records');
                           setShowRecordsMenu(false);
                         }}
@@ -132,7 +137,8 @@ const DashboardPage = () => {
                         <span>Registro de Egresos</span>
                       </button>
                       <button
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           navigate('/income-records');
                           setShowRecordsMenu(false);
                         }}
