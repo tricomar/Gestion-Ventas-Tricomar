@@ -42,6 +42,7 @@ const RealtimeMetrics = ({ refreshTrigger }) => {
   const [dailyData, setDailyData] = useState([]);
   const [chartType, setChartType] = useState('both'); // 'bars', 'lines', 'both'
   const [loadingChart, setLoadingChart] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     fetchMetrics();
@@ -50,10 +51,12 @@ const RealtimeMetrics = ({ refreshTrigger }) => {
 
   const fetchMetrics = async () => {
     try {
+      setError(null);
       const response = await axios.get(`${API}/dashboard/realtime-metrics`);
       setMetrics(response.data);
     } catch (error) {
       console.error('Error fetching realtime metrics:', error);
+      setError('Error al cargar métricas en tiempo real');
     } finally {
       setLoading(false);
     }
@@ -72,6 +75,7 @@ const RealtimeMetrics = ({ refreshTrigger }) => {
     try {
       setLoading(true);
       setLoadingChart(true);
+      setError(null);
       
       // Fetch monthly metrics
       const response = await axios.get(`${API}/dashboard/historic-data?year=${year}&month=${month}`);
@@ -84,14 +88,35 @@ const RealtimeMetrics = ({ refreshTrigger }) => {
       setLoadingChart(false);
     } catch (error) {
       console.error('Error fetching historic data:', error);
+      setError(`Error al cargar datos de ${MONTH_NAMES[month-1]} ${year}`);
       setLoadingChart(false);
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading && !metrics) {
+  const handleBackToMonth = () => {
+    setShowPeriod('month');
+    setSelectedHistoricMonth(null);
+    setError(null);
+  };
+
+  if (loading && !metrics && !selectedHistoricMonth) {
     return <div className="text-center py-4 text-slate-500">Cargando métricas...</div>;
+  }
+
+  if (error && !metrics && !selectedHistoricMonth) {
+    return (
+      <div className="text-center py-4">
+        <p className="text-red-600 font-medium">{error}</p>
+        <button
+          onClick={fetchMetrics}
+          className="mt-2 px-4 py-2 bg-white border-2 border-slate-900 rounded-lg hover:bg-slate-50 transition-all font-bold text-sm"
+        >
+          Reintentar
+        </button>
+      </div>
+    );
   }
 
   const currentMetrics = showPeriod === 'month' && metrics
