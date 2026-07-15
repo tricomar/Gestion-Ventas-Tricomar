@@ -46,7 +46,7 @@ const LoginPage = () => {
             className="w-full mx-auto mb-12"
           />
           <h2 className="text-4xl font-black text-slate-900 leading-tight">
-            La Tecnología que Ordena tu Venta<br />y Aumenta tus Ganancias
+            Tecnología que Ordena tus Ventas<br />y Aumenta tus Ganancias
           </h2>
         </div>
       </div>
