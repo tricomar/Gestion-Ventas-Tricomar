@@ -27,6 +27,17 @@ const SettingsPage = () => {
   const [showCredentialsModal, setShowCredentialsModal] = useState(false);
   const [resetCredentials, setResetCredentials] = useState(null);
   const [resetConfirmation, setResetConfirmation] = useState('');
+  const [adminPassword, setAdminPassword] = useState('');
+  
+  // Soft Reset
+  const [showSoftResetModal, setShowSoftResetModal] = useState(false);
+  const [softResetOptions, setSoftResetOptions] = useState({
+    sales: false,
+    users: false,
+    inventory_a: false,
+    inventory_b: false,
+    customers: false
+  });
   
   // Database validation
   const [showValidationModal, setShowValidationModal] = useState(false);
@@ -229,6 +240,11 @@ const SettingsPage = () => {
       toast.error('Debes escribir "RESETEAR" para confirmar');
       return;
     }
+    
+    if (!adminPassword) {
+      toast.error('Debes ingresar la contraseña del administrador');
+      return;
+    }
 
     setSaving(true);
 
@@ -242,7 +258,7 @@ const SettingsPage = () => {
 
       const response = await axios.post(
         `${API}/database/hard-reset`,
-        {},
+        { password: adminPassword },
         {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -255,6 +271,8 @@ const SettingsPage = () => {
       setResetCredentials(response.data.admin_credentials);
       setShowResetModal(false);
       setShowCredentialsModal(true);
+      setAdminPassword('');
+      setResetConfirmation('');
       
       toast.success('Base de datos reseteada exitosamente');
       
@@ -267,7 +285,9 @@ const SettingsPage = () => {
     } catch (error) {
       console.error('Error during hard reset:', error);
       
-      if (error.response?.status === 404) {
+      if (error.response?.status === 401) {
+        toast.error('Contraseña incorrecta');
+      } else if (error.response?.status === 404) {
         toast.error('Endpoint no encontrado. Verifica que el backend esté actualizado.');
       } else if (error.response?.status === 401 || error.response?.status === 403) {
         toast.error('No tienes permisos para realizar esta acción.');
@@ -280,6 +300,74 @@ const SettingsPage = () => {
       setResetConfirmation('');
     }
   };
+
+
+  const handleSoftReset = async () => {
+    // Validar que al menos una opción esté seleccionada
+    const hasSelection = Object.values(softResetOptions).some(val => val === true);
+    if (!hasSelection) {
+      toast.error('Debes seleccionar al menos una opción para resetear');
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast.error('No hay sesión activa');
+        setSaving(false);
+        return;
+      }
+
+      const response = await axios.post(
+        `${API}/database/soft-reset`,
+        softResetOptions,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      const { deleted_counts } = response.data;
+      
+      // Mostrar resumen de lo eliminado
+      let summary = 'Elementos eliminados:\n';
+      if (deleted_counts.sales) summary += `- Ventas: ${deleted_counts.sales}\n`;
+      if (deleted_counts.users) summary += `- Usuarios: ${deleted_counts.users}\n`;
+      if (deleted_counts.inventory_a) summary += `- Productos Tienda A: ${deleted_counts.inventory_a}\n`;
+      if (deleted_counts.inventory_b) summary += `- Productos Tienda B: ${deleted_counts.inventory_b}\n`;
+      if (deleted_counts.customers) summary += `- Clientes: ${deleted_counts.customers}\n`;
+      
+      toast.success(summary);
+      
+      // Resetear opciones
+      setSoftResetOptions({
+        sales: false,
+        users: false,
+        inventory_a: false,
+        inventory_b: false,
+        customers: false
+      });
+      
+      setShowSoftResetModal(false);
+      
+      // Refrescar la página para actualizar los datos
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+      
+    } catch (error) {
+      console.error('Error durante soft reset:', error);
+      const errorMsg = error.response?.data?.detail || 'Error al hacer soft reset';
+      toast.error(errorMsg);
+    } finally {
+      setSaving(false);
+    }
+  };
+
 
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
@@ -747,6 +835,27 @@ const SettingsPage = () => {
                 Ejecutar Hard Reset
               </button>
             </div>
+
+            {/* Soft Reset Section */}
+            <div className="border-2 border-slate-900 rounded-xl p-6">
+              <h3 className="text-xl font-bold text-slate-900 mb-3">
+                Soft Reset Selectivo
+              </h3>
+              <p className="text-slate-600 mb-4">
+                Elimina datos específicos sin afectar el resto del sistema.
+                Selecciona qué deseas resetear.
+              </p>
+              
+              <button
+                onClick={() => setShowSoftResetModal(true)}
+                className="flex items-center gap-2 px-6 py-3 bg-orange-500 text-white border-2 border-slate-900 rounded-xl font-bold hover:bg-orange-600 transition-all"
+                style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
+                data-testid="soft-reset-btn"
+              >
+                <Database className="w-5 h-5" />
+                Ejecutar Soft Reset
+              </button>
+            </div>
           </div>
         )}
 
@@ -892,6 +1001,20 @@ const SettingsPage = () => {
 
               <div className="mb-4">
                 <label className="block text-sm font-bold text-slate-700 mb-2">
+                  Contraseña del Administrador *
+                </label>
+                <input
+                  type="password"
+                  value={adminPassword}
+                  onChange={(e) => setAdminPassword(e.target.value)}
+                  className="w-full px-3 py-2 border-2 border-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="Ingresa tu contraseña"
+                  autoFocus
+                />
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-bold text-slate-700 mb-2">
                   Para confirmar, escribe: <span className="text-red-600">RESETEAR</span>
                 </label>
                 <input
@@ -900,7 +1023,6 @@ const SettingsPage = () => {
                   onChange={(e) => setResetConfirmation(e.target.value)}
                   className="w-full px-3 py-2 border-2 border-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
                   placeholder="Escribe RESETEAR"
-                  autoFocus
                 />
               </div>
 
@@ -910,6 +1032,7 @@ const SettingsPage = () => {
                   onClick={() => {
                     setShowResetModal(false);
                     setResetConfirmation('');
+                    setAdminPassword('');
                   }}
                   className="flex-1 px-4 py-2 border-2 border-slate-900 rounded-lg font-bold hover:bg-slate-50 transition-colors"
                 >
@@ -917,7 +1040,7 @@ const SettingsPage = () => {
                 </button>
                 <button
                   onClick={handleHardReset}
-                  disabled={saving || resetConfirmation !== 'RESETEAR'}
+                  disabled={saving || resetConfirmation !== 'RESETEAR' || !adminPassword}
                   className="flex-1 px-4 py-2 bg-red-600 text-white border-2 border-slate-900 rounded-lg font-bold hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
                 >
@@ -1021,6 +1144,142 @@ const SettingsPage = () => {
             </div>
           </div>
         )}
+
+
+        {/* Soft Reset Modal */}
+        {showSoftResetModal && (
+          <div 
+            className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+            onClick={() => setShowSoftResetModal(false)}
+          >
+            <div 
+              className="bg-white border-2 border-slate-900 rounded-xl p-6 max-w-lg w-full"
+              style={{ boxShadow: '8px 8px 0px 0px rgba(15,23,42,1)' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold text-slate-900">
+                  🔄 Soft Reset Selectivo
+                </h3>
+                <button
+                  onClick={() => setShowSoftResetModal(false)}
+                  className="p-1 hover:bg-slate-100 rounded"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="bg-orange-50 border-2 border-orange-500 rounded-lg p-4 mb-4">
+                <p className="text-sm text-orange-900 font-bold mb-2">
+                  Selecciona qué datos deseas eliminar
+                </p>
+                <p className="text-xs text-orange-800">
+                  Los elementos seleccionados se eliminarán permanentemente
+                </p>
+              </div>
+
+              <div className="space-y-3 mb-6">
+                {/* Ventas */}
+                <label className="flex items-center gap-3 p-3 border-2 border-slate-900 rounded-lg hover:bg-slate-50 cursor-pointer transition-all">
+                  <input
+                    type="checkbox"
+                    checked={softResetOptions.sales}
+                    onChange={(e) => setSoftResetOptions({...softResetOptions, sales: e.target.checked})}
+                    className="w-5 h-5"
+                  />
+                  <div className="flex-1">
+                    <div className="font-bold text-slate-900">Ventas</div>
+                    <div className="text-xs text-slate-600">Eliminar todas las ventas registradas</div>
+                  </div>
+                </label>
+
+                {/* Usuarios */}
+                <label className="flex items-center gap-3 p-3 border-2 border-slate-900 rounded-lg hover:bg-slate-50 cursor-pointer transition-all">
+                  <input
+                    type="checkbox"
+                    checked={softResetOptions.users}
+                    onChange={(e) => setSoftResetOptions({...softResetOptions, users: e.target.checked})}
+                    className="w-5 h-5"
+                  />
+                  <div className="flex-1">
+                    <div className="font-bold text-slate-900">Usuarios</div>
+                    <div className="text-xs text-slate-600">Eliminar todos los usuarios (excepto admin)</div>
+                  </div>
+                </label>
+
+                {/* Inventario Tienda A */}
+                <label className="flex items-center gap-3 p-3 border-2 border-slate-900 rounded-lg hover:bg-slate-50 cursor-pointer transition-all">
+                  <input
+                    type="checkbox"
+                    checked={softResetOptions.inventory_a}
+                    onChange={(e) => setSoftResetOptions({...softResetOptions, inventory_a: e.target.checked})}
+                    className="w-5 h-5"
+                  />
+                  <div className="flex-1">
+                    <div className="font-bold text-slate-900">Inventario Tienda A</div>
+                    <div className="text-xs text-slate-600">Eliminar todos los productos de Tienda A</div>
+                  </div>
+                </label>
+
+                {/* Inventario Tienda B */}
+                <label className="flex items-center gap-3 p-3 border-2 border-slate-900 rounded-lg hover:bg-slate-50 cursor-pointer transition-all">
+                  <input
+                    type="checkbox"
+                    checked={softResetOptions.inventory_b}
+                    onChange={(e) => setSoftResetOptions({...softResetOptions, inventory_b: e.target.checked})}
+                    className="w-5 h-5"
+                  />
+                  <div className="flex-1">
+                    <div className="font-bold text-slate-900">Inventario Tienda B</div>
+                    <div className="text-xs text-slate-600">Eliminar todos los productos de Tienda B</div>
+                  </div>
+                </label>
+
+                {/* Clientes */}
+                <label className="flex items-center gap-3 p-3 border-2 border-slate-900 rounded-lg hover:bg-slate-50 cursor-pointer transition-all">
+                  <input
+                    type="checkbox"
+                    checked={softResetOptions.customers}
+                    onChange={(e) => setSoftResetOptions({...softResetOptions, customers: e.target.checked})}
+                    className="w-5 h-5"
+                  />
+                  <div className="flex-1">
+                    <div className="font-bold text-slate-900">Clientes</div>
+                    <div className="text-xs text-slate-600">Eliminar todos los clientes del CRM</div>
+                  </div>
+                </label>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSoftResetModal(false);
+                    setSoftResetOptions({
+                      sales: false,
+                      users: false,
+                      inventory_a: false,
+                      inventory_b: false,
+                      customers: false
+                    });
+                  }}
+                  className="flex-1 px-4 py-2 border-2 border-slate-900 rounded-lg font-bold hover:bg-slate-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSoftReset}
+                  disabled={saving || !Object.values(softResetOptions).some(v => v === true)}
+                  className="flex-1 px-4 py-2 bg-orange-500 text-white border-2 border-slate-900 rounded-lg font-bold hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
+                >
+                  {saving ? 'Reseteando...' : 'Confirmar Reset'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
 
         {/* Schema Validation Report Modal */}
         {showValidationModal && validationReport && (

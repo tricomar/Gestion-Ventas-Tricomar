@@ -206,17 +206,33 @@ async def validate_and_fix_schema(admin: User = Depends(require_admin)):
         )
 
 @router.post("/hard-reset")
-async def hard_reset_database(current_user: User = Depends(get_current_user)):
+async def hard_reset_database(password: str, current_user: User = Depends(get_current_user)):
     """
     HARD RESET de la base de datos completa.
     Solo accesible para administradores.
     Borra TODAS las colecciones y crea un usuario administrador nuevo.
+    Requiere contraseña del admin actual para confirmar.
     """
     # Solo admin puede hacer esto
     if current_user.role != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Solo administradores pueden hacer hard reset de la base de datos"
+        )
+    
+    # Validar contraseña del admin actual
+    admin_user = await db.users.find_one({"id": current_user.id}, {"_id": 0})
+    if not admin_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Usuario no encontrado"
+        )
+    
+    # Verificar contraseña
+    if not bcrypt.checkpw(password.encode('utf-8'), admin_user['password_hash'].encode('utf-8')):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Contraseña incorrecta"
         )
     
     try:
@@ -301,17 +317,81 @@ async def hard_reset_database(current_user: User = Depends(get_current_user)):
             "admin_credentials": {
                 "username": "admin",
                 "email": admin_email,
-                "password": admin_password,
-                "warning": "GUARDA ESTAS CREDENCIALES - También guardadas en /app/ADMIN_CREDENTIALS.txt"
+                "password": admin_password
             },
-            "credentials_file": credentials_file_path,
-            "collections_deleted": len(collections),
+            "timestamp": timestamp_str
+        }
+        
+    except Exception as e:
+        logger.error(f"Error al resetear base de datos: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al resetear base de datos: {str(e)}"
+        )
+
+
+@router.post("/soft-reset")
+async def soft_reset_database(
+    reset_options: Dict[str, Any],
+    current_user: User = Depends(get_current_user)
+):
+    """
+    SOFT RESET selectivo de la base de datos.
+    Permite resetear colecciones específicas sin afectar el resto.
+    Solo accesible para administradores.
+    
+    Opciones:
+    - sales: bool - Resetear todas las ventas
+    - users: bool - Resetear usuarios (excepto admin)
+    - inventory_a: bool - Resetear inventario de Tienda A
+    - inventory_b: bool - Resetear inventario de Tienda B
+    - customers: bool - Resetear todos los clientes
+    """
+    # Solo admin puede hacer esto
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Solo administradores pueden hacer soft reset"
+        )
+    
+    try:
+        deleted_counts = {}
+        
+        # Resetear ventas
+        if reset_options.get('sales', False):
+            result = await db.sales.delete_many({})
+            deleted_counts['sales'] = result.deleted_count
+        
+        # Resetear usuarios (excepto admin)
+        if reset_options.get('users', False):
+            result = await db.users.delete_many({'role': {'$ne': 'admin'}})
+            deleted_counts['users'] = result.deleted_count
+        
+        # Resetear inventario de Tienda A
+        if reset_options.get('inventory_a', False):
+            result = await db.products.delete_many({'store': 'A'})
+            deleted_counts['inventory_a'] = result.deleted_count
+        
+        # Resetear inventario de Tienda B
+        if reset_options.get('inventory_b', False):
+            result = await db.products.delete_many({'store': 'B'})
+            deleted_counts['inventory_b'] = result.deleted_count
+        
+        # Resetear clientes
+        if reset_options.get('customers', False):
+            result = await db.customers.delete_many({})
+            deleted_counts['customers'] = result.deleted_count
+        
+        return {
+            "success": True,
+            "message": "Soft reset completado exitosamente",
+            "deleted_counts": deleted_counts,
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
         
     except Exception as e:
-        logger.error(f"Error en hard reset: {str(e)}")
+        logger.error(f"Error en soft reset: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error al resetear base de datos: {str(e)}"
+            detail=f"Error al hacer soft reset: {str(e)}"
         )
