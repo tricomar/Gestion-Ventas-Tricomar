@@ -37,19 +37,12 @@ const LoginPage = () => {
     <div className="min-h-screen flex" style={{ backgroundColor: '#F4F4F0' }}>
       {/* Left Side - Branding */}
       <div 
-        className="hidden md:flex md:w-1/2 relative items-center justify-center p-12"
-        style={{ backgroundColor: '#FFD93D' }}
+        className="hidden md:flex md:w-1/2 relative items-center justify-center bg-cover bg-center"
+        style={{ 
+          backgroundImage: 'url(/sales-background.jpg)',
+          backgroundColor: '#FFD93D'
+        }}
       >
-        <div className="text-center w-full max-w-xl">
-          <img 
-            src="/negocio-feliz-logo.jpg" 
-            alt="Sistema de Ventas" 
-            className="w-full mx-auto mb-12"
-          />
-          <h2 className="text-5xl font-black text-slate-900 leading-tight">
-            Negocio Feliz
-          </h2>
-        </div>
       </div>
 
       {/* Right Side - Form */}
