@@ -61,25 +61,29 @@ const EconomicIndicators = () => {
 
   return (
     <div className="flex flex-wrap gap-3 items-center">
-      {indicators.map((indicator, index) => (
-        <div
-          key={index}
-          className="flex items-center gap-2 px-3 py-2 border-2 border-slate-900 rounded-lg"
-          style={{ 
-            backgroundColor: getIndicatorColor(indicator.name),
-            boxShadow: '2px 2px 0px 0px rgba(15,23,42,1)'
-          }}
-        >
-          <div className="flex flex-col">
-            <span className="text-xs font-bold text-slate-700 uppercase">
-              {indicator.name}
+      {!indicators || indicators.length === 0 ? (
+        <div className="text-xs text-slate-500">Indicadores no disponibles</div>
+      ) : (
+        indicators.map((indicator, index) => (
+          <div
+            key={index}
+            className="flex items-center gap-2 px-3 py-2 border-2 border-slate-900 rounded-lg"
+            style={{ 
+              backgroundColor: getIndicatorColor(indicator.name),
+              boxShadow: '2px 2px 0px 0px rgba(15,23,42,1)'
+            }}
+          >
+            <div className="flex flex-col">
+              <span className="text-xs font-bold text-slate-700 uppercase">
+                {indicator.name}
             </span>
             <span className="text-sm font-black text-slate-900">
               ${formatValue(indicator.value, indicator.name)}
             </span>
           </div>
         </div>
-      ))}
+        ))
+      )}
     </div>
   );
 };

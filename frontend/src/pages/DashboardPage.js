@@ -31,10 +31,11 @@ const DashboardPage = () => {
   useEffect(() => {
     const fetchTodayTotal = async () => {
       try {
-        const response = await axios.get(`${API}/dashboard/stats`);
-        setTodayTotal(response.data.today_sales);
+        const response = await axios.get(`${API}/dashboard/realtime-metrics`);
+        setTodayTotal(response.data.today_sales || 0);
       } catch (error) {
         console.error('Error fetching today total:', error);
+        setTodayTotal(0);
       }
     };
 
