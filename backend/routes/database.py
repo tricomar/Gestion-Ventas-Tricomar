@@ -19,9 +19,11 @@ logger = logging.getLogger(__name__)
 
 # Modelos de request
 class HardResetRequest(BaseModel):
-    password: str
+    password: str  # Contraseña actual para validar
+    new_password: str  # Nueva contraseña a asignar
 
 class SoftResetRequest(BaseModel):
+    password: str  # Contraseña actual para validar
     sales: bool = False
     users: bool = False
     inventory_a: bool = False
@@ -260,7 +262,7 @@ async def hard_reset_database(
         
         # 3. Generar credenciales para nuevo admin
         admin_email = "admin@ventas.com"
-        admin_password = f"Admin{str(uuid.uuid4())[:8]}"  # Ej: Admin4f2a9b1c
+        admin_password = request.new_password  # Usar la contraseña elegida por el usuario
         password_hash = bcrypt.hashpw(admin_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
         
         # 4. Crear nuevo usuario administrador
@@ -354,6 +356,7 @@ async def soft_reset_database(
     SOFT RESET selectivo de la base de datos.
     Permite resetear colecciones específicas sin afectar el resto.
     Solo accesible para administradores.
+    Requiere contraseña del admin actual para confirmar.
     
     Opciones:
     - sales: bool - Resetear todas las ventas
@@ -367,6 +370,21 @@ async def soft_reset_database(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Solo administradores pueden hacer soft reset"
+        )
+    
+    # Validar contraseña del admin actual
+    admin_user = await db.users.find_one({"id": current_user.id}, {"_id": 0})
+    if not admin_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Usuario no encontrado"
+        )
+    
+    # Verificar contraseña
+    if not bcrypt.checkpw(request.password.encode('utf-8'), admin_user['password_hash'].encode('utf-8')):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Contraseña incorrecta"
         )
     
     try:

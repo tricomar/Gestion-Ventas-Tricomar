@@ -28,9 +28,12 @@ const SettingsPage = () => {
   const [resetCredentials, setResetCredentials] = useState(null);
   const [resetConfirmation, setResetConfirmation] = useState('');
   const [adminPassword, setAdminPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
   
   // Soft Reset
   const [showSoftResetModal, setShowSoftResetModal] = useState(false);
+  const [softResetPassword, setSoftResetPassword] = useState('');
   const [softResetOptions, setSoftResetOptions] = useState({
     sales: false,
     users: false,
@@ -52,8 +55,8 @@ const SettingsPage = () => {
   const [profileName, setProfileName] = useState('');
   const [profileEmail, setProfileEmail] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [profileNewPassword, setProfileNewPassword] = useState('');
+  const [profileConfirmPassword, setProfileConfirmPassword] = useState('');
   
   // User management
   const [users, setUsers] = useState([]);
@@ -130,13 +133,13 @@ const SettingsPage = () => {
     try {
       const updateData = { name: profileName };
       
-      if (newPassword || confirmPassword) {
-        if (newPassword !== confirmPassword) {
+      if (profileNewPassword || profileConfirmPassword) {
+        if (profileNewPassword !== profileConfirmPassword) {
           toast.error('Las contraseñas no coinciden');
           setSaving(false);
           return;
         }
-        if (newPassword.length < 6) {
+        if (profileNewPassword.length < 6) {
           toast.error('La contraseña debe tener al menos 6 caracteres');
           setSaving(false);
           return;
@@ -148,15 +151,15 @@ const SettingsPage = () => {
         }
         
         updateData.current_password = currentPassword;
-        updateData.new_password = newPassword;
+        updateData.new_password = profileNewPassword;
       }
 
       await axios.put(`${API}/auth/update-profile`, updateData);
 
       toast.success('Perfil actualizado exitosamente');
       setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
+      setProfileNewPassword('');
+      setProfileConfirmPassword('');
     } catch (error) {
       const errorMsg = error.response?.data?.detail || 'Error al actualizar perfil';
       toast.error(errorMsg);
@@ -242,7 +245,22 @@ const SettingsPage = () => {
     }
     
     if (!adminPassword) {
-      toast.error('Debes ingresar la contraseña del administrador');
+      toast.error('Debes ingresar tu contraseña actual');
+      return;
+    }
+    
+    if (!newPassword) {
+      toast.error('Debes ingresar la nueva contraseña');
+      return;
+    }
+    
+    if (newPassword !== confirmNewPassword) {
+      toast.error('Las contraseñas no coinciden');
+      return;
+    }
+    
+    if (newPassword.length < 8) {
+      toast.error('La nueva contraseña debe tener al menos 8 caracteres');
       return;
     }
 
@@ -258,7 +276,10 @@ const SettingsPage = () => {
 
       const response = await axios.post(
         `${API}/database/hard-reset`,
-        { password: adminPassword },
+        { 
+          password: adminPassword,
+          new_password: newPassword
+        },
         {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -272,6 +293,8 @@ const SettingsPage = () => {
       setShowResetModal(false);
       setShowCredentialsModal(true);
       setAdminPassword('');
+      setNewPassword('');
+      setConfirmNewPassword('');
       setResetConfirmation('');
       
       toast.success('Base de datos reseteada exitosamente');
@@ -326,6 +349,11 @@ const SettingsPage = () => {
       toast.error('Debes seleccionar al menos una opción para resetear');
       return;
     }
+    
+    if (!softResetPassword) {
+      toast.error('Debes ingresar tu contraseña para confirmar');
+      return;
+    }
 
     setSaving(true);
 
@@ -339,7 +367,10 @@ const SettingsPage = () => {
 
       const response = await axios.post(
         `${API}/database/soft-reset`,
-        softResetOptions,
+        {
+          password: softResetPassword,
+          ...softResetOptions
+        },
         {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -368,6 +399,7 @@ const SettingsPage = () => {
         inventory_b: false,
         customers: false
       });
+      setSoftResetPassword('');
       
       setShowSoftResetModal(false);
       
@@ -378,7 +410,26 @@ const SettingsPage = () => {
       
     } catch (error) {
       console.error('Error durante soft reset:', error);
-      const errorMsg = error.response?.data?.detail || 'Error al hacer soft reset';
+      
+      // Extraer mensaje de error
+      let errorMsg = 'Error al hacer soft reset';
+      
+      if (error.response?.status === 401) {
+        errorMsg = 'Contraseña incorrecta';
+      } else if (error.response?.data) {
+        const data = error.response.data;
+        
+        if (typeof data.detail === 'string') {
+          errorMsg = data.detail;
+        } else if (Array.isArray(data.detail)) {
+          errorMsg = data.detail.map(err => err.msg || JSON.stringify(err)).join(', ');
+        } else if (data.message) {
+          errorMsg = data.message;
+        }
+      } else if (error.message) {
+        errorMsg = error.message;
+      }
+      
       toast.error(errorMsg);
     } finally {
       setSaving(false);
@@ -647,8 +698,8 @@ const SettingsPage = () => {
                 </label>
                 <input
                   type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
+                  value={profileNewPassword}
+                  onChange={(e) => setProfileNewPassword(e.target.value)}
                   className="w-full px-4 py-3 border-2 border-slate-900 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-slate-900"
                   placeholder="Mínimo 6 caracteres"
                   minLength={6}
@@ -661,8 +712,8 @@ const SettingsPage = () => {
                 </label>
                 <input
                   type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  value={profileConfirmPassword}
+                  onChange={(e) => setProfileConfirmPassword(e.target.value)}
                   className="w-full px-4 py-3 border-2 border-slate-900 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-slate-900"
                   placeholder="Repite la nueva contraseña"
                 />
@@ -1020,9 +1071,6 @@ const SettingsPage = () => {
                 <label className="block text-sm font-bold text-slate-700 mb-2">
                   Contraseña Actual del Administrador *
                 </label>
-                <p className="text-xs text-slate-600 mb-2">
-                  ⚠️ Ingresa tu contraseña ACTUAL para confirmar. El sistema generará una nueva contraseña automáticamente.
-                </p>
                 <input
                   type="password"
                   value={adminPassword}
@@ -1030,6 +1078,32 @@ const SettingsPage = () => {
                   className="w-full px-3 py-2 border-2 border-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   placeholder="Tu contraseña actual"
                   autoFocus
+                />
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-bold text-slate-700 mb-2">
+                  Nueva Contraseña Asignada *
+                </label>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full px-3 py-2 border-2 border-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="Nueva contraseña (mín. 8 caracteres)"
+                />
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-bold text-slate-700 mb-2">
+                  Repetir Nueva Contraseña *
+                </label>
+                <input
+                  type="password"
+                  value={confirmNewPassword}
+                  onChange={(e) => setConfirmNewPassword(e.target.value)}
+                  className="w-full px-3 py-2 border-2 border-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="Confirma la nueva contraseña"
                 />
               </div>
 
@@ -1053,6 +1127,8 @@ const SettingsPage = () => {
                     setShowResetModal(false);
                     setResetConfirmation('');
                     setAdminPassword('');
+                    setNewPassword('');
+                    setConfirmNewPassword('');
                   }}
                   className="flex-1 px-4 py-2 border-2 border-slate-900 rounded-lg font-bold hover:bg-slate-50 transition-colors"
                 >
@@ -1060,7 +1136,7 @@ const SettingsPage = () => {
                 </button>
                 <button
                   onClick={handleHardReset}
-                  disabled={saving || resetConfirmation !== 'RESETEAR' || !adminPassword}
+                  disabled={saving || resetConfirmation !== 'RESETEAR' || !adminPassword || !newPassword || !confirmNewPassword}
                   className="flex-1 px-4 py-2 bg-red-600 text-white border-2 border-slate-900 rounded-lg font-bold hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
                 >
@@ -1170,7 +1246,10 @@ const SettingsPage = () => {
         {showSoftResetModal && (
           <div 
             className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-            onClick={() => setShowSoftResetModal(false)}
+            onClick={() => {
+              setShowSoftResetModal(false);
+              setSoftResetPassword('');
+            }}
           >
             <div 
               className="bg-white border-2 border-slate-900 rounded-xl p-6 max-w-lg w-full"
@@ -1196,6 +1275,21 @@ const SettingsPage = () => {
                 <p className="text-xs text-orange-800">
                   Los elementos seleccionados se eliminarán permanentemente
                 </p>
+              </div>
+
+              {/* Password Field */}
+              <div className="mb-6">
+                <label className="block text-sm font-bold text-slate-700 mb-2">
+                  Contraseña Actual del Administrador *
+                </label>
+                <input
+                  type="password"
+                  value={softResetPassword}
+                  onChange={(e) => setSoftResetPassword(e.target.value)}
+                  className="w-full px-3 py-2 border-2 border-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  placeholder="Ingresa tu contraseña"
+                  autoFocus
+                />
               </div>
 
               <div className="space-y-3 mb-6">
@@ -1275,6 +1369,7 @@ const SettingsPage = () => {
                   type="button"
                   onClick={() => {
                     setShowSoftResetModal(false);
+                    setSoftResetPassword('');
                     setSoftResetOptions({
                       sales: false,
                       users: false,
@@ -1289,7 +1384,7 @@ const SettingsPage = () => {
                 </button>
                 <button
                   onClick={handleSoftReset}
-                  disabled={saving || !Object.values(softResetOptions).some(v => v === true)}
+                  disabled={saving || !softResetPassword || !Object.values(softResetOptions).some(v => v === true)}
                   className="flex-1 px-4 py-2 bg-orange-500 text-white border-2 border-slate-900 rounded-lg font-bold hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
                 >

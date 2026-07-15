@@ -73,7 +73,6 @@ const RealtimeMetrics = ({ refreshTrigger }) => {
 
   const fetchHistoricData = async (year, month) => {
     try {
-      setLoading(true);
       setLoadingChart(true);
       setError(null);
       
@@ -90,8 +89,7 @@ const RealtimeMetrics = ({ refreshTrigger }) => {
       console.error('Error fetching historic data:', error);
       setError(`Error al cargar datos de ${MONTH_NAMES[month-1]} ${year}`);
       setLoadingChart(false);
-    } finally {
-      setLoading(false);
+      setSelectedHistoricMonth(null); // Reset selection on error
     }
   };
 
@@ -540,12 +538,36 @@ const RealtimeMetrics = ({ refreshTrigger }) => {
           <p className="text-sm text-slate-600 mb-4">
             Selecciona un mes para ver las métricas históricas
           </p>
+          
+          {/* Loading Indicator */}
+          {loadingChart && (
+            <div className="mb-4 p-4 bg-blue-50 border-2 border-blue-500 rounded-xl flex items-center gap-3">
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+              <span className="text-blue-900 font-medium">Cargando datos históricos...</span>
+            </div>
+          )}
+          
+          {/* Error Indicator */}
+          {error && !loadingChart && (
+            <div className="mb-4 p-4 bg-red-50 border-2 border-red-500 rounded-xl">
+              <p className="text-red-900 font-bold mb-2">{error}</p>
+              <button
+                onClick={fetchHistoricMonths}
+                className="px-4 py-2 bg-white border-2 border-slate-900 rounded-lg hover:bg-slate-50 transition-all font-bold text-sm"
+                style={{ boxShadow: '2px 2px 0px 0px rgba(15,23,42,1)' }}
+              >
+                Reintentar
+              </button>
+            </div>
+          )}
+          
           <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-12 gap-3">
             {historicMonths.map((item) => (
               <button
                 key={`${item.year}-${item.month}`}
                 onClick={() => fetchHistoricData(item.year, item.month)}
-                className="aspect-square border-2 border-slate-900 rounded-xl hover:bg-slate-100 transition-all flex flex-col items-center justify-center gap-1 p-2"
+                disabled={loadingChart}
+                className="aspect-square border-2 border-slate-900 rounded-xl hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex flex-col items-center justify-center gap-1 p-2"
                 style={{ boxShadow: '2px 2px 0px 0px rgba(15,23,42,1)' }}
                 data-testid={`historic-month-${item.year}-${item.month}`}
               >
@@ -555,7 +577,7 @@ const RealtimeMetrics = ({ refreshTrigger }) => {
               </button>
             ))}
           </div>
-          {historicMonths.length === 0 && (
+          {historicMonths.length === 0 && !loadingChart && (
             <p className="text-center text-slate-500 py-8">No hay datos históricos disponibles</p>
           )}
         </div>

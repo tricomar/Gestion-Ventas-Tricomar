@@ -1,0 +1,37 @@
+{
+  "summary": "Verified security validations for Database Hard/Soft Reset (frontend modals + backend endpoints) and Historic months endpoint. Both Hard Reset (4 fields: current pwd, new pwd, repeat pwd, RESETEAR text) and Soft Reset (current pwd + 5 checkboxes: Ventas, Usuarios, Inventario A, Inventario B, Clientes) render correctly. Backend correctly rejects wrong password with 401 on both endpoints.",
+  "tested_scope": ["frontend", "backend", "integration", "auth"],
+  "passed": [
+    "Admin login (admin / Admin3b4e892c) succeeds and returns JWT",
+    "Settings -> Base de Datos tab renders Hard Reset and Soft Reset sections",
+    "Hard Reset modal shows exactly 4 required fields with correct placeholders (Contraseña Actual, Nueva Contraseña, Repetir, RESETEAR text field)",
+    "Hard Reset 'Confirmar Reset' button is disabled until all fields valid",
+    "Soft Reset modal shows password field + 5 checkboxes (Ventas, Usuarios, Inventario Tienda A, Inventario Tienda B, Clientes)",
+    "Soft Reset 'Confirmar Reset' button disabled until valid",
+    "POST /api/database/hard-reset with wrong password returns 401 {detail: 'Contraseña incorrecta'}",
+    "POST /api/database/soft-reset with wrong password returns 401 {detail: 'Contraseña incorrecta'}",
+    "GET /api/dashboard/historic-months returns 200 with array of {year, month}"
+  ],
+  "failed": [
+    {
+      "area": "backend/soft-reset",
+      "issue": "Soft-reset endpoint accepts correct password with all options=false and returns 200 success (empty deleted_counts). Validation of at-least-one-option is enforced only in frontend. Not a blocker since UI prevents this, but a defense-in-depth gap.",
+      "evidence": "curl POST /api/database/soft-reset with password OK and all flags false -> HTTP 200 {\"success\":true,\"deleted_counts\":{}}",
+      "priority": "LOW"
+    },
+    {
+      "area": "frontend/testability",
+      "issue": "Hard Reset and Soft Reset modal inputs and confirm/cancel buttons lack data-testid attributes, making automated selection fragile (had to rely on placeholders/text).",
+      "evidence": "input elements returned testid=None for all password / RESETEAR fields",
+      "priority": "LOW"
+    }
+  ],
+  "action_items": [
+    "(Optional) Add server-side validation for soft-reset to require at least one option flag=true.",
+    "(Optional) Add data-testid attributes to Hard/Soft Reset modal fields and confirm buttons for robust testing."
+  ],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "retest_needed": false,
+  "full_testing_deferred": true,
+  "notes": "Did not execute a destructive Hard Reset to avoid rotating admin credentials during test session. Historic Month Selector loading/error UI states not visually reproduced because the endpoint responded quickly with success; loading spinner code is present in RealtimeMetrics.js per problem statement but was not observed under failure condition. Recommend simulating a slow/failing response in follow-up full-testing pass."
+}
