@@ -2,9 +2,10 @@
 Router para gestión de base de datos (hard reset, etc.)
 """
 
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, HTTPException, Depends, status, Body
 from datetime import datetime, timezone
 from typing import Dict, List, Any
+from pydantic import BaseModel
 import uuid
 import bcrypt
 import logging
@@ -15,6 +16,17 @@ from utils import db, get_current_user, require_admin
 router = APIRouter(prefix="/database", tags=["database"])
 
 logger = logging.getLogger(__name__)
+
+# Modelos de request
+class HardResetRequest(BaseModel):
+    password: str
+
+class SoftResetRequest(BaseModel):
+    sales: bool = False
+    users: bool = False
+    inventory_a: bool = False
+    inventory_b: bool = False
+    customers: bool = False
 
 # Esquema esperado de la base de datos
 EXPECTED_SCHEMA = {
@@ -206,7 +218,10 @@ async def validate_and_fix_schema(admin: User = Depends(require_admin)):
         )
 
 @router.post("/hard-reset")
-async def hard_reset_database(password: str, current_user: User = Depends(get_current_user)):
+async def hard_reset_database(
+    request: HardResetRequest,
+    current_user: User = Depends(get_current_user)
+):
     """
     HARD RESET de la base de datos completa.
     Solo accesible para administradores.
@@ -229,7 +244,7 @@ async def hard_reset_database(password: str, current_user: User = Depends(get_cu
         )
     
     # Verificar contraseña
-    if not bcrypt.checkpw(password.encode('utf-8'), admin_user['password_hash'].encode('utf-8')):
+    if not bcrypt.checkpw(request.password.encode('utf-8'), admin_user['password_hash'].encode('utf-8')):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Contraseña incorrecta"
@@ -332,7 +347,7 @@ async def hard_reset_database(password: str, current_user: User = Depends(get_cu
 
 @router.post("/soft-reset")
 async def soft_reset_database(
-    reset_options: Dict[str, Any],
+    request: SoftResetRequest,
     current_user: User = Depends(get_current_user)
 ):
     """
@@ -358,27 +373,27 @@ async def soft_reset_database(
         deleted_counts = {}
         
         # Resetear ventas
-        if reset_options.get('sales', False):
+        if request.sales:
             result = await db.sales.delete_many({})
             deleted_counts['sales'] = result.deleted_count
         
         # Resetear usuarios (excepto admin)
-        if reset_options.get('users', False):
+        if request.users:
             result = await db.users.delete_many({'role': {'$ne': 'admin'}})
             deleted_counts['users'] = result.deleted_count
         
         # Resetear inventario de Tienda A
-        if reset_options.get('inventory_a', False):
+        if request.inventory_a:
             result = await db.products.delete_many({'store': 'A'})
             deleted_counts['inventory_a'] = result.deleted_count
         
         # Resetear inventario de Tienda B
-        if reset_options.get('inventory_b', False):
+        if request.inventory_b:
             result = await db.products.delete_many({'store': 'B'})
             deleted_counts['inventory_b'] = result.deleted_count
         
         # Resetear clientes
-        if reset_options.get('customers', False):
+        if request.customers:
             result = await db.customers.delete_many({})
             deleted_counts['customers'] = result.deleted_count
         

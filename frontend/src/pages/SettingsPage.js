@@ -285,19 +285,36 @@ const SettingsPage = () => {
     } catch (error) {
       console.error('Error during hard reset:', error);
       
+      // Extraer mensaje de error apropiado
+      let errorMsg = 'Error al resetear base de datos';
+      
       if (error.response?.status === 401) {
-        toast.error('Contraseña incorrecta');
+        errorMsg = 'Contraseña incorrecta';
       } else if (error.response?.status === 404) {
-        toast.error('Endpoint no encontrado. Verifica que el backend esté actualizado.');
-      } else if (error.response?.status === 401 || error.response?.status === 403) {
-        toast.error('No tienes permisos para realizar esta acción.');
-      } else {
-        const errorMsg = error.response?.data?.detail || error.message || 'Error al resetear base de datos';
-        toast.error(errorMsg);
+        errorMsg = 'Endpoint no encontrado. Verifica que el backend esté actualizado.';
+      } else if (error.response?.status === 403) {
+        errorMsg = 'No tienes permisos para realizar esta acción.';
+      } else if (error.response?.data) {
+        // Manejar diferentes formatos de error
+        const data = error.response.data;
+        
+        if (typeof data.detail === 'string') {
+          errorMsg = data.detail;
+        } else if (Array.isArray(data.detail)) {
+          // Error de validación de Pydantic
+          errorMsg = data.detail.map(err => err.msg || JSON.stringify(err)).join(', ');
+        } else if (data.message) {
+          errorMsg = data.message;
+        }
+      } else if (error.message) {
+        errorMsg = error.message;
       }
+      
+      toast.error(errorMsg);
     } finally {
       setSaving(false);
       setResetConfirmation('');
+      setAdminPassword('');
     }
   };
 
@@ -1001,14 +1018,17 @@ const SettingsPage = () => {
 
               <div className="mb-4">
                 <label className="block text-sm font-bold text-slate-700 mb-2">
-                  Contraseña del Administrador *
+                  Contraseña Actual del Administrador *
                 </label>
+                <p className="text-xs text-slate-600 mb-2">
+                  ⚠️ Ingresa tu contraseña ACTUAL para confirmar. El sistema generará una nueva contraseña automáticamente.
+                </p>
                 <input
                   type="password"
                   value={adminPassword}
                   onChange={(e) => setAdminPassword(e.target.value)}
                   className="w-full px-3 py-2 border-2 border-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="Ingresa tu contraseña"
+                  placeholder="Tu contraseña actual"
                   autoFocus
                 />
               </div>

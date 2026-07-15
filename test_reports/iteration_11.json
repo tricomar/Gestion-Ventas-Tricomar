@@ -1,0 +1,23 @@
+{
+  "summary": "Verified Hard Reset bug fix. Backend endpoint POST /api/database/hard-reset now uses Pydantic HardResetRequest model. Frontend properly handles Pydantic validation array errors and 401 responses. Modal text updated to clarify it's the CURRENT admin password for validation, not a new one.",
+  "tested_scope": ["backend", "frontend", "integration"],
+  "passed": [
+    "Login as admin/Admin3b4e892c returns 200 with token",
+    "POST /api/database/hard-reset with wrong password returns 401 with detail:'Contraseña incorrecta' (string, not object)",
+    "POST /api/database/hard-reset with missing body returns 422 with Pydantic array (frontend handles gracefully)",
+    "Settings > Base de Datos tab loads and shows Hard Reset section",
+    "Hard Reset modal displays 'Contraseña Actual del Administrador' with warning that system will generate a new password",
+    "Entering wrong password + 'RESETEAR' triggers readable toast 'Contraseña incorrecta'",
+    "NO '[object Object]' text rendered in UI",
+    "NO 'Objects are not valid as a React child' errors in browser console",
+    "handleHardReset error handler correctly maps Pydantic detail arrays via err.msg"
+  ],
+  "failed": [],
+  "action_items": [
+    "Full E2E of a real successful hard reset (correct password) was intentionally SKIPPED to avoid wiping the shared DB / rotating admin credentials mid-session. Consider running that flow in an isolated environment.",
+    "Soft Reset flow was not exercised in UI (visible on page but not clicked). Recommend a follow-up smoke test."
+  ],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "retest_needed": false,
+  "full_testing_deferred": true
+}
