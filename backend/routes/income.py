@@ -5,12 +5,16 @@ Router para gestión de otros ingresos
 from fastapi import APIRouter, HTTPException, Depends, status
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timezone, timedelta
+from zoneinfo import ZoneInfo
 import uuid
 import bcrypt
 
 from models.income import OtherIncome, OtherIncomeCreate
 from utils import db, get_current_user, require_admin
 from models.users import User
+
+# Zona horaria de Chile
+CHILE_TZ = ZoneInfo('America/Santiago')
 
 router = APIRouter(prefix="/other-income", tags=["income"])
 
@@ -31,11 +35,18 @@ async def create_other_income(income_input: OtherIncomeCreate, current_user: Use
 async def get_other_income(date: Optional[str] = None, current_user: User = Depends(get_current_user)):
     query = {}
     if date:
+        # Parse date in Chile timezone
         target_date = datetime.fromisoformat(date).replace(hour=0, minute=0, second=0, microsecond=0)
-        next_day = target_date + timedelta(days=1)
+        chile_start = target_date.replace(tzinfo=CHILE_TZ)
+        chile_end = chile_start + timedelta(days=1)
+        
+        # Convertir a UTC para la query
+        utc_start = chile_start.astimezone(timezone.utc)
+        utc_end = chile_end.astimezone(timezone.utc)
+        
         query['created_at'] = {
-            '$gte': target_date.isoformat(),
-            '$lt': next_day.isoformat()
+            '$gte': utc_start.isoformat(),
+            '$lt': utc_end.isoformat()
         }
     
     income_list = await db.other_income.find(query, {'_id': 0}).sort('created_at', -1).to_list(1000)

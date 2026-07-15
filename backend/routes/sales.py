@@ -5,12 +5,16 @@ Router para gestión de ventas
 from fastapi import APIRouter, HTTPException, Depends, status
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timezone, timedelta
+from zoneinfo import ZoneInfo
 import uuid
 import bcrypt
 
 from models.sales import Sale, SaleCreate, SaleCreateWithDate
 from utils import db, get_current_user, require_admin
 from models.users import User
+
+# Zona horaria de Chile
+CHILE_TZ = ZoneInfo('America/Santiago')
 
 router = APIRouter(prefix="/sales", tags=["sales"])
 
@@ -25,7 +29,11 @@ async def create_sale(sale_input: SaleCreate, current_user: User = Depends(get_c
     # Save to database
     doc = sale.model_dump()
     doc['created_at'] = doc['created_at'].isoformat()
-    doc['date'] = doc['created_at']  # Usar created_at como fecha de la venta
+    
+    # Guardar fecha en zona horaria de Chile (YYYY-MM-DD)
+    chile_time = datetime.now(CHILE_TZ)
+    doc['date'] = chile_time.strftime('%Y-%m-%d')
+    
     await db.sales.insert_one(doc)
     
     # Update product usage count
@@ -69,17 +77,24 @@ async def create_past_sale(
             detail="Solo administradores y supervisores pueden registrar ventas pasadas"
         )
     
-    # Validar y parsear fecha personalizada
+    # Validar y parsear fecha personalizada en zona horaria de Chile
     try:
         if 'T' in sale_input.custom_date:
-            custom_datetime = datetime.fromisoformat(sale_input.custom_date.replace('Z', '+00:00'))
+            # Tiene hora especificada
+            custom_datetime = datetime.fromisoformat(sale_input.custom_date.replace('Z', ''))
+            # Asignar timezone de Chile si no tiene
+            if custom_datetime.tzinfo is None:
+                custom_datetime = custom_datetime.replace(tzinfo=CHILE_TZ)
         else:
-            # Si solo es fecha (YYYY-MM-DD), agregar hora actual
-            custom_datetime = datetime.fromisoformat(f"{sale_input.custom_date}T{datetime.now(timezone.utc).strftime('%H:%M:%S')}")
-        
-        # Asegurar que la fecha tenga timezone UTC
-        if custom_datetime.tzinfo is None:
-            custom_datetime = custom_datetime.replace(tzinfo=timezone.utc)
+            # Solo fecha (YYYY-MM-DD), usar hora actual de Chile
+            date_part = datetime.fromisoformat(sale_input.custom_date)
+            current_time_chile = datetime.now(CHILE_TZ)
+            custom_datetime = date_part.replace(
+                hour=current_time_chile.hour,
+                minute=current_time_chile.minute,
+                second=current_time_chile.second,
+                tzinfo=CHILE_TZ
+            )
             
     except ValueError:
         raise HTTPException(
@@ -87,19 +102,24 @@ async def create_past_sale(
             detail="Formato de fecha inválido. Use YYYY-MM-DD o YYYY-MM-DDTHH:MM:SS"
         )
     
-    # Validar que la fecha no sea futura
-    if custom_datetime > datetime.now(timezone.utc):
+    # Validar que la fecha no sea futura (comparar en zona horaria de Chile)
+    now_chile = datetime.now(CHILE_TZ)
+    if custom_datetime > now_chile:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="No se puede registrar una venta con fecha futura"
         )
     
+    # Convertir a UTC para guardar
+    custom_datetime_utc = custom_datetime.astimezone(timezone.utc)
+    
     # Crear venta con la fecha personalizada
     sale_dict = sale_input.model_dump(exclude={'custom_date'})
     sale_dict['user_id'] = current_user.id
     sale_dict['user_name'] = current_user.name
-    sale_dict['created_at'] = custom_datetime
-    sale_dict['date'] = custom_datetime.isoformat()
+    sale_dict['created_at'] = custom_datetime_utc
+    # Guardar fecha en formato YYYY-MM-DD en zona horaria de Chile
+    sale_dict['date'] = custom_datetime.strftime('%Y-%m-%d')
     
     sale = Sale(**sale_dict)
     
@@ -137,12 +157,22 @@ async def create_past_sale(
 async def get_sales(date: Optional[str] = None, current_user: User = Depends(get_current_user)):
     query = {}
     if date:
-        # Parse date and get start/end of day
+        # Parse date in Chile timezone
+        # date viene como 'YYYY-MM-DD' (ejemplo: '2026-07-15')
+        # Necesitamos buscar todas las ventas de ese día en hora Chile
+        
+        # Crear inicio y fin del día en zona horaria de Chile
         target_date = datetime.fromisoformat(date).replace(hour=0, minute=0, second=0, microsecond=0)
-        next_day = target_date + timedelta(days=1)
+        chile_start = target_date.replace(tzinfo=CHILE_TZ)
+        chile_end = chile_start + timedelta(days=1)
+        
+        # Convertir a UTC para la query
+        utc_start = chile_start.astimezone(timezone.utc)
+        utc_end = chile_end.astimezone(timezone.utc)
+        
         query['created_at'] = {
-            '$gte': target_date.isoformat(),
-            '$lt': next_day.isoformat()
+            '$gte': utc_start.isoformat(),
+            '$lt': utc_end.isoformat()
         }
     
     sales = await db.sales.find(query, {'_id': 0}).sort('created_at', -1).to_list(1000)

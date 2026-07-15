@@ -5,12 +5,16 @@ Router para gestión de gastos
 from fastapi import APIRouter, HTTPException, Depends, status
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timezone, timedelta
+from zoneinfo import ZoneInfo
 import uuid
 import bcrypt
 
 from models.expenses import Expense, ExpenseCreate
 from utils import db, get_current_user, require_admin
 from models.users import User
+
+# Zona horaria de Chile
+CHILE_TZ = ZoneInfo('America/Santiago')
 
 router = APIRouter(prefix="/expenses", tags=["expenses"])
 
@@ -31,11 +35,18 @@ async def create_expense(expense_input: ExpenseCreate, current_user: User = Depe
 async def get_expenses(date: Optional[str] = None, current_user: User = Depends(get_current_user)):
     query = {}
     if date:
+        # Parse date in Chile timezone
         target_date = datetime.fromisoformat(date).replace(hour=0, minute=0, second=0, microsecond=0)
-        next_day = target_date + timedelta(days=1)
+        chile_start = target_date.replace(tzinfo=CHILE_TZ)
+        chile_end = chile_start + timedelta(days=1)
+        
+        # Convertir a UTC para la query
+        utc_start = chile_start.astimezone(timezone.utc)
+        utc_end = chile_end.astimezone(timezone.utc)
+        
         query['created_at'] = {
-            '$gte': target_date.isoformat(),
-            '$lt': next_day.isoformat()
+            '$gte': utc_start.isoformat(),
+            '$lt': utc_end.isoformat()
         }
     
     expenses = await db.expenses.find(query, {'_id': 0}).sort('created_at', -1).to_list(1000)

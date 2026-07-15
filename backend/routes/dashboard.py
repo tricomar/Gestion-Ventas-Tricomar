@@ -5,6 +5,7 @@ Router para métricas y estadísticas del dashboard
 from fastapi import APIRouter, HTTPException, Depends
 from typing import List, Dict, Any
 from datetime import datetime, timezone, timedelta
+from zoneinfo import ZoneInfo
 from collections import defaultdict
 import httpx
 import asyncio
@@ -12,6 +13,9 @@ import asyncio
 from models.dashboard import RealtimeMetrics, DashboardStats
 from models.users import User
 from utils import db, get_current_user
+
+# Zona horaria de Chile
+CHILE_TZ = ZoneInfo('America/Santiago')
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
@@ -24,11 +28,24 @@ CACHE_DURATION = timedelta(hours=1)
 
 @router.get("/realtime-metrics", response_model=RealtimeMetrics)
 async def get_realtime_metrics(current_user: User = Depends(get_current_user)):
-    now = datetime.now(timezone.utc)
-    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    tomorrow_start = today_start + timedelta(days=1)
-    next_month_start = (month_start + timedelta(days=32)).replace(day=1)
+    # Usar hora de Chile para determinar el día actual
+    now_chile = datetime.now(CHILE_TZ)
+    today_start_chile = now_chile.replace(hour=0, minute=0, second=0, microsecond=0)
+    tomorrow_start_chile = today_start_chile + timedelta(days=1)
+    
+    # Inicio del mes en Chile
+    month_start_chile = now_chile.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    # Próximo mes
+    if month_start_chile.month == 12:
+        next_month_start_chile = month_start_chile.replace(year=month_start_chile.year + 1, month=1)
+    else:
+        next_month_start_chile = month_start_chile.replace(month=month_start_chile.month + 1)
+    
+    # Convertir a UTC para las queries
+    today_start = today_start_chile.astimezone(timezone.utc)
+    tomorrow_start = tomorrow_start_chile.astimezone(timezone.utc)
+    month_start = month_start_chile.astimezone(timezone.utc)
+    next_month_start = next_month_start_chile.astimezone(timezone.utc)
     
     # Get all sales
     today_sales = await db.sales.find({
