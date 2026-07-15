@@ -7,6 +7,9 @@ class ExpenseCreate(BaseModel):
     amount: float
     category: str  # compra_inventario, retiros, compras_informales, otros
 
+class ExpenseCreateWithDate(ExpenseCreate):
+    custom_date: str  # Fecha personalizada en formato YYYY-MM-DD o YYYY-MM-DDTHH:MM:SS
+
 class Expense(ExpenseCreate):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))

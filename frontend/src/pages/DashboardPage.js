@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { LogOut, TrendingUp, TrendingDown, DollarSign, PlusCircle, Package, FileText, Settings, Users, Menu } from 'lucide-react';
+import { LogOut, TrendingUp, TrendingDown, DollarSign, PlusCircle, Package, FileText, Settings, Users, Menu, ChevronDown, Calendar as CalendarIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import SalesForm from '../components/SalesForm';
 import ExpenseForm from '../components/ExpenseForm';
@@ -25,8 +25,21 @@ const DashboardPage = () => {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [showMenu, setShowMenu] = useState(false);
+  const [showRecordsMenu, setShowRecordsMenu] = useState(false);
 
   const refresh = () => setRefreshTrigger(prev => prev + 1);
+
+  // Cerrar dropdown de registros al hacer clic fuera
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (showRecordsMenu && !event.target.closest('[data-testid="records-dropdown-btn"]')) {
+        setShowRecordsMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showRecordsMenu]);
 
   useEffect(() => {
     const fetchTodayTotal = async () => {
@@ -77,18 +90,61 @@ const DashboardPage = () => {
                 </p>
               </div>
               
-              <button
-                onClick={() => navigate('/sales-records')}
-                className="px-4 py-2 bg-white border-2 border-slate-900 rounded-xl hover:bg-slate-50 transition-all font-bold text-sm flex items-center gap-2"
-                style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
-                onMouseEnter={(e) => e.target.style.transform = 'translateY(-2px)'}
-                onMouseLeave={(e) => e.target.style.transform = 'translateY(0)'}
-                data-testid="sales-records-btn"
-              >
-                <Menu className="w-4 h-4" />
-                <span className="hidden sm:inline">REGISTRO DE VENTAS</span>
-                <span className="sm:hidden">REGISTRO</span>
-              </button>
+              {/* Dropdown de Registros */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowRecordsMenu(!showRecordsMenu)}
+                  className="px-4 py-2 bg-white border-2 border-slate-900 rounded-xl hover:bg-slate-50 transition-all font-bold text-sm flex items-center gap-2"
+                  style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
+                  onMouseEnter={(e) => e.target.style.transform = 'translateY(-2px)'}
+                  onMouseLeave={(e) => e.target.style.transform = 'translateY(0)'}
+                  data-testid="records-dropdown-btn"
+                >
+                  <CalendarIcon className="w-4 h-4" />
+                  <span className="hidden sm:inline">REGISTROS</span>
+                  <ChevronDown className={`w-4 h-4 transition-transform ${showRecordsMenu ? 'rotate-180' : ''}`} />
+                </button>
+
+                {showRecordsMenu && (
+                  <div
+                    className="absolute right-0 mt-2 w-64 bg-white border-2 border-slate-900 rounded-xl shadow-lg z-50"
+                    style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
+                  >
+                    <div className="py-2">
+                      <button
+                        onClick={() => {
+                          navigate('/sales-records');
+                          setShowRecordsMenu(false);
+                        }}
+                        className="w-full px-4 py-3 text-left hover:bg-slate-50 transition-all flex items-center gap-3 font-medium"
+                      >
+                        <TrendingUp className="w-5 h-5 text-green-600" />
+                        <span>Registro de Ventas</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          navigate('/expenses-records');
+                          setShowRecordsMenu(false);
+                        }}
+                        className="w-full px-4 py-3 text-left hover:bg-slate-50 transition-all flex items-center gap-3 font-medium"
+                      >
+                        <TrendingDown className="w-5 h-5 text-red-600" />
+                        <span>Registro de Egresos</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          navigate('/income-records');
+                          setShowRecordsMenu(false);
+                        }}
+                        className="w-full px-4 py-3 text-left hover:bg-slate-50 transition-all flex items-center gap-3 font-medium"
+                      >
+                        <DollarSign className="w-5 h-5 text-blue-600" />
+                        <span>Registro de Otros Ingresos</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
               
               <button
                 onClick={logout}

@@ -17,6 +17,8 @@ from .settings import router as settings_router
 from .dashboard import router as dashboard_router
 from .database import router as database_router
 from .sales_records import router as sales_records_router
+from .expenses_records import router as expenses_records_router
+from .income_records import router as income_records_router
 from .indicators import router as indicators_router
 
 # Crear el router principal con prefijo /api
@@ -35,6 +37,8 @@ api_router.include_router(settings_router)
 api_router.include_router(dashboard_router)
 api_router.include_router(database_router)
 api_router.include_router(sales_records_router)
+api_router.include_router(expenses_records_router)
+api_router.include_router(income_records_router)
 api_router.include_router(indicators_router)
 
 __all__ = ["api_router"]

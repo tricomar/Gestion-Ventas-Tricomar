@@ -8,6 +8,8 @@ import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
 import CustomersPage from './pages/CustomersPage';
 import SalesRecordPage from './pages/SalesRecordPage';
+import ExpensesRecordPage from './pages/ExpensesRecordPage';
+import IncomeRecordPage from './pages/IncomeRecordPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SettingsProvider } from './context/SettingsContext';
 import './App.css';
@@ -79,6 +81,22 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <SalesRecordPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/expenses-records"
+          element={
+            <ProtectedRoute>
+              <ExpensesRecordPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/income-records"
+          element={
+            <ProtectedRoute>
+              <IncomeRecordPage />
             </ProtectedRoute>
           }
         />

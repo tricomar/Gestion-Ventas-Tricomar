@@ -9,7 +9,7 @@ from zoneinfo import ZoneInfo
 import uuid
 import bcrypt
 
-from models.expenses import Expense, ExpenseCreate
+from models.expenses import Expense, ExpenseCreate, ExpenseCreateWithDate
 from utils import db, get_current_user, require_admin
 from models.users import User
 
@@ -84,3 +84,71 @@ async def delete_expense(expense_id: str, current_user: User = Depends(get_curre
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Expense not found")
     return {"message": "Expense deleted"}
+
+
+@router.post("/past", response_model=Expense)
+async def create_past_expense(
+    expense_input: ExpenseCreateWithDate,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Crear egreso con fecha personalizada (pasada)
+    Solo disponible para admin y supervisor
+    """
+    # Validar permisos
+    if current_user.role not in ['admin', 'supervisor']:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Solo administradores y supervisores pueden registrar egresos pasados"
+        )
+    
+    # Validar y parsear fecha personalizada en zona horaria de Chile
+    try:
+        if 'T' in expense_input.custom_date:
+            # Tiene hora especificada
+            custom_datetime = datetime.fromisoformat(expense_input.custom_date.replace('Z', ''))
+            # Asignar timezone de Chile si no tiene
+            if custom_datetime.tzinfo is None:
+                custom_datetime = custom_datetime.replace(tzinfo=CHILE_TZ)
+        else:
+            # Solo fecha (YYYY-MM-DD), usar hora actual de Chile
+            date_part = datetime.fromisoformat(expense_input.custom_date)
+            current_time_chile = datetime.now(CHILE_TZ)
+            custom_datetime = date_part.replace(
+                hour=current_time_chile.hour,
+                minute=current_time_chile.minute,
+                second=current_time_chile.second,
+                tzinfo=CHILE_TZ
+            )
+            
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Formato de fecha inválido. Use YYYY-MM-DD o YYYY-MM-DDTHH:MM:SS"
+        )
+    
+    # Validar que la fecha no sea futura
+    now_chile = datetime.now(CHILE_TZ)
+    if custom_datetime > now_chile:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No se puede registrar un egreso con fecha futura"
+        )
+    
+    # Convertir a UTC para guardar
+    custom_datetime_utc = custom_datetime.astimezone(timezone.utc)
+    
+    # Crear egreso con la fecha personalizada
+    expense_dict = expense_input.model_dump(exclude={'custom_date'})
+    expense_dict['user_id'] = current_user.id
+    expense_dict['user_name'] = current_user.name
+    expense_dict['created_at'] = custom_datetime_utc
+    
+    expense = Expense(**expense_dict)
+    
+    # Save to database
+    doc = expense.model_dump()
+    doc['created_at'] = doc['created_at'].isoformat()
+    await db.expenses.insert_one(doc)
+    
+    return expense
