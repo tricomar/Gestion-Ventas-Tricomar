@@ -387,6 +387,21 @@ async def soft_reset_database(
             detail="Contraseña incorrecta"
         )
     
+    # Verificar que al menos una opción esté seleccionada
+    has_selection = any([
+        request.sales,
+        request.users,
+        request.inventory_a,
+        request.inventory_b,
+        request.customers
+    ])
+    
+    if not has_selection:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Debes seleccionar al menos una opción para resetear"
+        )
+    
     try:
         deleted_counts = {}
         
