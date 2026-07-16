@@ -25,7 +25,7 @@ const SettingsPage = () => {
   const { refreshSettings } = useSettings();
   const { user, logout } = useAuth();
   const { stores, loading: storesLoading } = useStores(); // Hook para obtener tiendas dinámicas
-  const [activeTab, setActiveTab] = useState('stores'); // 'stores', 'profile', 'users', or 'database'
+  const [activeTab, setActiveTab] = useState('profile'); // 'stores', 'profile', 'users', or 'database' - Inicia en Mi Perfil
   
   // Database reset
   const [showResetModal, setShowResetModal] = useState(false);
@@ -131,6 +131,9 @@ const SettingsPage = () => {
           fetchAccountInfo();
         }
       }
+      
+      // Marcar como cargado
+      setLoading(false);
     }
   }, [user]);
 
@@ -159,7 +162,7 @@ const SettingsPage = () => {
 
   const fetchAccountInfo = async () => {
     try {
-      const response = await axios.get(`${API}/account/info`);
+      const response = await axios.get(`${API}/auth/account/info`);
       setAccountInfo(response.data);
     } catch (error) {
       console.error('Error fetching account info:', error);
