@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { Toaster } from './components/ui/sonner';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
+import AdminDashboard from './pages/AdminDashboard';
 import InventoryPage from './pages/InventoryPage';
 import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
@@ -16,6 +17,24 @@ import { AccountProvider } from './context/AccountContext';
 import { SettingsProvider } from './context/SettingsContext';
 import './App.css';
 
+// Componente para redirigir según rol
+const RoleBasedRedirect = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user) {
+      if (user.role === 'super_admin') {
+        navigate('/admin', { replace: true });
+      } else {
+        navigate('/dashboard', { replace: true });
+      }
+    }
+  }, [user, navigate]);
+
+  return null;
+};
+
 const ProtectedRoute = ({ children }) => {
   const { user } = useAuth();
   return user ? children : <Navigate to="/login" replace />;
@@ -24,7 +43,7 @@ const ProtectedRoute = ({ children }) => {
 const SuperAdminRoute = ({ children }) => {
   const { user } = useAuth();
   if (!user) return <Navigate to="/login" replace />;
-  if (user.role !== 'super_admin') return <Navigate to="/" replace />;
+  if (user.role !== 'super_admin') return <Navigate to="/dashboard" replace />;
   return children;
 };
 
@@ -49,8 +68,24 @@ function AppRoutes() {
           path="/"
           element={
             <ProtectedRoute>
+              <RoleBasedRedirect />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
               <DashboardPage />
             </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            <SuperAdminRoute>
+              <AdminDashboard />
+            </SuperAdminRoute>
           }
         />
         <Route

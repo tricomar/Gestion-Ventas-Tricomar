@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { Home, Settings as SettingsIcon, Save, User, Store, Users, Plus, Edit2, Trash2, X, Database, AlertTriangle } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useSettings } from '../context/SettingsContext';
 import { useAuth } from '../context/AuthContext';
 
@@ -20,6 +20,7 @@ const ROLES = [
 
 const SettingsPage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { refreshSettings } = useSettings();
   const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('stores'); // 'stores', 'profile', 'users', or 'database'
@@ -78,18 +79,24 @@ const SettingsPage = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // Establecer pestaña por defecto según el rol
+  // Establecer pestaña por defecto según el rol y parámetros URL
   useEffect(() => {
+    // Verificar si hay parámetro de tab en la URL
+    const tabParam = searchParams.get('tab');
+    if (tabParam) {
+      setActiveTab(tabParam);
+      return;
+    }
+
+    // Si no hay parámetro, usar valor por defecto según rol
     if (user) {
-      // Empleados solo ven "Mi Perfil"
       if (user.role === 'employee') {
         setActiveTab('profile');
-      } 
-      // Super-Admin y Supervisor ven "Tiendas" por defecto
-      else if (user.role === 'super_admin' || user.role === 'account_admin') {
+      } else if (user.role === 'super_admin' || user.role === 'account_admin') {
         setActiveTab('stores');
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   useEffect(() => {
