@@ -9,7 +9,6 @@ import uuid
 import bcrypt
 
 from models.products import Product, ProductBase, ProductCreate
-from middleware.tenant import get_tenant_filter, add_account_id_to_document
 from utils import db, get_current_user, require_admin
 from models.users import User
 
@@ -17,9 +16,7 @@ router = APIRouter(prefix="/products", tags=["products"])
 
 @router.get("", response_model=List[Product])
 async def get_products(current_user: User = Depends(get_current_user)):
-    # Filtro de tenant
-    tenant_filter = get_tenant_filter(current_user.dict())
-    products = await db.products.find(tenant_filter, {'_id': 0}).sort('name', 1).to_list(10000)
+    products = await db.products.find({}, {'_id': 0}).sort('name', 1).to_list(10000)
     
     result = []
     for prod in products:
@@ -79,23 +76,20 @@ async def create_product(product_input: ProductCreate, current_user: User = Depe
     product = Product(**product_input.model_dump(), usage_count=0)
     doc = product.model_dump()
     doc['created_at'] = doc['created_at'].isoformat()
-    # Agregar account_id (tenant isolation)
-    doc = add_account_id_to_document(current_user.dict(), doc)
-
     await db.products.insert_one(doc)
     
     return product
 
 @router.put("/{product_id}", response_model=Product)
 async def update_product(product_id: str, product_input: ProductCreate, current_user: User = Depends(get_current_user)):
-    existing = await db.products.find_one(get_tenant_filter(current_user.dict(), {'id': product_id}), {'_id': 0})
+    existing = await db.products.find_one({'id': product_id}, {'_id': 0})
     if not existing:
         raise HTTPException(status_code=404, detail="Product not found")
     
     update_data = product_input.model_dump()
-    await db.products.update_one(get_tenant_filter(current_user.dict(), {'id': product_id}), {'$set': update_data})
+    await db.products.update_one({'id': product_id}, {'$set': update_data})
     
-    updated = await db.products.find_one(get_tenant_filter(current_user.dict(), {'id': product_id}), {'_id': 0})
+    updated = await db.products.find_one({'id': product_id}, {'_id': 0})
     if isinstance(updated.get('created_at'), str):
         updated['created_at'] = datetime.fromisoformat(updated['created_at'])
     
@@ -103,14 +97,14 @@ async def update_product(product_id: str, product_input: ProductCreate, current_
 
 @router.delete("/{product_id}")
 async def delete_product(product_id: str, current_user: User = Depends(get_current_user)):
-    result = await db.products.delete_one(get_tenant_filter(current_user.dict(), {'id': product_id}))
+    result = await db.products.delete_one({'id': product_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Product not found")
     return {"message": "Product deleted"}
 
 @router.get("/{product_id}", response_model=Product)
 async def get_product(product_id: str, current_user: User = Depends(get_current_user)):
-    product = await db.products.find_one(get_tenant_filter(current_user.dict(), {'id': product_id}), {'_id': 0})
+    product = await db.products.find_one({'id': product_id}, {'_id': 0})
     if not product:
         raise HTTPException(status_code=404, detail="Product not found")
     if isinstance(product.get('created_at'), str):

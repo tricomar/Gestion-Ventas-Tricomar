@@ -93,6 +93,20 @@ const DashboardPage = () => {
                 </p>
               </div>
               
+              {/* Botón Super-Admin (solo para super_admin) */}
+              {user?.role === 'super_admin' && (
+                <button
+                  onClick={() => navigate('/super-admin')}
+                  className="px-4 py-2 bg-purple-500 text-white border-2 border-slate-900 rounded-xl hover:bg-purple-600 transition-all font-bold text-sm flex items-center gap-2"
+                  style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
+                  onMouseEnter={(e) => e.target.style.transform = 'translateY(-2px)'}
+                  onMouseLeave={(e) => e.target.style.transform = 'translateY(0)'}
+                >
+                  <Settings className="w-4 h-4" />
+                  <span className="hidden sm:inline">SUPER-ADMIN</span>
+                </button>
+              )}
+              
               {/* Dropdown de Registros */}
               <div className="relative">
                 <button

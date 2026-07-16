@@ -9,7 +9,6 @@ from typing import Dict, List, Any, Optional
 from calendar import monthrange
 
 from models.users import User
-from middleware.tenant import get_tenant_filter, add_account_id_to_document
 from utils import db, get_current_user, require_admin
 
 router = APIRouter(prefix="/sales-records", tags=["sales-records"])

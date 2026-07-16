@@ -10,6 +10,7 @@ import CustomersPage from './pages/CustomersPage';
 import SalesRecordPage from './pages/SalesRecordPage';
 import ExpensesRecordPage from './pages/ExpensesRecordPage';
 import IncomeRecordPage from './pages/IncomeRecordPage';
+import SuperAdminPage from './pages/SuperAdminPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SettingsProvider } from './context/SettingsContext';
 import './App.css';
@@ -17,6 +18,13 @@ import './App.css';
 const ProtectedRoute = ({ children }) => {
   const { user } = useAuth();
   return user ? children : <Navigate to="/login" replace />;
+};
+
+const SuperAdminRoute = ({ children }) => {
+  const { user } = useAuth();
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.role !== 'super_admin') return <Navigate to="/" replace />;
+  return children;
 };
 
 const PublicRoute = ({ children }) => {
@@ -98,6 +106,14 @@ function AppRoutes() {
             <ProtectedRoute>
               <IncomeRecordPage />
             </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/super-admin"
+          element={
+            <SuperAdminRoute>
+              <SuperAdminPage />
+            </SuperAdminRoute>
           }
         />
       </Routes>

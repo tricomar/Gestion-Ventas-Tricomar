@@ -9,6 +9,7 @@ from collections import defaultdict
 
 from utils import db, get_current_user
 from models.users import User
+from middleware.tenant import get_tenant_filter, add_account_id_to_document
 
 router = APIRouter(prefix="/expenses-records", tags=["expenses-records"])
 

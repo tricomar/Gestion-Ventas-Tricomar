@@ -10,7 +10,6 @@ import uuid
 import bcrypt
 
 from models.income import OtherIncome, OtherIncomeCreate, OtherIncomeCreateWithDate
-from middleware.tenant import get_tenant_filter, add_account_id_to_document
 from utils import db, get_current_user, require_admin
 from models.users import User
 
@@ -28,9 +27,6 @@ async def create_other_income(income_input: OtherIncomeCreate, current_user: Use
     
     doc = income.model_dump()
     doc['created_at'] = doc['created_at'].isoformat()
-    # Agregar account_id (tenant isolation)
-    doc = add_account_id_to_document(current_user.dict(), doc)
-
     await db.other_income.insert_one(doc)
     
     return income
@@ -63,16 +59,16 @@ async def get_other_income(date: Optional[str] = None, current_user: User = Depe
 
 @router.put("/{income_id}", response_model=OtherIncome)
 async def update_other_income(income_id: str, income_input: OtherIncomeCreate, current_user: User = Depends(get_current_user)):
-    existing = await db.other_income.find_one(get_tenant_filter(current_user.dict(), {'id': income_id}), {'_id': 0})
+    existing = await db.other_income.find_one({'id': income_id}, {'_id': 0})
     if not existing:
         raise HTTPException(status_code=404, detail="Income not found")
     
     # Update income data
     update_data = income_input.model_dump()
-    await db.other_income.update_one(get_tenant_filter(current_user.dict(), {'id': income_id}), {'$set': update_data})
+    await db.other_income.update_one({'id': income_id}, {'$set': update_data})
     
     # Fetch updated income
-    updated = await db.other_income.find_one(get_tenant_filter(current_user.dict(), {'id': income_id}), {'_id': 0})
+    updated = await db.other_income.find_one({'id': income_id}, {'_id': 0})
     if isinstance(updated.get('created_at'), str):
         updated['created_at'] = datetime.fromisoformat(updated['created_at'])
     
@@ -84,7 +80,7 @@ async def update_other_income(income_id: str, income_input: OtherIncomeCreate, c
 
 @router.delete("/{income_id}")
 async def delete_other_income(income_id: str, current_user: User = Depends(get_current_user)):
-    result = await db.other_income.delete_one(get_tenant_filter(current_user.dict(), {'id': income_id}))
+    result = await db.other_income.delete_one({'id': income_id})
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Income not found")
     return {"message": "Income deleted"}
@@ -153,9 +149,6 @@ async def create_past_income(
     # Save to database
     doc = income.model_dump()
     doc['created_at'] = doc['created_at'].isoformat()
-    # Agregar account_id (tenant isolation)
-    doc = add_account_id_to_document(current_user.dict(), doc)
-
     await db.other_income.insert_one(doc)
     
     return income

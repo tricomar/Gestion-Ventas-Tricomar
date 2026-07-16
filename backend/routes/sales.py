@@ -12,6 +12,7 @@ import bcrypt
 from models.sales import Sale, SaleCreate, SaleCreateWithDate
 from utils import db, get_current_user, require_admin
 from models.users import User
+from middleware.tenant import get_tenant_filter, add_account_id_to_document
 
 # Zona horaria de Chile
 CHILE_TZ = ZoneInfo('America/Santiago')
@@ -30,15 +31,19 @@ async def create_sale(sale_input: SaleCreate, current_user: User = Depends(get_c
     doc = sale.model_dump()
     doc['created_at'] = doc['created_at'].isoformat()
     
+    # Agregar account_id (tenant isolation)
+    doc = add_account_id_to_document(current_user.dict(), doc)
+    
     # Guardar fecha en zona horaria de Chile (YYYY-MM-DD)
     chile_time = datetime.now(CHILE_TZ)
     doc['date'] = chile_time.strftime('%Y-%m-%d')
     
     await db.sales.insert_one(doc)
     
-    # Update product usage count
+    # Update product usage count (con filtro de tenant)
+    tenant_filter = get_tenant_filter(current_user.dict(), {'id': sale_input.product_id})
     await db.products.update_one(
-        {'id': sale_input.product_id},
+        tenant_filter,
         {'$inc': {'usage_count': 1}},
         upsert=False
     )
@@ -46,8 +51,9 @@ async def create_sale(sale_input: SaleCreate, current_user: User = Depends(get_c
     # Update customer stats if customer_id provided
     if sale_input.customer_id:
         sale_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+        tenant_filter = get_tenant_filter(current_user.dict(), {'id': sale_input.customer_id})
         await db.customers.update_one(
-            {'id': sale_input.customer_id},
+            tenant_filter,
             {
                 '$inc': {
                     'purchase_count': 1,
@@ -155,7 +161,9 @@ async def create_past_sale(
 
 @router.get("", response_model=List[Sale])
 async def get_sales(date: Optional[str] = None, current_user: User = Depends(get_current_user)):
-    query = {}
+    # Filtro de tenant
+    tenant_filter = get_tenant_filter(current_user.dict())
+    
     if date:
         # Parse date in Chile timezone
         # date viene como 'YYYY-MM-DD' (ejemplo: '2026-07-15')
@@ -170,12 +178,12 @@ async def get_sales(date: Optional[str] = None, current_user: User = Depends(get
         utc_start = chile_start.astimezone(timezone.utc)
         utc_end = chile_end.astimezone(timezone.utc)
         
-        query['created_at'] = {
+        tenant_filter['created_at'] = {
             '$gte': utc_start.isoformat(),
             '$lt': utc_end.isoformat()
         }
     
-    sales = await db.sales.find(query, {'_id': 0}).sort('created_at', -1).to_list(1000)
+    sales = await db.sales.find(tenant_filter, {'_id': 0}).sort('created_at', -1).to_list(1000)
     
     result = []
     for sale in sales:
@@ -210,16 +218,19 @@ async def get_sales(date: Optional[str] = None, current_user: User = Depends(get
 
 @router.put("/{sale_id}", response_model=Sale)
 async def update_sale(sale_id: str, sale_input: SaleCreate, current_user: User = Depends(get_current_user)):
-    existing = await db.sales.find_one({'id': sale_id}, {'_id': 0})
+    # Filtro de tenant
+    tenant_filter = get_tenant_filter(current_user.dict(), {'id': sale_id})
+    
+    existing = await db.sales.find_one(tenant_filter, {'_id': 0})
     if not existing:
-        raise HTTPException(status_code=404, detail="Sale not found")
+        raise HTTPException(status_code=404, detail="Venta no encontrada")
     
     # Update sale data
     update_data = sale_input.model_dump()
-    await db.sales.update_one({'id': sale_id}, {'$set': update_data})
+    await db.sales.update_one(tenant_filter, {'$set': update_data})
     
     # Fetch updated sale
-    updated = await db.sales.find_one({'id': sale_id}, {'_id': 0})
+    updated = await db.sales.find_one(tenant_filter, {'_id': 0})
     if isinstance(updated.get('created_at'), str):
         updated['created_at'] = datetime.fromisoformat(updated['created_at'])
     
@@ -231,7 +242,10 @@ async def update_sale(sale_id: str, sale_input: SaleCreate, current_user: User =
 
 @router.delete("/{sale_id}")
 async def delete_sale(sale_id: str, current_user: User = Depends(get_current_user)):
-    result = await db.sales.delete_one({'id': sale_id})
+    # Filtro de tenant
+    tenant_filter = get_tenant_filter(current_user.dict(), {'id': sale_id})
+    
+    result = await db.sales.delete_one(tenant_filter)
     if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Sale not found")
-    return {"message": "Sale deleted"}
+        raise HTTPException(status_code=404, detail="Venta no encontrada")
+    return {"message": "Venta eliminada"}
