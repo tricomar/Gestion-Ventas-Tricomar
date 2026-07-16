@@ -69,6 +69,10 @@ const SettingsPage = () => {
     password: ''
   });
   
+  // Estados para super-admin
+  const [accounts, setAccounts] = useState([]);
+  const [selectedAccountForReset, setSelectedAccountForReset] = useState('');
+  
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -77,11 +81,30 @@ const SettingsPage = () => {
     if (user) {
       setProfileName(user.name);
       setProfileEmail(user.email);
-      if (user.role === 'admin') {
+      
+      // Cargar cuentas si es super-admin
+      if (user.role === 'super_admin') {
+        fetchAccounts();
+      }
+      
+      if (user.role === 'admin' || user.role === 'account_admin' || user.role === 'super_admin') {
         fetchUsers();
       }
     }
   }, [user]);
+
+  const fetchAccounts = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${API}/super-admin/accounts`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setAccounts(response.data);
+    } catch (error) {
+      console.error('Error fetching accounts:', error);
+      toast.error('Error al cargar cuentas');
+    }
+  };
 
   const fetchSettings = async () => {
     try {
@@ -263,6 +286,12 @@ const SettingsPage = () => {
       toast.error('La nueva contraseña debe tener al menos 8 caracteres');
       return;
     }
+    
+    // Si es super-admin, debe seleccionar una cuenta
+    if (user?.role === 'super_admin' && !selectedAccountForReset) {
+      toast.error('Debes seleccionar una cuenta para resetear');
+      return;
+    }
 
     setSaving(true);
 
@@ -278,7 +307,8 @@ const SettingsPage = () => {
         `${API}/database/hard-reset`,
         { 
           password: adminPassword,
-          new_password: newPassword
+          new_password: newPassword,
+          account_id: user?.role === 'super_admin' ? selectedAccountForReset : undefined
         },
         {
           headers: {
@@ -369,6 +399,7 @@ const SettingsPage = () => {
         `${API}/database/soft-reset`,
         {
           password: softResetPassword,
+          account_id: user?.role === 'super_admin' ? selectedAccountForReset : undefined,
           ...softResetOptions
         },
         {
@@ -493,7 +524,7 @@ const SettingsPage = () => {
     return <div className="p-8">Cargando...</div>;
   }
 
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = user?.role === 'admin' || user?.role === 'account_admin' || user?.role === 'super_admin';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
@@ -1067,6 +1098,31 @@ const SettingsPage = () => {
                 </ul>
               </div>
 
+              {/* Selector de cuenta (solo para super-admin) */}
+              {user?.role === 'super_admin' && (
+                <div className="mb-4">
+                  <label className="block text-sm font-bold text-slate-700 mb-2">
+                    Cuenta a Resetear *
+                  </label>
+                  <select
+                    value={selectedAccountForReset}
+                    onChange={(e) => setSelectedAccountForReset(e.target.value)}
+                    className="w-full px-3 py-2 border-2 border-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 font-medium"
+                    required
+                  >
+                    <option value="">Selecciona una cuenta...</option>
+                    {accounts.map(acc => (
+                      <option key={acc.id} value={acc.id}>
+                        {acc.business_name} ({acc.plan}) - {acc.stores?.length || 0} tiendas
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-slate-600 mt-1">
+                    ⚠️ Se eliminarán TODOS los datos de esta cuenta
+                  </p>
+                </div>
+              )}
+
               <div className="mb-4">
                 <label className="block text-sm font-bold text-slate-700 mb-2">
                   Contraseña Actual del Administrador *
@@ -1276,6 +1332,28 @@ const SettingsPage = () => {
                   Los elementos seleccionados se eliminarán permanentemente
                 </p>
               </div>
+
+              {/* Selector de cuenta (solo para super-admin) */}
+              {user?.role === 'super_admin' && (
+                <div className="mb-6">
+                  <label className="block text-sm font-bold text-slate-700 mb-2">
+                    Cuenta a Resetear *
+                  </label>
+                  <select
+                    value={selectedAccountForReset}
+                    onChange={(e) => setSelectedAccountForReset(e.target.value)}
+                    className="w-full px-3 py-2 border-2 border-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 font-medium"
+                    required
+                  >
+                    <option value="">Selecciona una cuenta...</option>
+                    {accounts.map(acc => (
+                      <option key={acc.id} value={acc.id}>
+                        {acc.business_name} ({acc.plan})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {/* Password Field */}
               <div className="mb-6">
