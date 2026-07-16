@@ -524,7 +524,12 @@ const SettingsPage = () => {
     return <div className="p-8">Cargando...</div>;
   }
 
-  const isAdmin = user?.role === 'admin' || user?.role === 'account_admin' || user?.role === 'super_admin';
+  // Determinar permisos según rol
+  const isSuperAdmin = user?.role === 'super_admin';
+  const isSupervisor = user?.role === 'account_admin'; // Supervisor
+  const canManageEmployees = isSupervisor; // Solo Supervisor puede gestionar empleados
+  const canAccessDatabase = isSuperAdmin; // Solo Super-Admin ve Base de Datos
+  const canAccessAllUsers = isSuperAdmin; // Solo Super-Admin ve todos los usuarios
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
