@@ -8,6 +8,7 @@ from .auth import (
     create_token,
     get_current_user,
     require_admin,
+    require_super_admin,
     security
 )
 from .database import db, client
@@ -18,6 +19,7 @@ __all__ = [
     "create_token",
     "get_current_user",
     "require_admin",
+    "require_super_admin",
     "security",
     "db",
     "client"

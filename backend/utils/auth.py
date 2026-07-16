@@ -55,7 +55,14 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         raise HTTPException(status_code=401, detail=str(e))
 
 async def require_admin(current_user: User = Depends(get_current_user)) -> User:
-    """Middleware to require admin role"""
-    if current_user.role != "admin":
+    """Middleware to require admin role (admin, super_admin, or account_admin)"""
+    allowed_roles = ["admin", "super_admin", "account_admin"]
+    if current_user.role not in allowed_roles:
         raise HTTPException(status_code=403, detail="Solo administradores pueden realizar esta acción")
+    return current_user
+
+async def require_super_admin(current_user: User = Depends(get_current_user)) -> User:
+    """Middleware to require super_admin role only"""
+    if current_user.role != "super_admin":
+        raise HTTPException(status_code=403, detail="Solo Super-Admin puede realizar esta acción")
     return current_user

@@ -10,10 +10,12 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const ROLES = [
+  { value: 'super_admin', label: 'Super-Admin' },
+  { value: 'account_admin', label: 'Supervisor' },
+  { value: 'employee', label: 'Empleado' },
+  // Legacy roles (mantener para compatibilidad)
   { value: 'admin', label: 'Administrador' },
-  { value: 'sub_admin', label: 'Sub-Administrador' },
-  { value: 'supervisor', label: 'Supervisor' },
-  { value: 'empleado', label: 'Empleado' }
+  { value: 'operator', label: 'Operador' }
 ];
 
 const SettingsPage = () => {
@@ -75,6 +77,20 @@ const SettingsPage = () => {
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // Establecer pestaña por defecto según el rol
+  useEffect(() => {
+    if (user) {
+      // Empleados solo ven "Mi Perfil"
+      if (user.role === 'employee') {
+        setActiveTab('profile');
+      } 
+      // Super-Admin y Supervisor ven "Tiendas" por defecto
+      else if (user.role === 'super_admin' || user.role === 'account_admin') {
+        setActiveTab('stores');
+      }
+    }
+  }, [user]);
 
   useEffect(() => {
     fetchSettings();
@@ -558,19 +574,23 @@ const SettingsPage = () => {
 
         {/* Tabs */}
         <div className="flex gap-2 mb-6 flex-wrap">
-          <button
-            onClick={() => setActiveTab('stores')}
-            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold border-2 border-slate-900 transition-all ${
-              activeTab === 'stores' 
-                ? 'bg-slate-900 text-white' 
-                : 'bg-white text-slate-900 hover:bg-slate-50'
-            }`}
-            style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
-            data-testid="stores-tab-btn"
-          >
-            <Store className="w-5 h-5" />
-            Tiendas
-          </button>
+          {/* Tiendas - Solo para Super-Admin y Supervisor */}
+          {(isSuperAdmin || isSupervisor) && (
+            <button
+              onClick={() => setActiveTab('stores')}
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold border-2 border-slate-900 transition-all ${
+                activeTab === 'stores' 
+                  ? 'bg-slate-900 text-white' 
+                  : 'bg-white text-slate-900 hover:bg-slate-50'
+              }`}
+              style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
+              data-testid="stores-tab-btn"
+            >
+              <Store className="w-5 h-5" />
+              Tiendas
+            </button>
+          )}
+          {/* Mi Perfil - Visible para todos */}
           <button
             onClick={() => setActiveTab('profile')}
             className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold border-2 border-slate-900 transition-all ${
@@ -584,7 +604,24 @@ const SettingsPage = () => {
             <User className="w-5 h-5" />
             Mi Perfil
           </button>
-          {isAdmin && (
+          {/* Gestión de Empleados - Solo para Supervisor */}
+          {isSupervisor && (
+            <button
+              onClick={() => setActiveTab('employees')}
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold border-2 border-slate-900 transition-all ${
+                activeTab === 'employees' 
+                  ? 'bg-slate-900 text-white' 
+                  : 'bg-white text-slate-900 hover:bg-slate-50'
+              }`}
+              style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
+              data-testid="employees-tab-btn"
+            >
+              <Users className="w-5 h-5" />
+              Gestión de Empleados
+            </button>
+          )}
+          {/* Gestión de Usuarios - Solo para Super-Admin (vista global) */}
+          {isSuperAdmin && (
             <button
               onClick={() => setActiveTab('users')}
               className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold border-2 border-slate-900 transition-all ${
@@ -599,7 +636,8 @@ const SettingsPage = () => {
               Gestión de Usuarios
             </button>
           )}
-          {isAdmin && (
+          {/* Base de Datos - Solo para Super-Admin */}
+          {isSuperAdmin && (
             <button
               onClick={() => setActiveTab('database')}
               className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold border-2 border-slate-900 transition-all ${
@@ -616,8 +654,8 @@ const SettingsPage = () => {
           )}
         </div>
 
-        {/* Store Settings Tab */}
-        {activeTab === 'stores' && (
+        {/* Store Settings Tab - Solo para Super-Admin y Supervisor */}
+        {activeTab === 'stores' && (isSuperAdmin || isSupervisor) && (
           <div 
             className="bg-white border-2 border-slate-900 rounded-xl p-8"
             style={{ boxShadow: '8px 8px 0px 0px rgba(15,23,42,1)' }}
@@ -768,8 +806,92 @@ const SettingsPage = () => {
           </div>
         )}
 
-        {/* User Management Tab (Admin Only) */}
-        {activeTab === 'users' && isAdmin && (
+        {/* Employee Management Tab (Supervisor Only) - Gestión de usuarios de su cuenta */}
+        {activeTab === 'employees' && isSupervisor && (
+          <div 
+            className="bg-white border-2 border-slate-900 rounded-xl p-8"
+            style={{ boxShadow: '8px 8px 0px 0px rgba(15,23,42,1)' }}
+          >
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <Users className="w-6 h-6" />
+                <h2 className="text-2xl font-bold text-slate-900">Gestión de Empleados</h2>
+              </div>
+              <button
+                onClick={() => handleOpenUserModal()}
+                className="flex items-center gap-2 px-4 py-2 bg-[#D4F0A5] border-2 border-slate-900 rounded-xl font-bold hover:bg-[#c5e196] transition-all"
+                style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
+                data-testid="add-employee-btn"
+              >
+                <Plus className="w-5 h-5" />
+                Nuevo Empleado
+              </button>
+            </div>
+
+            {/* Users Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b-2 border-slate-900">
+                    <th className="text-left py-3 px-4 font-bold text-slate-900">Nombre</th>
+                    <th className="text-left py-3 px-4 font-bold text-slate-900">Email</th>
+                    <th className="text-left py-3 px-4 font-bold text-slate-900">Perfil</th>
+                    <th className="text-left py-3 px-4 font-bold text-slate-900">Fecha Creación</th>
+                    <th className="text-center py-3 px-4 font-bold text-slate-900">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.map((u) => (
+                    <tr key={u.id} className="border-b border-slate-200 hover:bg-slate-50">
+                      <td className="py-3 px-4">{u.name}</td>
+                      <td className="py-3 px-4">{u.email}</td>
+                      <td className="py-3 px-4">
+                        <span className={`px-3 py-1 rounded-lg text-xs font-bold ${
+                          u.role === 'admin' ? 'bg-purple-100 text-purple-900' :
+                          u.role === 'sub_admin' ? 'bg-blue-100 text-blue-900' :
+                          u.role === 'supervisor' ? 'bg-green-100 text-green-900' :
+                          'bg-slate-100 text-slate-900'
+                        }`}>
+                          {ROLES.find(r => r.value === u.role)?.label || u.role}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-sm text-slate-600">
+                        {new Date(u.created_at).toLocaleDateString('es-CL')}
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => handleOpenUserModal(u)}
+                            className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                            data-testid={`edit-user-${u.id}`}
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          {u.id !== user.id && (
+                            <button
+                              onClick={() => handleDeleteUser(u.id, u.name)}
+                              className="p-2 hover:bg-red-50 text-red-600 rounded-lg transition-colors"
+                              data-testid={`delete-user-${u.id}`}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {users.length === 0 && (
+              <p className="text-center text-slate-500 py-8">No hay empleados registrados</p>
+            )}
+          </div>
+        )}
+
+        {/* User Management Tab (Super-Admin Only) - Vista global de todos los usuarios */}
+        {activeTab === 'users' && isSuperAdmin && (
           <div 
             className="bg-white border-2 border-slate-900 rounded-xl p-8"
             style={{ boxShadow: '8px 8px 0px 0px rgba(15,23,42,1)' }}
@@ -852,8 +974,8 @@ const SettingsPage = () => {
           </div>
         )}
 
-        {/* Database Management Tab (Admin Only) */}
-        {activeTab === 'database' && isAdmin && (
+        {/* Database Management Tab (Super-Admin Only) */}
+        {activeTab === 'database' && isSuperAdmin && (
           <div 
             className="bg-white border-2 border-slate-900 rounded-xl p-8"
             style={{ boxShadow: '8px 8px 0px 0px rgba(15,23,42,1)' }}
