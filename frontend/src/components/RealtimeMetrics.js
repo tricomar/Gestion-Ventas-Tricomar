@@ -226,90 +226,18 @@ const RealtimeMetrics = ({ refreshTrigger }) => {
           </h3>
         </div>
 
-        {/* Metrics Grid */}
+        {/* Metrics Grid - Dinámico según max_stores */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Tienda A */}
-          <div>
-            <div 
-              className="mb-3 px-4 py-2 border-2 border-slate-900 rounded-lg text-center font-black text-lg"
-              style={{ backgroundColor: '#D4F0A5' }}
-            >
-              {settings.store_a_name.toUpperCase()}
-            </div>
-            <div className="space-y-3">
-              <MetricCard
-                title="Compras"
-                value={currentMetrics.store_a.compras || 0}
-                icon={Wallet}
-                color="#FFF7ED"
-              />
-              <MetricCard
-                title="Ganancia"
-                value={currentMetrics.store_a.utilidades || 0}
-                icon={TrendingUp}
-                color="#D1FAE5"
-              />
-              <MetricCard
-                title="IVA a favor"
-                value={currentMetrics.store_a.iva_a_favor || 0}
-                icon={DollarSign}
-                color="#DBEAFE"
-              />
-            </div>
-          </div>
+          {/* Renderizar tiendas dinámicamente */}
+          {getActiveStores().map((store, index) => {
+            // Mapear store.id a los datos correspondientes
+            const storeKey = index === 0 ? 'store_a' : index === 1 ? 'store_b' : `store_${String.fromCharCode(97 + index)}`;
+            const storeData = currentMetrics[storeKey] || {};
+            return renderStoreColumn(store, storeData, index);
+          })}
 
-          {/* Tienda B */}
-          <div>
-            <div 
-              className="mb-3 px-4 py-2 border-2 border-slate-900 rounded-lg text-center font-black text-lg"
-              style={{ backgroundColor: '#FADBB0' }}
-            >
-              {settings.store_b_name.toUpperCase()}
-            </div>
-            <div className="space-y-3">
-              <MetricCard
-                title="Compras"
-                value={currentMetrics.store_b.compras || 0}
-                icon={Wallet}
-                color="#FFF7ED"
-              />
-              <MetricCard
-                title="Ganancia"
-                value={currentMetrics.store_b.utilidades || 0}
-                icon={TrendingUp}
-                color="#D1FAE5"
-              />
-              <MetricCard
-                title="IVA a favor"
-                value={currentMetrics.store_b.iva_a_favor || 0}
-                icon={DollarSign}
-                color="#DBEAFE"
-              />
-            </div>
-          </div>
-
-          {/* General */}
-          <div>
-            <div 
-              className="mb-3 px-4 py-2 border-2 border-slate-900 rounded-lg text-center font-black text-lg bg-white"
-            >
-              GENERAL
-            </div>
-            <div className="space-y-3">
-              <MetricCard
-                title="Otros Ingresos"
-                value={currentMetrics.general.otros_ingresos || 0}
-                icon={TrendingUp}
-                color="#E0E7FF"
-              />
-              <MetricCard
-                title="Egresos"
-                value={currentMetrics.general.egresos || 0}
-                icon={TrendingDown}
-                color="#FEE2E2"
-              />
-            </div>
-          </div>
+          {/* Columna General */}
+          {renderGeneralColumn(currentMetrics.general || {})}
         </div>
 
         {/* Chart Section */}
@@ -520,90 +448,17 @@ const RealtimeMetrics = ({ refreshTrigger }) => {
 
       {/* Content */}
       {showPeriod === 'month' ? (
-        /* Stores Grid - Total Mes */
+        /* Stores Grid - Total Mes - Dinámico */
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Tienda A */}
-          <div>
-            <div 
-              className="mb-3 px-4 py-2 border-2 border-slate-900 rounded-lg text-center font-black text-lg"
-              style={{ backgroundColor: '#D4F0A5' }}
-            >
-              {settings.store_a_name.toUpperCase()}
-            </div>
-            <div className="space-y-3">
-              <MetricCard
-                title="Compras"
-                value={currentMetrics.store_a.compras}
-                icon={Wallet}
-                color="#FFF7ED"
-              />
-              <MetricCard
-                title="Ganancia"
-                value={currentMetrics.store_a.utilidades}
-                icon={TrendingUp}
-                color="#D1FAE5"
-              />
-              <MetricCard
-                title="IVA a favor"
-                value={currentMetrics.store_a.iva_a_favor}
-                icon={DollarSign}
-                color="#DBEAFE"
-              />
-            </div>
-          </div>
+          {/* Renderizar tiendas dinámicamente */}
+          {getActiveStores().map((store, index) => {
+            const storeKey = index === 0 ? 'store_a' : index === 1 ? 'store_b' : `store_${String.fromCharCode(97 + index)}`;
+            const storeData = currentMetrics[storeKey] || {};
+            return renderStoreColumn(store, storeData, index);
+          })}
 
-          {/* Tienda B */}
-          <div>
-            <div 
-              className="mb-3 px-4 py-2 border-2 border-slate-900 rounded-lg text-center font-black text-lg"
-              style={{ backgroundColor: '#FADBB0' }}
-            >
-              {settings.store_b_name.toUpperCase()}
-            </div>
-            <div className="space-y-3">
-              <MetricCard
-                title="Compras"
-                value={currentMetrics.store_b.compras}
-                icon={Wallet}
-                color="#FFF7ED"
-              />
-              <MetricCard
-                title="Ganancia"
-                value={currentMetrics.store_b.utilidades}
-                icon={TrendingUp}
-                color="#D1FAE5"
-              />
-              <MetricCard
-                title="IVA a favor"
-                value={currentMetrics.store_b.iva_a_favor}
-                icon={DollarSign}
-                color="#DBEAFE"
-              />
-            </div>
-          </div>
-
-          {/* General */}
-          <div>
-            <div 
-              className="mb-3 px-4 py-2 border-2 border-slate-900 rounded-lg text-center font-black text-lg bg-white"
-            >
-              GENERAL
-            </div>
-            <div className="space-y-3">
-              <MetricCard
-                title="Otros Ingresos"
-                value={currentMetrics.general.otros_ingresos}
-                icon={TrendingUp}
-                color="#E0E7FF"
-              />
-              <MetricCard
-                title="Egresos"
-                value={currentMetrics.general.egresos}
-                icon={TrendingDown}
-                color="#FEE2E2"
-              />
-            </div>
-          </div>
+          {/* Columna General */}
+          {renderGeneralColumn(currentMetrics.general || {})}
         </div>
       ) : (
         /* Historic Grid - Last 2 years */
