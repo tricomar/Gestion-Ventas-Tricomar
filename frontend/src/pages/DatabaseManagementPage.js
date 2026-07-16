@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { ArrowLeft, Database, AlertTriangle, CheckCircle, Trash2, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Database, AlertTriangle, CheckCircle, Trash2, RotateCcw, CheckSquare } from 'lucide-react';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -21,6 +21,29 @@ const DatabaseManagementPage = () => {
     customers: false
   });
   const [loading, setLoading] = useState(false);
+  const [showValidationModal, setShowValidationModal] = useState(false);
+  const [validationReport, setValidationReport] = useState(null);
+
+  const handleValidateSchema = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('token');
+      const response = await axios.post(
+        `${API}/database/validate-and-fix`,
+        {},
+        { headers: { 'Authorization': `Bearer ${token}` } }
+      );
+
+      setValidationReport(response.data);
+      setShowValidationModal(true);
+      toast.success('Esquema validado y corregido exitosamente');
+    } catch (error) {
+      console.error('Error validating schema:', error);
+      toast.error(error.response?.data?.detail || 'Error al validar esquema');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleHardReset = async () => {
     if (confirmationText !== 'RESETEAR') {
@@ -149,7 +172,48 @@ const DatabaseManagementPage = () => {
         </div>
 
         {/* Reset Options */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+          {/* Validar y Corregir Esquema */}
+          <div 
+            className="bg-white border-2 border-slate-900 rounded-xl p-6"
+            style={{ boxShadow: '8px 8px 0px 0px rgba(15,23,42,1)' }}
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-3 bg-blue-100 border-2 border-slate-900 rounded-xl">
+                <CheckSquare className="w-6 h-6 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="font-bold text-lg">Validar y Corregir Esquema</h3>
+                <p className="text-sm text-slate-600">Actualización segura</p>
+              </div>
+            </div>
+            
+            <p className="text-slate-600 mb-4 text-sm">
+              Verifica la estructura de la base de datos y crea automáticamente tablas, índices o campos faltantes. 
+              Esta operación es <strong>segura</strong> y no elimina datos existentes.
+            </p>
+
+            <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-3 mb-4 text-xs">
+              <p className="font-bold text-blue-900 mb-1">Esta acción:</p>
+              <ul className="space-y-1 text-blue-800 ml-4">
+                <li>✅ Detecta colecciones faltantes y las crea</li>
+                <li>✅ Crea índices necesarios para optimización</li>
+                <li>✅ Inicializa el documento de configuración si no existe</li>
+                <li>✅ NO elimina ni modifica datos existentes</li>
+                <li>✅ Genera un reporte detallado de cambios realizados</li>
+              </ul>
+            </div>
+
+            <button
+              onClick={handleValidateSchema}
+              disabled={loading}
+              className="w-full px-4 py-3 bg-blue-500 text-white border-2 border-slate-900 rounded-xl font-bold hover:bg-blue-600 disabled:opacity-50 transition-all"
+              style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
+            >
+              {loading ? 'Validando...' : 'Validar y Corregir Esquema'}
+            </button>
+          </div>
+
           {/* Hard Reset */}
           <div 
             className="bg-white border-2 border-slate-900 rounded-xl p-6"
@@ -353,6 +417,67 @@ const DatabaseManagementPage = () => {
                   {loading ? 'Procesando...' : 'Confirmar'}
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Validation Report Modal */}
+        {showValidationModal && validationReport && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div 
+              className="bg-white border-4 border-slate-900 rounded-2xl p-8 max-w-2xl w-full max-h-[80vh] overflow-y-auto"
+              style={{ boxShadow: '12px 12px 0px 0px rgba(15,23,42,1)' }}
+            >
+              <h2 className="text-2xl font-black mb-4 flex items-center gap-2">
+                <CheckSquare className="w-7 h-7 text-blue-600" />
+                Reporte de Validación
+              </h2>
+              
+              <div className="space-y-4">
+                {validationReport.changes_made && validationReport.changes_made.length > 0 ? (
+                  <>
+                    <div className="bg-green-50 border-2 border-green-500 rounded-xl p-4">
+                      <p className="font-bold text-green-900">
+                        ✅ Se realizaron {validationReport.changes_made.length} cambio(s) en la base de datos
+                      </p>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <h3 className="font-bold text-slate-900">Cambios realizados:</h3>
+                      <ul className="space-y-2">
+                        {validationReport.changes_made.map((change, index) => (
+                          <li key={index} className="p-3 bg-slate-50 border-2 border-slate-200 rounded-lg text-sm">
+                            <span className="font-mono text-slate-700">{change}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </>
+                ) : (
+                  <div className="bg-blue-50 border-2 border-blue-500 rounded-xl p-4">
+                    <p className="font-bold text-blue-900">
+                      ✅ La base de datos ya está actualizada. No se requieren cambios.
+                    </p>
+                  </div>
+                )}
+
+                {validationReport.collections_checked && (
+                  <div className="text-sm text-slate-600">
+                    <p><strong>Colecciones verificadas:</strong> {validationReport.collections_checked.join(', ')}</p>
+                  </div>
+                )}
+              </div>
+
+              <button
+                onClick={() => {
+                  setShowValidationModal(false);
+                  setValidationReport(null);
+                }}
+                className="w-full mt-6 px-4 py-3 bg-slate-900 text-white border-2 border-slate-900 rounded-xl font-bold hover:bg-slate-800"
+                style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
+              >
+                Cerrar
+              </button>
             </div>
           </div>
         )}
