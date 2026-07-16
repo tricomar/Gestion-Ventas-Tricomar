@@ -186,12 +186,12 @@ const SuperAdminPage = () => {
           {/* Header */}
           <div className="mb-8">
             <button
-              onClick={() => navigate('/dashboard')}
+              onClick={() => navigate('/admin')}
               className="flex items-center gap-2 px-4 py-2 bg-white border-2 border-slate-900 rounded-lg hover:bg-slate-50 transition-all font-bold mb-4"
               style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
             >
               <ArrowLeft className="w-5 h-5" />
-              Volver al Dashboard
+              Volver al Panel Admin
             </button>
             
             <h1 className="text-4xl font-black text-slate-900 mb-2">Panel Super-Admin</h1>
