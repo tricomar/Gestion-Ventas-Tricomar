@@ -261,6 +261,12 @@ const SuperAdminPage = () => {
     setShowEmployeeModal(true);
   };
 
+  // Verificar si ya existe un supervisor en la cuenta
+  const hasSupervisor = () => {
+    if (!selectedAccount?.users) return false;
+    return selectedAccount.users.some(user => user.role === 'supervisor');
+  };
+
   const saveEmployee = async () => {
     if (!employeeForm.name || !employeeForm.email) {
       toast.error('Nombre y email son requeridos');
@@ -788,11 +794,27 @@ const SuperAdminPage = () => {
                     value={employeeForm.role}
                     onChange={(e) => setEmployeeForm({...employeeForm, role: e.target.value})}
                     className="w-full px-4 py-3 border-2 border-slate-900 rounded-xl"
+                    disabled={editingEmployee} // No permitir cambio de rol al editar
                   >
                     <option value="employee">Empleado</option>
-                    <option value="supervisor">Supervisor</option>
-                    <option value="account_admin">Administrador</option>
+                    <option 
+                      value="supervisor" 
+                      disabled={!editingEmployee && hasSupervisor()}
+                    >
+                      Supervisor {!editingEmployee && hasSupervisor() ? '(Ya existe uno)' : ''}
+                    </option>
                   </select>
+                  {!editingEmployee && (
+                    <p className="text-xs text-slate-600 mt-2">
+                      ℹ️ Solo se permite 1 Supervisor por cuenta. 
+                      Empleados según límite: {selectedAccount?.users?.filter(u => u.role === 'employee' || u.role === 'supervisor').length || 0}/{editForm.max_employees}
+                    </p>
+                  )}
+                  {editingEmployee && (
+                    <p className="text-xs text-slate-600 mt-2">
+                      ℹ️ No se puede cambiar el rol de un usuario existente
+                    </p>
+                  )}
                 </div>
               </div>
 

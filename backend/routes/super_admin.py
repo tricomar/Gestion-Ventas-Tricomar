@@ -469,6 +469,9 @@ async def create_employee_for_account(
 ):
     """
     Crea un nuevo empleado para una cuenta específica.
+    Restricciones:
+    - Solo 1 Supervisor por cuenta
+    - Empleados según el límite configurado (max_employees)
     Solo accesible para super-admin.
     """
     require_super_admin(current_user.dict())
@@ -485,10 +488,39 @@ async def create_employee_for_account(
                 detail="Cuenta no encontrada"
             )
         
-        # Verificar límite de empleados
+        # Validar datos requeridos
+        if not user_data.get("name") or not user_data.get("email") or not user_data.get("password"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Los campos name, email y password son requeridos"
+            )
+        
+        role = user_data.get("role", "employee")
+        
+        # Validar rol
+        if role not in ["supervisor", "employee"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="El rol debe ser 'supervisor' o 'employee'"
+            )
+        
+        # Si es supervisor, verificar que no exista uno ya
+        if role == "supervisor":
+            existing_supervisor = await db.users.find_one({
+                "account_id": account_id,
+                "role": "supervisor"
+            }, {"_id": 0})
+            
+            if existing_supervisor:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Esta cuenta ya tiene un Supervisor asignado"
+                )
+        
+        # Verificar límite de empleados (cuenta tanto supervisores como empleados)
         current_employees = await db.users.count_documents({
             "account_id": account_id,
-            "role": {"$ne": "account_admin"}
+            "role": {"$in": ["supervisor", "employee"]}
         })
         
         max_employees = account.get("max_employees", 0)
@@ -496,13 +528,6 @@ async def create_employee_for_account(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Esta cuenta ha alcanzado el límite de {max_employees} empleados"
-            )
-        
-        # Validar datos requeridos
-        if not user_data.get("name") or not user_data.get("email") or not user_data.get("password"):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Los campos name, email y password son requeridos"
             )
         
         # Verificar que el email no esté en uso
@@ -520,7 +545,7 @@ async def create_employee_for_account(
             "email": user_data["email"],
             "name": user_data["name"],
             "password_hash": hash_password(user_data["password"]),
-            "role": user_data.get("role", "employee"),
+            "role": role,
             "is_account_owner": False,
             "created_at": datetime.now(timezone.utc).isoformat()
         }
