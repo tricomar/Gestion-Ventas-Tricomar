@@ -3,6 +3,7 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import { X } from 'lucide-react';
 import { useSettings } from '../context/SettingsContext';
+import { useStores } from '../hooks/useStores';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;

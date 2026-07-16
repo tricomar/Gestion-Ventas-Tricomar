@@ -112,7 +112,6 @@ const SettingsPage = () => {
   }, [stores]);
 
   useEffect(() => {
-    fetchSettings();
     if (user) {
       setProfileName(user.name);
       setProfileEmail(user.email);
