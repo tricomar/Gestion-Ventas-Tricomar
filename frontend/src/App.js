@@ -4,6 +4,8 @@ import { Toaster } from './components/ui/sonner';
 import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import AdminDashboard from './pages/AdminDashboard';
+import DatabaseManagementPage from './pages/DatabaseManagementPage';
+import TiendasGlobalesPage from './pages/TiendasGlobalesPage';
 import InventoryPage from './pages/InventoryPage';
 import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';

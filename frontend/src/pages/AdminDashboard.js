@@ -17,12 +17,12 @@ const AdminDashboard = () => {
       route: '/super-admin'
     },
     {
-      id: 'settings',
-      title: 'Configuración',
-      description: 'Configuraciones generales del sistema',
-      icon: Settings,
+      id: 'stores',
+      title: 'Tiendas',
+      description: 'Gestión de todas las tiendas del sistema',
+      icon: Store,
       color: '#FADBB0',
-      route: '/settings'
+      route: '/tiendas-globales'
     },
     {
       id: 'database',
@@ -30,15 +30,15 @@ const AdminDashboard = () => {
       description: 'Gestión y mantenimiento de la base de datos',
       icon: Database,
       color: '#FFE4E6',
-      route: '/settings?tab=database'
+      route: '/database-management'
     },
     {
-      id: 'stores',
-      title: 'Tiendas',
-      description: 'Configuración de tiendas del sistema',
-      icon: Store,
+      id: 'settings',
+      title: 'Configuración',
+      description: 'Configuraciones generales del sistema',
+      icon: Settings,
       color: '#E0E7FF',
-      route: '/settings?tab=stores'
+      route: '/settings'
     }
   ];
 
