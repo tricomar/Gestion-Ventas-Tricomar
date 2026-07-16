@@ -179,3 +179,24 @@ async def update_profile(
     )
     
     return {"message": "Perfil actualizado exitosamente"}
+
+@router.get("/account/info")
+async def get_account_info(current_user: User = Depends(get_current_user)):
+    """Obtener información de la cuenta del usuario actual"""
+    if not current_user.account_id:
+        raise HTTPException(status_code=404, detail="Usuario no tiene cuenta asignada")
+    
+    account = await db.accounts.find_one({"id": current_user.account_id}, {"_id": 0})
+    
+    if not account:
+        raise HTTPException(status_code=404, detail="Cuenta no encontrada")
+    
+    return {
+        "id": account.get("id"),
+        "business_name": account.get("business_name"),
+        "plan": account.get("plan"),
+        "max_stores": account.get("max_stores"),
+        "max_employees": account.get("max_employees"),
+        "stores": account.get("stores", []),
+        "enabled_modules": account.get("enabled_modules", [])
+    }

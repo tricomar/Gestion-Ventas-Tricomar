@@ -55,6 +55,9 @@ const SettingsPage = () => {
   // Store settings - Dinámico basado en useStores
   const [storeNames, setStoreNames] = useState({});
   
+  // Account info para validar límites
+  const [accountInfo, setAccountInfo] = useState(null);
+  
   // Profile settings
   const [profileName, setProfileName] = useState('');
   const [profileEmail, setProfileEmail] = useState('');
@@ -123,6 +126,10 @@ const SettingsPage = () => {
       
       if (user.role === 'admin' || user.role === 'account_admin' || user.role === 'super_admin') {
         fetchUsers();
+        // Cargar info de cuenta para validar límites
+        if (user.role === 'account_admin') {
+          fetchAccountInfo();
+        }
       }
     }
   }, [user]);
@@ -147,6 +154,15 @@ const SettingsPage = () => {
     } catch (error) {
       console.error('Error fetching users:', error);
       toast.error('Error al cargar usuarios');
+    }
+  };
+
+  const fetchAccountInfo = async () => {
+    try {
+      const response = await axios.get(`${API}/account/info`);
+      setAccountInfo(response.data);
+    } catch (error) {
+      console.error('Error fetching account info:', error);
     }
   };
 
@@ -193,6 +209,21 @@ const SettingsPage = () => {
   };
 
   const handleOpenUserModal = (user = null) => {
+    // Si es nuevo usuario (no es edición), validar límite
+    if (!user && accountInfo) {
+      // Contar empleados actuales (excluyendo account_admin)
+      const currentEmployees = users.filter(u => 
+        u.role === 'supervisor' || u.role === 'employee'
+      ).length;
+      
+      const maxEmployees = accountInfo.max_employees || 0;
+      
+      if (currentEmployees >= maxEmployees) {
+        toast.error(`Has alcanzado el límite de ${maxEmployees} empleados para tu plan`);
+        return;
+      }
+    }
+    
     if (user) {
       setEditingUser(user);
       setUserForm({
@@ -206,7 +237,7 @@ const SettingsPage = () => {
       setUserForm({
         name: '',
         email: '',
-        role: 'empleado',
+        role: 'employee',
         password: ''
       });
     }
