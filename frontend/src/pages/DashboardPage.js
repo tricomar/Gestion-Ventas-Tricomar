@@ -27,6 +27,10 @@ const DashboardPage = () => {
   const [showMenu, setShowMenu] = useState(false);
   const [showRecordsMenu, setShowRecordsMenu] = useState(false);
 
+  // Role checks
+  const isSuperAdmin = user?.role === 'super_admin';
+  const isEmployee = user?.role === 'employee';
+
   const refresh = () => setRefreshTrigger(prev => prev + 1);
 
   // Cerrar dropdown de registros al hacer clic fuera
@@ -214,13 +218,16 @@ const DashboardPage = () => {
                   <Package className="w-4 h-4" />
                   Inventario
                 </button>
-                <button
-                  onClick={() => { navigate('/reports'); setShowMenu(false); }}
-                  className="w-full text-left px-4 py-2 hover:bg-slate-100 font-bold flex items-center gap-2 border-b-2 border-slate-200"
-                >
-                  <FileText className="w-4 h-4" />
-                  Reportes
-                </button>
+                {/* Reportes - Oculto para Empleados */}
+                {!isEmployee && (
+                  <button
+                    onClick={() => { navigate('/reports'); setShowMenu(false); }}
+                    className="w-full text-left px-4 py-2 hover:bg-slate-100 font-bold flex items-center gap-2 border-b-2 border-slate-200"
+                  >
+                    <FileText className="w-4 h-4" />
+                    Reportes
+                  </button>
+                )}
                 <button
                   onClick={() => { navigate('/settings'); setShowMenu(false); }}
                   className="w-full text-left px-4 py-2 hover:bg-slate-100 font-bold flex items-center gap-2 rounded-b-lg"

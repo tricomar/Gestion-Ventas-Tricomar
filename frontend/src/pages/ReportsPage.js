@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { Home, FileDown, Calendar } from 'lucide-react';
+import { Home, FileDown, Calendar, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import * as XLSX from 'xlsx';
@@ -12,11 +13,22 @@ const API = `${BACKEND_URL}/api`;
 
 const ReportsPage = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [period, setPeriod] = useState('day');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [reportData, setReportData] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  // Verificar permisos - Empleados no tienen acceso
+  const isEmployee = user?.role === 'employee';
+
+  useEffect(() => {
+    if (isEmployee) {
+      toast.error('No tienes acceso a esta sección');
+      navigate('/');
+    }
+  }, [isEmployee, navigate]);
 
   const fetchReport = async () => {
     setLoading(true);
@@ -158,6 +170,33 @@ const ReportsPage = () => {
     XLSX.writeFile(wb, `reporte-${period}-${Date.now()}.xlsx`);
     toast.success('Excel descargado');
   };
+
+  // Mostrar mensaje de acceso denegado para empleados
+  if (isEmployee) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-6">
+        <div className="max-w-2xl mx-auto mt-20">
+          <div 
+            className="bg-white border-2 border-slate-900 rounded-xl p-8 text-center"
+            style={{ boxShadow: '8px 8px 0px 0px rgba(15,23,42,1)' }}
+          >
+            <AlertCircle className="w-16 h-16 mx-auto mb-4 text-red-500" />
+            <h2 className="text-2xl font-bold mb-2">Acceso Denegado</h2>
+            <p className="text-slate-600 mb-6">
+              No tienes permisos para acceder a la sección de Reportes.
+            </p>
+            <button
+              onClick={() => navigate('/')}
+              className="px-6 py-3 bg-slate-900 text-white border-2 border-slate-900 rounded-xl font-bold hover:bg-slate-800 transition-all"
+              style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
+            >
+              Volver al Dashboard
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 md:p-8" style={{ backgroundColor: '#F4F4F0', minHeight: '100vh' }}>
