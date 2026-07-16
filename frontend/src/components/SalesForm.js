@@ -5,12 +5,14 @@ import { Search, Plus } from 'lucide-react';
 import ProductForm from './ProductForm';
 import CustomerForm from './CustomerForm';
 import { useSettings } from '../context/SettingsContext';
+import { useStores } from '../hooks/useStores';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const SalesForm = ({ onSuccess }) => {
   const { settings } = useSettings();
+  const { getStoreName } = useStores();
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [productSearch, setProductSearch] = useState('');
   const [quantity, setQuantity] = useState('');
@@ -251,7 +253,7 @@ const SalesForm = ({ onSuccess }) => {
                   <div className="flex justify-between items-center">
                     <div>
                       <p className="font-bold">{prod.name}</p>
-                      <p className="text-xs text-slate-500">Tienda {prod.store || 'A'}</p>
+                      <p className="text-xs text-slate-500">{getStoreName(prod.store || 'A')}</p>
                     </div>
                     <span className="font-mono font-bold">
                       ${(prod.sale_price || 0).toLocaleString('es-CL')}
@@ -293,7 +295,7 @@ const SalesForm = ({ onSuccess }) => {
               <div className="flex justify-between items-center">
                 <div>
                   <span className="text-xs font-bold uppercase text-slate-500">
-                    Tienda {selectedProduct.store || 'A'}
+                    {getStoreName(selectedProduct.store || 'A')}
                   </span>
                   <p className="font-mono font-bold">
                     ${(selectedProduct.sale_price || 0).toLocaleString('es-CL')}

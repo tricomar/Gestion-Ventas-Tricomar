@@ -5,6 +5,7 @@ import { Users, Plus, Edit2, Trash2, Eye, Phone, MapPin, TrendingUp } from 'luci
 import { useNavigate } from 'react-router-dom';
 import CustomerForm from '../components/CustomerForm';
 import { useSettings } from '../context/SettingsContext';
+import { useStores } from '../hooks/useStores';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -12,6 +13,7 @@ const API = `${BACKEND_URL}/api`;
 const CustomersPage = () => {
   const navigate = useNavigate();
   const { settings } = useSettings();
+  const { getStoreName } = useStores();
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);

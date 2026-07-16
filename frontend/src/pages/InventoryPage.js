@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { Package, Plus, Edit, Trash2, Home } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useSettings } from '../context/SettingsContext';
+import { useStores } from '../hooks/useStores';
 import ProductForm from '../components/ProductForm';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -12,6 +13,7 @@ const API = `${BACKEND_URL}/api`;
 const InventoryPage = () => {
   const navigate = useNavigate();
   const { settings } = useSettings();
+  const { getStoreName } = useStores();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -182,7 +184,7 @@ const InventoryPage = () => {
                         className="px-3 py-1 rounded-full text-xs font-bold uppercase border-2 border-slate-900"
                         style={{ backgroundColor: product.store === 'A' ? '#D4F0A5' : '#FADBB0' }}
                       >
-                        {product.store === 'A' ? settings.store_a_name : settings.store_b_name}
+                        {getStoreName(product.store)}
                       </span>
                     </td>
                     <td className="px-6 py-4 font-bold text-slate-900">

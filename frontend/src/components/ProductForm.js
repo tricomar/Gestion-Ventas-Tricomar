@@ -9,6 +9,7 @@ const API = `${BACKEND_URL}/api`;
 
 const ProductForm = ({ product, onClose }) => {
   const { settings } = useSettings();
+  const { storeOptions } = useStores();
   const [name, setName] = useState('');
   const [store, setStore] = useState('A');
   const [costPrice, setCostPrice] = useState('');
@@ -110,8 +111,11 @@ const ProductForm = ({ product, onClose }) => {
               className="w-full bg-white border-2 border-slate-900 rounded-xl px-4 py-3 font-medium text-slate-900 cursor-pointer focus:ring-0 focus:outline-none focus:border-indigo-500"
               data-testid="product-store-select"
             >
-              <option value="A">{settings.store_a_name}</option>
-              <option value="B">{settings.store_b_name}</option>
+              {storeOptions.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
             </select>
           </div>
 
