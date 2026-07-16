@@ -93,7 +93,7 @@ const SettingsPage = () => {
       if (user.role === 'employee') {
         setActiveTab('profile');
       } else if (user.role === 'super_admin' || user.role === 'account_admin') {
-        setActiveTab('stores');
+        setActiveTab('profile'); // Mi Perfil es primera pestaña ahora
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -581,6 +581,21 @@ const SettingsPage = () => {
 
         {/* Tabs */}
         <div className="flex gap-2 mb-6 flex-wrap">
+          {/* Mi Perfil - Visible para todos (PRIMERA POSICIÓN) */}
+          <button
+            onClick={() => setActiveTab('profile')}
+            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold border-2 border-slate-900 transition-all ${
+              activeTab === 'profile' 
+                ? 'bg-slate-900 text-white' 
+                : 'bg-white text-slate-900 hover:bg-slate-50'
+            }`}
+            style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
+            data-testid="profile-tab-btn"
+          >
+            <User className="w-5 h-5" />
+            Mi Perfil
+          </button>
+          
           {/* Tiendas - Solo para Super-Admin y Supervisor */}
           {(isSuperAdmin || isSupervisor) && (
             <button
@@ -597,20 +612,7 @@ const SettingsPage = () => {
               Tiendas
             </button>
           )}
-          {/* Mi Perfil - Visible para todos */}
-          <button
-            onClick={() => setActiveTab('profile')}
-            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold border-2 border-slate-900 transition-all ${
-              activeTab === 'profile' 
-                ? 'bg-slate-900 text-white' 
-                : 'bg-white text-slate-900 hover:bg-slate-50'
-            }`}
-            style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
-            data-testid="profile-tab-btn"
-          >
-            <User className="w-5 h-5" />
-            Mi Perfil
-          </button>
+          
           {/* Gestión de Empleados - Solo para Supervisor */}
           {isSupervisor && (
             <button
@@ -625,38 +627,6 @@ const SettingsPage = () => {
             >
               <Users className="w-5 h-5" />
               Gestión de Empleados
-            </button>
-          )}
-          {/* Gestión de Usuarios - Solo para Super-Admin (vista global) */}
-          {isSuperAdmin && (
-            <button
-              onClick={() => setActiveTab('users')}
-              className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold border-2 border-slate-900 transition-all ${
-                activeTab === 'users' 
-                  ? 'bg-slate-900 text-white' 
-                  : 'bg-white text-slate-900 hover:bg-slate-50'
-              }`}
-              style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
-              data-testid="users-tab-btn"
-            >
-              <Users className="w-5 h-5" />
-              Gestión de Usuarios
-            </button>
-          )}
-          {/* Base de Datos - Solo para Super-Admin */}
-          {isSuperAdmin && (
-            <button
-              onClick={() => setActiveTab('database')}
-              className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold border-2 border-slate-900 transition-all ${
-                activeTab === 'database' 
-                  ? 'bg-slate-900 text-white' 
-                  : 'bg-white text-slate-900 hover:bg-slate-50'
-              }`}
-              style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
-              data-testid="database-tab-btn"
-            >
-              <Database className="w-5 h-5" />
-              Base de Datos
             </button>
           )}
         </div>
