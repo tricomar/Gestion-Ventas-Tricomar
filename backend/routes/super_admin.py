@@ -411,3 +411,215 @@ async def get_available_plans(current_user: User = Depends(get_current_user)):
     return {
         "plans": PLANS
     }
+
+@router.delete("/accounts/{account_id}")
+async def delete_account(
+    account_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Elimina una cuenta y todos sus datos asociados.
+    Solo accesible para super-admin.
+    PRECAUCIÓN: Esta acción es irreversible.
+    """
+    require_super_admin(current_user.dict())
+    
+    try:
+        # Verificar que la cuenta existe
+        account = await db.accounts.find_one({"id": account_id}, {"_id": 0})
+        
+        if not account:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Cuenta no encontrada"
+            )
+        
+        # Eliminar todos los usuarios de la cuenta
+        await db.users.delete_many({"account_id": account_id})
+        
+        # Eliminar datos operacionales de la cuenta
+        await db.sales.delete_many({"account_id": account_id})
+        await db.expenses.delete_many({"account_id": account_id})
+        await db.inventory.delete_many({"account_id": account_id})
+        await db.income.delete_many({"account_id": account_id})
+        await db.customers.delete_many({"account_id": account_id})
+        await db.notes.delete_many({"account_id": account_id})
+        
+        # Eliminar la cuenta
+        await db.accounts.delete_one({"id": account_id})
+        
+        return {
+            "success": True,
+            "message": f"Cuenta '{account.get('business_name')}' eliminada exitosamente"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al eliminar cuenta: {str(e)}"
+        )
+
+@router.post("/accounts/{account_id}/users")
+async def create_employee_for_account(
+    account_id: str,
+    user_data: dict,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Crea un nuevo empleado para una cuenta específica.
+    Solo accesible para super-admin.
+    """
+    require_super_admin(current_user.dict())
+    
+    try:
+        from utils.auth import hash_password
+        
+        # Verificar que la cuenta existe
+        account = await db.accounts.find_one({"id": account_id}, {"_id": 0})
+        
+        if not account:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Cuenta no encontrada"
+            )
+        
+        # Verificar límite de empleados
+        current_employees = await db.users.count_documents({
+            "account_id": account_id,
+            "role": {"$ne": "account_admin"}
+        })
+        
+        max_employees = account.get("max_employees", 0)
+        if current_employees >= max_employees:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Esta cuenta ha alcanzado el límite de {max_employees} empleados"
+            )
+        
+        # Validar datos requeridos
+        if not user_data.get("name") or not user_data.get("email") or not user_data.get("password"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Los campos name, email y password son requeridos"
+            )
+        
+        # Verificar que el email no esté en uso
+        existing_user = await db.users.find_one({"email": user_data["email"]}, {"_id": 0})
+        if existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="El email ya está registrado"
+            )
+        
+        # Crear nuevo usuario
+        new_user = {
+            "id": str(uuid.uuid4()),
+            "account_id": account_id,
+            "email": user_data["email"],
+            "name": user_data["name"],
+            "password_hash": hash_password(user_data["password"]),
+            "role": user_data.get("role", "employee"),
+            "is_account_owner": False,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        await db.users.insert_one(new_user)
+        
+        # Eliminar password_hash antes de retornar
+        new_user.pop("password_hash", None)
+        new_user.pop("_id", None)
+        
+        return {
+            "success": True,
+            "message": "Empleado creado exitosamente",
+            "user": new_user
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al crear empleado: {str(e)}"
+        )
+
+@router.put("/accounts/{account_id}/users/{user_id}")
+async def update_user_info(
+    account_id: str,
+    user_id: str,
+    user_data: dict,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Actualiza la información de un usuario.
+    Solo accesible para super-admin.
+    """
+    require_super_admin(current_user.dict())
+    
+    try:
+        from utils.auth import hash_password
+        
+        # Verificar que el usuario existe y pertenece a la cuenta
+        user = await db.users.find_one({"id": user_id, "account_id": account_id}, {"_id": 0})
+        
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Usuario no encontrado"
+            )
+        
+        # Preparar actualización
+        update_data = {"updated_at": datetime.now(timezone.utc).isoformat()}
+        
+        if "name" in user_data and user_data["name"]:
+            update_data["name"] = user_data["name"]
+        
+        if "email" in user_data and user_data["email"]:
+            # Verificar que el email no esté en uso por otro usuario
+            existing = await db.users.find_one({
+                "email": user_data["email"],
+                "id": {"$ne": user_id}
+            }, {"_id": 0})
+            
+            if existing:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="El email ya está en uso"
+                )
+            update_data["email"] = user_data["email"]
+        
+        if "role" in user_data and user_data["role"]:
+            if user_data["role"] not in ["account_admin", "supervisor", "employee"]:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Rol inválido"
+                )
+            update_data["role"] = user_data["role"]
+        
+        if "password" in user_data and user_data["password"]:
+            update_data["password_hash"] = hash_password(user_data["password"])
+        
+        # Actualizar usuario
+        await db.users.update_one(
+            {"id": user_id},
+            {"$set": update_data}
+        )
+        
+        # Retornar usuario actualizado sin password
+        updated_user = await db.users.find_one({"id": user_id}, {"_id": 0, "password_hash": 0})
+        
+        return {
+            "success": True,
+            "message": "Usuario actualizado exitosamente",
+            "user": updated_user
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al actualizar usuario: {str(e)}"
+        )
