@@ -19,8 +19,7 @@ const MODULES = {
 
 const PLANS = {
   free: { name: "Gratuito", color: "bg-slate-500" },
-  premium: { name: "Premium", color: "bg-blue-500" },
-  enterprise: { name: "Enterprise", color: "bg-purple-500" }
+  subscribed: { name: "Suscrito", color: "bg-blue-500" }
 };
 
 const SuperAdminPage = () => {
@@ -29,7 +28,8 @@ const SuperAdminPage = () => {
   const [selectedAccount, setSelectedAccount] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState('info'); // info, limits, stores, modules, users
+  const [activeTab, setActiveTab] = useState('info'); // info, stores, users
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' o 'list'
 
   // Form states para editar cuenta
   const [editForm, setEditForm] = useState({
@@ -40,8 +40,23 @@ const SuperAdminPage = () => {
     status: 'active'
   });
 
-  // Form para agregar tienda
+  // Form para agregar/editar tienda
   const [newStore, setNewStore] = useState({ name: '', code: '' });
+  const [editingStore, setEditingStore] = useState(null);
+  
+  // Form para agregar/editar empleado
+  const [showEmployeeModal, setShowEmployeeModal] = useState(false);
+  const [editingEmployee, setEditingEmployee] = useState(null);
+  const [employeeForm, setEmployeeForm] = useState({
+    name: '',
+    email: '',
+    password: '',
+    role: 'employee'
+  });
+  
+  // Modal confirmación eliminar cuenta
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState('');
 
   useEffect(() => {
     fetchAccounts();
