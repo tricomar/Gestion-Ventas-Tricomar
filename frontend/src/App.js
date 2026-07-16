@@ -154,6 +154,22 @@ function AppRoutes() {
             </SuperAdminRoute>
           }
         />
+        <Route
+          path="/database-management"
+          element={
+            <SuperAdminRoute>
+              <DatabaseManagementPage />
+            </SuperAdminRoute>
+          }
+        />
+        <Route
+          path="/tiendas-globales"
+          element={
+            <SuperAdminRoute>
+              <TiendasGlobalesPage />
+            </SuperAdminRoute>
+          }
+        />
       </Routes>
       <Toaster position="top-right" />
     </>

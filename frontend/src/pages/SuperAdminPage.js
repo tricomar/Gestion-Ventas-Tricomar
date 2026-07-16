@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { ArrowLeft, Building2, Users, Store, Settings, CheckSquare, Square, Edit2 } from 'lucide-react';
+import { ArrowLeft, Building2, Users, Store, Settings, CheckSquare, Square, Edit2, Grid3x3, List } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -357,51 +357,158 @@ const SuperAdminPage = () => {
               Volver al Panel Admin
             </button>
             
-            <h1 className="text-4xl font-black text-slate-900 mb-2">Panel Super-Admin</h1>
-            <p className="text-slate-600">Gestiona todas las cuentas del sistema</p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-4xl font-black text-slate-900 mb-2">Panel Super-Admin</h1>
+                <p className="text-slate-600">Gestiona todas las cuentas del sistema</p>
+              </div>
+              
+              {/* Toggle Vista Grid/Lista */}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setViewMode('grid')}
+                  className={`p-3 border-2 border-slate-900 rounded-lg font-bold transition-all ${
+                    viewMode === 'grid' ? 'bg-slate-900 text-white' : 'bg-white hover:bg-slate-50'
+                  }`}
+                  style={{ boxShadow: '2px 2px 0px 0px rgba(15,23,42,1)' }}
+                  title="Vista Grid"
+                >
+                  <Grid3x3 className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`p-3 border-2 border-slate-900 rounded-lg font-bold transition-all ${
+                    viewMode === 'list' ? 'bg-slate-900 text-white' : 'bg-white hover:bg-slate-50'
+                  }`}
+                  style={{ boxShadow: '2px 2px 0px 0px rgba(15,23,42,1)' }}
+                  title="Vista Lista"
+                >
+                  <List className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
           </div>
 
-          {/* Lista de cuentas */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {accounts.map(account => (
-              <div
-                key={account.id}
-                onClick={() => selectAccount(account.id)}
-                className="bg-white border-2 border-slate-900 rounded-xl p-6 cursor-pointer hover:bg-slate-50 transition-all"
-                style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <Building2 className="w-8 h-8 text-slate-900" />
-                  <span className={`px-3 py-1 ${PLANS[account.plan].color} text-white text-xs font-bold rounded-full`}>
-                    {PLANS[account.plan].name}
-                  </span>
-                </div>
-                
-                <h3 className="text-xl font-bold text-slate-900 mb-2">{account.business_name}</h3>
-                
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center gap-2">
-                    <Store className="w-4 h-4" />
-                    <span>{account.stores?.length || 0} tiendas ({account.max_stores} máx)</span>
+          {/* Vista Grid */}
+          {viewMode === 'grid' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {accounts.map(account => (
+                <div
+                  key={account.id}
+                  onClick={() => selectAccount(account.id)}
+                  className="bg-white border-2 border-slate-900 rounded-xl p-6 cursor-pointer hover:bg-slate-50 transition-all"
+                  style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
+                >
+                  <div className="flex items-start justify-between mb-4">
+                    <Building2 className="w-8 h-8 text-slate-900" />
+                    <span className={`px-3 py-1 ${PLANS[account.plan].color} text-white text-xs font-bold rounded-full`}>
+                      {PLANS[account.plan].name}
+                    </span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Users className="w-4 h-4" />
-                    <span>{account.current_employees || 0} empleados ({account.max_employees} máx)</span>
+                  
+                  <h3 className="text-xl font-bold text-slate-900 mb-2">{account.business_name}</h3>
+                  
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      <Store className="w-4 h-4" />
+                      <span>{account.stores?.length || 0} tiendas ({account.max_stores} máx)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Users className="w-4 h-4" />
+                      <span>{account.current_employees || 0} empleados ({account.max_employees} máx)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Settings className="w-4 h-4" />
+                      <span>{account.enabled_modules?.length || 0} módulos activos</span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Settings className="w-4 h-4" />
-                    <span>{account.enabled_modules?.length || 0} módulos activos</span>
+                  
+                  <div className="mt-4 pt-4 border-t-2 border-slate-200">
+                    <span className={`text-xs font-bold ${account.status === 'active' ? 'text-green-600' : 'text-red-600'}`}>
+                      {account.status === 'active' ? '● Activa' : '● Suspendida'}
+                    </span>
                   </div>
                 </div>
-                
-                <div className="mt-4 pt-4 border-t-2 border-slate-200">
-                  <span className={`text-xs font-bold ${account.status === 'active' ? 'text-green-600' : 'text-red-600'}`}>
-                    {account.status === 'active' ? '● Activa' : '● Suspendida'}
-                  </span>
+              ))}
+            </div>
+          )}
+
+          {/* Vista Lista con Detalle */}
+          {viewMode === 'list' && (
+            <div className="space-y-4">
+              {accounts.map(account => (
+                <div
+                  key={account.id}
+                  className="bg-white border-2 border-slate-900 rounded-xl overflow-hidden"
+                  style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
+                >
+                  {/* Header de la fila */}
+                  <div className="p-6 flex items-center justify-between border-b-2 border-slate-200">
+                    <div className="flex items-center gap-4 flex-1">
+                      <Building2 className="w-8 h-8 text-slate-900" />
+                      <div>
+                        <h3 className="text-xl font-bold text-slate-900">{account.business_name}</h3>
+                        <p className="text-sm text-slate-600">ID: {account.id}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className={`px-3 py-1 ${PLANS[account.plan].color} text-white text-xs font-bold rounded-full`}>
+                        {PLANS[account.plan].name}
+                      </span>
+                      <span className={`text-xs font-bold ${account.status === 'active' ? 'text-green-600' : 'text-red-600'}`}>
+                        {account.status === 'active' ? '● Activa' : '● Suspendida'}
+                      </span>
+                      <button
+                        onClick={() => selectAccount(account.id)}
+                        className="px-4 py-2 bg-blue-500 text-white border-2 border-slate-900 rounded-lg font-bold hover:bg-blue-600 transition-all"
+                      >
+                        Ver Detalle
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {/* Detalles de la cuenta */}
+                  <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6 bg-slate-50">
+                    <div>
+                      <p className="text-xs font-bold text-slate-500 mb-2">TIENDAS</p>
+                      <div className="flex items-center gap-2">
+                        <Store className="w-5 h-5 text-slate-700" />
+                        <span className="font-bold text-slate-900">
+                          {account.stores?.length || 0} / {account.max_stores}
+                        </span>
+                      </div>
+                      {account.stores?.slice(0, 2).map(store => (
+                        <p key={store.id} className="text-sm text-slate-600 ml-7">• {store.name}</p>
+                      ))}
+                      {(account.stores?.length || 0) > 2 && (
+                        <p className="text-xs text-slate-500 ml-7 mt-1">+{(account.stores?.length || 0) - 2} más</p>
+                      )}
+                    </div>
+                    
+                    <div>
+                      <p className="text-xs font-bold text-slate-500 mb-2">EMPLEADOS</p>
+                      <div className="flex items-center gap-2">
+                        <Users className="w-5 h-5 text-slate-700" />
+                        <span className="font-bold text-slate-900">
+                          {account.current_employees || 0} / {account.max_employees}
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <p className="text-xs font-bold text-slate-500 mb-2">MÓDULOS ACTIVOS</p>
+                      <div className="flex items-center gap-2">
+                        <Settings className="w-5 h-5 text-slate-700" />
+                        <span className="font-bold text-slate-900">
+                          {account.enabled_modules?.length || 0} módulos
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     );
@@ -467,8 +574,7 @@ const SuperAdminPage = () => {
                   className="w-full px-4 py-3 border-2 border-slate-900 rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-slate-900"
                 >
                   <option value="free">Gratuito</option>
-                  <option value="premium">Premium</option>
-                  <option value="enterprise">Enterprise</option>
+                  <option value="subscribed">Suscrito</option>
                 </select>
               </div>
 

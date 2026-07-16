@@ -597,7 +597,8 @@ const SettingsPage = () => {
           </button>
           
           {/* Tiendas - Solo para Super-Admin y Supervisor */}
-          {(isSuperAdmin || isSupervisor) && (
+          {/* Tiendas - Solo para Supervisor (NO para super_admin) */}
+          {isSupervisor && !isSuperAdmin && (
             <button
               onClick={() => setActiveTab('stores')}
               className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold border-2 border-slate-900 transition-all ${
@@ -631,8 +632,8 @@ const SettingsPage = () => {
           )}
         </div>
 
-        {/* Store Settings Tab - Solo para Super-Admin y Supervisor */}
-        {activeTab === 'stores' && (isSuperAdmin || isSupervisor) && (
+        {/* Store Settings Tab - Solo para Supervisor (NO super_admin) */}
+        {activeTab === 'stores' && isSupervisor && !isSuperAdmin && (
           <div 
             className="bg-white border-2 border-slate-900 rounded-xl p-8"
             style={{ boxShadow: '8px 8px 0px 0px rgba(15,23,42,1)' }}
