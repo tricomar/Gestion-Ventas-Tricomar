@@ -5,6 +5,7 @@ import { Home, Settings as SettingsIcon, Save, User, Store, Users, Plus, Edit2, 
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useSettings } from '../context/SettingsContext';
 import { useAuth } from '../context/AuthContext';
+import { useStores } from '../hooks/useStores';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -23,6 +24,7 @@ const SettingsPage = () => {
   const [searchParams] = useSearchParams();
   const { refreshSettings } = useSettings();
   const { user, logout } = useAuth();
+  const { stores, loading: storesLoading } = useStores(); // Hook para obtener tiendas dinámicas
   const [activeTab, setActiveTab] = useState('stores'); // 'stores', 'profile', 'users', or 'database'
   
   // Database reset
@@ -50,9 +52,8 @@ const SettingsPage = () => {
   const [validationReport, setValidationReport] = useState(null);
   const [validating, setValidating] = useState(false);
   
-  // Store settings
-  const [storeAName, setStoreAName] = useState('Tienda A');
-  const [storeBName, setStoreBName] = useState('Tienda B');
+  // Store settings - Dinámico basado en useStores
+  const [storeNames, setStoreNames] = useState({});
   
   // Profile settings
   const [profileName, setProfileName] = useState('');
@@ -99,6 +100,17 @@ const SettingsPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
+  // Inicializar nombres de tiendas desde useStores
+  useEffect(() => {
+    if (stores && stores.length > 0) {
+      const names = {};
+      stores.forEach(store => {
+        names[store.id] = store.name;
+      });
+      setStoreNames(names);
+    }
+  }, [stores]);
+
   useEffect(() => {
     fetchSettings();
     if (user) {
@@ -129,19 +141,6 @@ const SettingsPage = () => {
     }
   };
 
-  const fetchSettings = async () => {
-    try {
-      const response = await axios.get(`${API}/settings`);
-      setStoreAName(response.data.store_a_name);
-      setStoreBName(response.data.store_b_name);
-    } catch (error) {
-      console.error('Error fetching settings:', error);
-      toast.error('Error al cargar configuración');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const fetchUsers = async () => {
     try {
       const response = await axios.get(`${API}/users`);
@@ -149,26 +148,6 @@ const SettingsPage = () => {
     } catch (error) {
       console.error('Error fetching users:', error);
       toast.error('Error al cargar usuarios');
-    }
-  };
-
-  const handleSaveStores = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-
-    try {
-      await axios.put(`${API}/settings`, {
-        store_a_name: storeAName,
-        store_b_name: storeBName
-      });
-
-      toast.success('Configuración de tiendas guardada');
-      refreshSettings();
-    } catch (error) {
-      toast.error('Error al guardar configuración');
-      console.error('Error saving settings:', error);
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -632,7 +611,7 @@ const SettingsPage = () => {
           )}
         </div>
 
-        {/* Store Settings Tab - Solo para Supervisor (NO super_admin) */}
+        {/* Store Settings Tab - Solo para Supervisor (NO super_admin) - SOLO LECTURA */}
         {activeTab === 'stores' && isSupervisor && !isSuperAdmin && (
           <div 
             className="bg-white border-2 border-slate-900 rounded-xl p-8"
@@ -640,48 +619,41 @@ const SettingsPage = () => {
           >
             <div className="flex items-center gap-3 mb-6">
               <Store className="w-6 h-6" />
-              <h2 className="text-2xl font-bold text-slate-900">Nombres de Tiendas</h2>
+              <h2 className="text-2xl font-bold text-slate-900">Tiendas de la Cuenta</h2>
             </div>
             
-            <form onSubmit={handleSaveStores} className="space-y-6">
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">
-                  Nombre Tienda A
-                </label>
-                <input
-                  type="text"
-                  value={storeAName}
-                  onChange={(e) => setStoreAName(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-slate-900 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-slate-900"
-                  required
-                  maxLength={50}
-                />
+            <p className="text-sm text-slate-600 mb-6">
+              Estas son las tiendas asignadas a tu cuenta. Para agregar o modificar tiendas, contacta al administrador del sistema.
+            </p>
+            
+            {stores && stores.length > 0 ? (
+              <div className="space-y-4">
+                {stores.map((store, index) => (
+                  <div 
+                    key={store.id}
+                    className="p-4 border-2 border-slate-200 rounded-xl bg-slate-50"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-bold text-slate-900">{store.name}</p>
+                        <p className="text-sm text-slate-600">Código: {store.code}</p>
+                      </div>
+                      {index === 0 && (
+                        <span className="px-3 py-1 bg-blue-100 text-blue-900 text-xs font-bold rounded-full">
+                          Por Defecto
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
-
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">
-                  Nombre Tienda B
-                </label>
-                <input
-                  type="text"
-                  value={storeBName}
-                  onChange={(e) => setStoreBName(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-slate-900 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-slate-900"
-                  required
-                  maxLength={50}
-                />
+            ) : (
+              <div className="text-center py-8 text-slate-600">
+                <Store className="w-12 h-12 mx-auto mb-4 text-slate-400" />
+                <p>No hay tiendas configuradas para tu cuenta.</p>
+                <p className="text-sm mt-2">Contacta al administrador del sistema.</p>
               </div>
-
-              <button
-                type="submit"
-                disabled={saving}
-                className="flex items-center gap-2 px-6 py-3 bg-[#D4F0A5] border-2 border-slate-900 rounded-xl font-bold hover:bg-[#c5e196] disabled:opacity-50 transition-all"
-                style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
-              >
-                <Save className="w-5 h-5" />
-                {saving ? 'Guardando...' : 'Guardar Cambios'}
-              </button>
-            </form>
+            )}
           </div>
         )}
 
