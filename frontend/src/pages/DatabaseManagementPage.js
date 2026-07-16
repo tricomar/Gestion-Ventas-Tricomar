@@ -434,37 +434,107 @@ const DatabaseManagementPage = () => {
               </h2>
               
               <div className="space-y-4">
-                {validationReport.changes_made && validationReport.changes_made.length > 0 ? (
-                  <>
-                    <div className="bg-green-50 border-2 border-green-500 rounded-xl p-4">
-                      <p className="font-bold text-green-900">
-                        ✅ Se realizaron {validationReport.changes_made.length} cambio(s) en la base de datos
-                      </p>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <h3 className="font-bold text-slate-900">Cambios realizados:</h3>
-                      <ul className="space-y-2">
-                        {validationReport.changes_made.map((change, index) => (
-                          <li key={index} className="p-3 bg-slate-50 border-2 border-slate-200 rounded-lg text-sm">
-                            <span className="font-mono text-slate-700">{change}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </>
-                ) : (
-                  <div className="bg-blue-50 border-2 border-blue-500 rounded-xl p-4">
-                    <p className="font-bold text-blue-900">
-                      ✅ La base de datos ya está actualizada. No se requieren cambios.
+                {/* Mensaje principal */}
+                {validationReport.message && (
+                  <div className={`border-2 rounded-xl p-4 ${
+                    validationReport.status === 'ok' 
+                      ? 'bg-green-50 border-green-500' 
+                      : 'bg-blue-50 border-blue-500'
+                  }`}>
+                    <p className={`font-bold ${
+                      validationReport.status === 'ok' 
+                        ? 'text-green-900' 
+                        : 'text-blue-900'
+                    }`}>
+                      {validationReport.message}
                     </p>
                   </div>
                 )}
 
-                {validationReport.collections_checked && (
-                  <div className="text-sm text-slate-600">
-                    <p><strong>Colecciones verificadas:</strong> {validationReport.collections_checked.join(', ')}</p>
+                {/* Estadísticas */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-slate-50 border-2 border-slate-200 rounded-lg p-3">
+                    <p className="text-xs text-slate-600 mb-1">Colecciones verificadas</p>
+                    <p className="text-2xl font-bold text-slate-900">{validationReport.collections_checked || 0}</p>
                   </div>
+                  <div className="bg-slate-50 border-2 border-slate-200 rounded-lg p-3">
+                    <p className="text-xs text-slate-600 mb-1">Cambios realizados</p>
+                    <p className="text-2xl font-bold text-slate-900">
+                      {(validationReport.collections_created?.length || 0) + (validationReport.indexes_created?.length || 0)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Colecciones creadas */}
+                {validationReport.collections_created && validationReport.collections_created.length > 0 && (
+                  <div>
+                    <h3 className="font-bold text-slate-900 mb-2">✅ Colecciones Creadas:</h3>
+                    <ul className="space-y-2">
+                      {validationReport.collections_created.map((collection, index) => (
+                        <li key={index} className="p-3 bg-green-50 border-2 border-green-200 rounded-lg text-sm">
+                          <span className="font-mono text-slate-700">{collection}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Índices creados */}
+                {validationReport.indexes_created && validationReport.indexes_created.length > 0 && (
+                  <div>
+                    <h3 className="font-bold text-slate-900 mb-2">✅ Índices Creados:</h3>
+                    <ul className="space-y-2">
+                      {validationReport.indexes_created.map((index, i) => (
+                        <li key={i} className="p-3 bg-blue-50 border-2 border-blue-200 rounded-lg text-sm">
+                          <span className="font-mono text-slate-700">{index}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Configuración inicializada */}
+                {validationReport.settings_initialized && (
+                  <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-3">
+                    <p className="text-sm text-blue-900">
+                      ✅ Documento de configuración inicializado
+                    </p>
+                  </div>
+                )}
+
+                {/* Advertencias */}
+                {validationReport.warnings && validationReport.warnings.length > 0 && (
+                  <div>
+                    <h3 className="font-bold text-orange-900 mb-2">⚠️ Advertencias:</h3>
+                    <ul className="space-y-2">
+                      {validationReport.warnings.map((warning, index) => (
+                        <li key={index} className="p-3 bg-orange-50 border-2 border-orange-200 rounded-lg text-sm text-orange-800">
+                          {warning}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Errores */}
+                {validationReport.errors && validationReport.errors.length > 0 && (
+                  <div>
+                    <h3 className="font-bold text-red-900 mb-2">❌ Errores:</h3>
+                    <ul className="space-y-2">
+                      {validationReport.errors.map((error, index) => (
+                        <li key={index} className="p-3 bg-red-50 border-2 border-red-200 rounded-lg text-sm text-red-800">
+                          {error}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Timestamp */}
+                {validationReport.timestamp && (
+                  <p className="text-xs text-slate-500 text-center mt-4">
+                    Ejecutado: {new Date(validationReport.timestamp).toLocaleString('es-CL')}
+                  </p>
                 )}
               </div>
 
