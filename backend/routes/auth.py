@@ -4,56 +4,126 @@ Maneja registro, login y actualización de perfil
 """
 
 from fastapi import APIRouter, HTTPException, Depends
-from datetime import datetime
+from datetime import datetime, timezone
 import bcrypt
+import uuid
 
 from models.users import User, UserCreate, UserLogin, TokenResponse
+from models.accounts import PLANS
 from utils import db, hash_password, verify_password, create_token, get_current_user
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.post("/register", response_model=TokenResponse)
 async def register(user_input: UserCreate):
-    """Registrar un nuevo usuario"""
-    # Check if user exists
+    """
+    Registrar un nuevo usuario y crear cuenta freemium automáticamente.
+    Cada usuario que se registra crea su propia cuenta independiente.
+    """
+    # Verificar si el usuario ya existe
     existing = await db.users.find_one({'email': user_input.email}, {'_id': 0})
     if existing:
-        raise HTTPException(status_code=400, detail="Email already registered")
+        raise HTTPException(status_code=400, detail="Email ya registrado")
     
-    # Create user
-    user_dict = user_input.model_dump(exclude={'password'})
-    user = User(**user_dict)
-    
-    # Hash password and store
-    doc = user.model_dump()
-    doc['password_hash'] = hash_password(user_input.password)
-    doc['created_at'] = doc['created_at'].isoformat()
-    
-    await db.users.insert_one(doc)
-    
-    # Generate token
-    token = create_token(user.id, user.email)
-    
-    return TokenResponse(token=token, user=user)
+    try:
+        # Crear ID de cuenta
+        account_id = f"acc_{uuid.uuid4().hex[:12]}"
+        
+        # Crear cuenta freemium
+        business_name = user_input.business_name or f"Negocio de {user_input.name}"
+        
+        account = {
+            "id": account_id,
+            "owner_user_id": "",  # Se actualizará después de crear el usuario
+            "business_name": business_name,
+            "plan": "free",
+            "max_stores": 1,
+            "max_employees": 0,
+            "current_employees": 0,
+            "stores": [
+                {
+                    "id": f"store_{uuid.uuid4().hex[:8]}",
+                    "name": "Mi Tienda",
+                    "code": "A"
+                }
+            ],
+            "enabled_modules": ["sales"],  # Solo ventas en plan free
+            "status": "active",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        # Crear usuario (owner de la cuenta)
+        user_id = str(uuid.uuid4())
+        user_dict = {
+            "id": user_id,
+            "account_id": account_id,
+            "email": user_input.email,
+            "password_hash": hash_password(user_input.password),
+            "name": user_input.name,
+            "role": "account_admin",
+            "is_account_owner": True,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        # Actualizar owner_user_id en cuenta
+        account["owner_user_id"] = user_id
+        
+        # Insertar en base de datos
+        await db.accounts.insert_one(account)
+        await db.users.insert_one(user_dict)
+        
+        # Crear objeto User para respuesta (sin password_hash)
+        user = User(
+            id=user_id,
+            account_id=account_id,
+            email=user_input.email,
+            name=user_input.name,
+            role="account_admin",
+            is_account_owner=True,
+            created_at=datetime.now(timezone.utc)
+        )
+        
+        # Generar token
+        token = create_token(user.id, user.email)
+        
+        return TokenResponse(token=token, user=user)
+        
+    except Exception as e:
+        # Rollback si algo falla
+        await db.accounts.delete_one({"id": account_id})
+        await db.users.delete_one({"id": user_id})
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al crear cuenta: {str(e)}"
+        )
 
 @router.post("/login", response_model=TokenResponse)
 async def login(credentials: UserLogin):
     """
     Iniciar sesión
-    - Si el usuario es exactamente "admin" (sin @ventas.com), busca admin@ventas.com
-    - Para el resto de usuarios, requiere email completo
+    - Super-admin puede usar "admin" o su email completo
+    - Otros usuarios deben usar su email completo
     """
-    # Permitir login con "admin" (sin @ventas.com) solo para el super administrador
-    search_email = credentials.email
+    # Permitir login con "admin" para buscar al super-admin
     if credentials.email == "admin":
-        search_email = "admin@ventas.com"
+        # Buscar super-admin por rol
+        user_doc = await db.users.find_one(
+            {"role": "super_admin"},
+            {"_id": 0}
+        )
+    else:
+        # Buscar por email normal
+        user_doc = await db.users.find_one(
+            {"email": credentials.email},
+            {"_id": 0}
+        )
     
-    user_doc = await db.users.find_one({'email': search_email}, {'_id': 0})
     if not user_doc:
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+        raise HTTPException(status_code=401, detail="Credenciales inválidas")
     
     if not verify_password(credentials.password, user_doc['password_hash']):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+        raise HTTPException(status_code=401, detail="Credenciales inválidas")
     
     if isinstance(user_doc.get('created_at'), str):
         user_doc['created_at'] = datetime.fromisoformat(user_doc['created_at'])
