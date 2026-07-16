@@ -4,7 +4,7 @@ Router para gestión de base de datos (hard reset, etc.)
 
 from fastapi import APIRouter, HTTPException, Depends, status, Body
 from datetime import datetime, timezone
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 from pydantic import BaseModel
 import uuid
 import bcrypt
@@ -12,6 +12,7 @@ import logging
 
 from models.users import User
 from utils import db, get_current_user, require_admin
+from middleware.tenant import get_account_id_from_user
 
 router = APIRouter(prefix="/database", tags=["database"])
 
@@ -21,9 +22,11 @@ logger = logging.getLogger(__name__)
 class HardResetRequest(BaseModel):
     password: str  # Contraseña actual para validar
     new_password: str  # Nueva contraseña a asignar
+    account_id: Optional[str] = None  # Para super-admin especificar cuenta
 
 class SoftResetRequest(BaseModel):
     password: str  # Contraseña actual para validar
+    account_id: Optional[str] = None  # Para super-admin especificar cuenta
     sales: bool = False
     users: bool = False
     inventory_a: bool = False
@@ -225,86 +228,119 @@ async def hard_reset_database(
     current_user: User = Depends(get_current_user)
 ):
     """
-    HARD RESET de la base de datos completa.
-    Solo accesible para administradores.
-    Borra TODAS las colecciones y crea un usuario administrador nuevo.
-    Requiere contraseña del admin actual para confirmar.
+    HARD RESET de base de datos de una cuenta específica.
+    - Account_admin: Resetea su propia cuenta
+    - Super-admin: Debe especificar account_id para resetear cualquier cuenta
+    
+    ELIMINA TODOS LOS DATOS de la cuenta y actualiza contraseña del admin.
     """
-    # Solo admin puede hacer esto
-    if current_user.role != "admin":
+    # Determinar qué cuenta resetear
+    target_account_id = request.account_id
+    
+    # Si no es super-admin, solo puede resetear su propia cuenta
+    if current_user.role != 'super_admin':
+        if target_account_id and target_account_id != current_user.account_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No tienes permisos para resetear otras cuentas"
+            )
+        target_account_id = current_user.account_id
+        
+        if not target_account_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No se pudo determinar la cuenta a resetear"
+            )
+    
+    # Si es super-admin y no especificó account_id, error
+    if current_user.role == 'super_admin' and not target_account_id:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Solo administradores pueden hacer hard reset de la base de datos"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Super-admin debe especificar account_id de la cuenta a resetear"
         )
     
-    # Validar contraseña del admin actual
-    admin_user = await db.users.find_one({"id": current_user.id}, {"_id": 0})
+    # Buscar el admin owner de la cuenta target
+    admin_user = await db.users.find_one({
+        "account_id": target_account_id,
+        "is_account_owner": True
+    }, {"_id": 0})
+    
     if not admin_user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Usuario no encontrado"
+            detail="Cuenta no encontrada"
         )
     
-    # Verificar contraseña
-    if not bcrypt.checkpw(request.password.encode('utf-8'), admin_user['password_hash'].encode('utf-8')):
+    # Verificar contraseña del usuario actual
+    current_user_doc = await db.users.find_one({"id": current_user.id}, {"_id": 0})
+    if not bcrypt.checkpw(request.password.encode('utf-8'), current_user_doc['password_hash'].encode('utf-8')):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Contraseña incorrecta"
         )
     
+    # Validar nueva contraseña
+    if len(request.new_password) < 8:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="La nueva contraseña debe tener al menos 8 caracteres"
+        )
+    
     try:
-        # 1. Obtener lista de todas las colecciones
-        collections = await db.list_collection_names()
+        # Hash de la nueva contraseña
+        new_password_hash = bcrypt.hashpw(
+            request.new_password.encode('utf-8'),
+            bcrypt.gensalt()
+        ).decode('utf-8')
         
-        # 2. Borrar TODAS las colecciones
-        for collection_name in collections:
-            await db[collection_name].drop()
+        # Buscar cuenta para obtener info
+        account = await db.accounts.find_one({"id": target_account_id}, {"_id": 0})
+        if not account:
+            raise HTTPException(status_code=404, detail="Cuenta no encontrada")
         
-        # 3. Generar credenciales para nuevo admin
-        admin_email = "admin@ventas.com"
-        admin_password = request.new_password  # Usar la contraseña elegida por el usuario
-        password_hash = bcrypt.hashpw(admin_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        # ELIMINAR TODOS LOS DATOS DE LA CUENTA
+        await db.sales.delete_many({"account_id": target_account_id})
+        await db.products.delete_many({"account_id": target_account_id})
+        await db.expenses.delete_many({"account_id": target_account_id})
+        await db.other_income.delete_many({"account_id": target_account_id})
+        await db.customers.delete_many({"account_id": target_account_id})
+        await db.notes.delete_many({"account_id": target_account_id})
         
-        # 4. Crear nuevo usuario administrador
-        admin_user = {
-            "id": str(uuid.uuid4()),
-            "email": admin_email,
-            "password_hash": password_hash,
-            "name": "Administrador",
-            "role": "admin",
-            "created_at": datetime.now(timezone.utc).isoformat()
-        }
-        await db.users.insert_one(admin_user)
+        # Eliminar empleados (no el owner)
+        await db.users.delete_many({
+            "account_id": target_account_id,
+            "is_account_owner": False
+        })
         
-        # 5. Crear documento de settings por defecto
-        default_settings = {
-            "id": "settings",
-            "store_a_name": "Tienda A",
-            "store_b_name": "Tienda B",
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "updated_at": datetime.now(timezone.utc).isoformat()
-        }
-        await db.settings.insert_one(default_settings)
+        # Actualizar contraseña del admin owner
+        await db.users.update_one(
+            {"id": admin_user["id"]},
+            {"$set": {"password_hash": new_password_hash}}
+        )
         
-        # 6. Recrear índices básicos
-        await db.users.create_index("email", unique=True)
-        await db.users.create_index("id", unique=True)
-        await db.products.create_index("id", unique=True)
+        # Resetear contador de empleados
+        await db.accounts.update_one(
+            {"id": target_account_id},
+            {"$set": {
+                "current_employees": 0,
+                "updated_at": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+        
+        # Recrear índices
         await db.sales.create_index("id", unique=True)
-        await db.customers.create_index("id", unique=True)
+        await db.products.create_index("id", unique=True)
         await db.expenses.create_index("id", unique=True)
         await db.notes.create_index("id", unique=True)
-        await db.settings.create_index("id", unique=True)
         
-        # 7. Retornar credenciales del nuevo admin
         return {
             "success": True,
-            "message": "Base de datos reseteada exitosamente",
+            "message": f"Cuenta '{account['business_name']}' reseteada exitosamente",
             "admin_credentials": {
-                "username": "admin",
-                "email": admin_email,
-                "password": admin_password
+                "email": admin_user["email"],
+                "password": request.new_password
             },
+            "account_id": target_account_id,
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
         
@@ -322,35 +358,40 @@ async def soft_reset_database(
     current_user: User = Depends(get_current_user)
 ):
     """
-    SOFT RESET selectivo de la base de datos.
-    Permite resetear colecciones específicas sin afectar el resto.
-    Solo accesible para administradores.
-    Requiere contraseña del admin actual para confirmar.
+    SOFT RESET selectivo de base de datos de una cuenta.
+    - Account_admin: Resetea elementos de su propia cuenta
+    - Super-admin: Debe especificar account_id
     
-    Opciones:
-    - sales: bool - Resetear todas las ventas
-    - users: bool - Resetear usuarios (excepto admin)
-    - inventory_a: bool - Resetear inventario de Tienda A
-    - inventory_b: bool - Resetear inventario de Tienda B
-    - customers: bool - Resetear todos los clientes
+    Opciones: sales, users, inventory_a, inventory_b, customers
     """
-    # Solo admin puede hacer esto
-    if current_user.role != "admin":
+    # Determinar qué cuenta resetear
+    target_account_id = request.account_id
+    
+    # Si no es super-admin, solo puede resetear su propia cuenta
+    if current_user.role != 'super_admin':
+        if target_account_id and target_account_id != current_user.account_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No tienes permisos para resetear otras cuentas"
+            )
+        target_account_id = current_user.account_id
+        
+        if not target_account_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No se pudo determinar la cuenta"
+            )
+    
+    # Si es super-admin y no especificó account_id, error
+    if current_user.role == 'super_admin' and not target_account_id:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Solo administradores pueden hacer soft reset"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Super-admin debe especificar account_id"
         )
     
-    # Validar contraseña del admin actual
-    admin_user = await db.users.find_one({"id": current_user.id}, {"_id": 0})
-    if not admin_user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Usuario no encontrado"
-        )
-    
-    # Verificar contraseña
-    if not bcrypt.checkpw(request.password.encode('utf-8'), admin_user['password_hash'].encode('utf-8')):
+    # Verificar contraseña del usuario actual
+    current_user_doc = await db.users.find_one({"id": current_user.id}, {"_id": 0})
+    if not bcrypt.checkpw(request.password.encode('utf-8'), current_user_doc['password_hash'].encode('utf-8')):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Contraseña incorrecta"
@@ -376,34 +417,56 @@ async def soft_reset_database(
         
         # Resetear ventas
         if request.sales:
-            result = await db.sales.delete_many({})
+            result = await db.sales.delete_many({"account_id": target_account_id})
             deleted_counts['sales'] = result.deleted_count
         
-        # Resetear usuarios (excepto admin)
+        # Resetear usuarios (excepto el owner)
         if request.users:
-            result = await db.users.delete_many({'role': {'$ne': 'admin'}})
+            result = await db.users.delete_many({
+                "account_id": target_account_id,
+                "is_account_owner": False
+            })
             deleted_counts['users'] = result.deleted_count
+            
+            # Actualizar contador en account
+            await db.accounts.update_one(
+                {"id": target_account_id},
+                {"$set": {"current_employees": 0}}
+            )
         
-        # Resetear inventario de Tienda A
+        # Resetear inventario Tienda A
         if request.inventory_a:
-            result = await db.products.delete_many({'store': 'A'})
+            result = await db.products.delete_many({
+                "account_id": target_account_id,
+                "store": "A"
+            })
             deleted_counts['inventory_a'] = result.deleted_count
         
-        # Resetear inventario de Tienda B
+        # Resetear inventario Tienda B
         if request.inventory_b:
-            result = await db.products.delete_many({'store': 'B'})
+            result = await db.products.delete_many({
+                "account_id": target_account_id,
+                "store": "B"
+            })
             deleted_counts['inventory_b'] = result.deleted_count
         
         # Resetear clientes
         if request.customers:
-            result = await db.customers.delete_many({})
+            result = await db.customers.delete_many({"account_id": target_account_id})
             deleted_counts['customers'] = result.deleted_count
         
         return {
             "success": True,
-            "message": "Soft reset completado exitosamente",
+            "message": "Soft reset completado",
             "deleted_counts": deleted_counts,
-            "timestamp": datetime.now(timezone.utc).isoformat()
+            "account_id": target_account_id
+        }
+        
+        return {
+            "success": True,
+            "message": "Soft reset completado",
+            "deleted_counts": deleted_counts,
+            "account_id": target_account_id
         }
         
     except Exception as e:
