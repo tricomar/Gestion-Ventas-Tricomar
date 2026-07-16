@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { Home, FileDown, Calendar, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useStores } from '../hooks/useStores';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import * as XLSX from 'xlsx';
@@ -14,6 +15,7 @@ const API = `${BACKEND_URL}/api`;
 const ReportsPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { getStoreName } = useStores();
   const [period, setPeriod] = useState('day');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -70,8 +72,8 @@ const ReportsPage = () => {
     
     const summaryData = [
       ['Tienda', 'Ventas', 'Total', 'Costo'],
-      ['Tienda A', reportData.store_a.sales_count, `$${reportData.store_a.total_sales.toLocaleString('es-CL')}`, `$${reportData.store_a.total_cost.toLocaleString('es-CL')}`],
-      ['Tienda B', reportData.store_b.sales_count, `$${reportData.store_b.total_sales.toLocaleString('es-CL')}`, `$${reportData.store_b.total_cost.toLocaleString('es-CL')}`],
+      [getStoreName('A'), reportData.store_a.sales_count, `$${reportData.store_a.total_sales.toLocaleString('es-CL')}`, `$${reportData.store_a.total_cost.toLocaleString('es-CL')}`],
+      [getStoreName('B'), reportData.store_b.sales_count, `$${reportData.store_b.total_sales.toLocaleString('es-CL')}`, `$${reportData.store_b.total_cost.toLocaleString('es-CL')}`],
       ['Total Egresos', '', `$${reportData.total_expenses.toLocaleString('es-CL')}`, ''],
       ['Total Otros Ingresos', '', `$${reportData.total_other_income.toLocaleString('es-CL')}`, ''],
     ];
@@ -125,8 +127,8 @@ const ReportsPage = () => {
       [],
       ['RESUMEN POR TIENDA'],
       ['Tienda', 'Cant. Ventas', 'Total Ventas', 'Total Costo'],
-      ['Tienda A', reportData.store_a.sales_count, reportData.store_a.total_sales, reportData.store_a.total_cost],
-      ['Tienda B', reportData.store_b.sales_count, reportData.store_b.total_sales, reportData.store_b.total_cost],
+      [getStoreName('A'), reportData.store_a.sales_count, reportData.store_a.total_sales, reportData.store_a.total_cost],
+      [getStoreName('B'), reportData.store_b.sales_count, reportData.store_b.total_sales, reportData.store_b.total_cost],
       [],
       ['Total Egresos', '', reportData.total_expenses, ''],
       ['Total Otros Ingresos', '', reportData.total_other_income, '']
@@ -306,12 +308,12 @@ const ReportsPage = () => {
           {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div className="p-4 border-2 border-slate-900 rounded-xl" style={{ backgroundColor: '#D4F0A5' }}>
-              <h3 className="font-bold text-sm uppercase mb-2">Tienda A</h3>
+              <h3 className="font-bold text-sm uppercase mb-2">{getStoreName('A')}</h3>
               <p className="text-2xl font-black font-mono">${reportData.store_a.total_sales.toLocaleString('es-CL')}</p>
               <p className="text-sm">{ reportData.store_a.sales_count} ventas</p>
             </div>
             <div className="p-4 border-2 border-slate-900 rounded-xl" style={{ backgroundColor: '#FADBB0' }}>
-              <h3 className="font-bold text-sm uppercase mb-2">Tienda B</h3>
+              <h3 className="font-bold text-sm uppercase mb-2">{getStoreName('B')}</h3>
               <p className="text-2xl font-black font-mono">${reportData.store_b.total_sales.toLocaleString('es-CL')}</p>
               <p className="text-sm">{reportData.store_b.sales_count} ventas</p>
             </div>

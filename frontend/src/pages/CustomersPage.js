@@ -102,7 +102,7 @@ const CustomersPage = () => {
               }`}
               style={{ boxShadow: '2px 2px 0px 0px rgba(15,23,42,1)' }}
             >
-              Tienda A
+              {getStoreName('A')}
             </button>
             <button
               onClick={() => setFilterStore('B')}
@@ -111,7 +111,7 @@ const CustomersPage = () => {
               }`}
               style={{ boxShadow: '2px 2px 0px 0px rgba(15,23,42,1)' }}
             >
-              Tienda B
+              {getStoreName('B')}
             </button>
             <button
               onClick={() => setFilterStore('Ambas')}

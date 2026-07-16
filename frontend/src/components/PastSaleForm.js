@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useStores } from '../hooks/useStores';
 import axios from 'axios';
 import { X, Search, Plus } from 'lucide-react';
 import { toast } from 'sonner';
@@ -9,6 +10,7 @@ const API = `${BACKEND_URL}/api`;
 
 const PastSaleForm = ({ onClose, onSuccess, initialDate }) => {
   const { user } = useAuth();
+  const { getStoreName } = useStores();
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [productSearch, setProductSearch] = useState('');
   const [quantity, setQuantity] = useState('');
@@ -227,7 +229,7 @@ const PastSaleForm = ({ onClose, onSuccess, initialDate }) => {
                     <div className="flex justify-between items-center">
                       <div>
                         <p className="font-bold">{prod.name}</p>
-                        <p className="text-xs text-slate-500">Tienda {prod.store || 'A'}</p>
+                        <p className="text-xs text-slate-500">{getStoreName(prod.store || 'A')}</p>
                       </div>
                       <span className="font-mono font-bold">
                         ${(prod.sale_price || 0).toLocaleString('es-CL')}
@@ -242,7 +244,7 @@ const PastSaleForm = ({ onClose, onSuccess, initialDate }) => {
                 <div className="flex justify-between items-center">
                   <div>
                     <span className="text-xs font-bold uppercase text-slate-500">
-                      Tienda {selectedProduct.store || 'A'}
+                      {getStoreName(selectedProduct.store || 'A')}
                     </span>
                     <p className="font-mono font-bold">
                       ${(selectedProduct.sale_price || 0).toLocaleString('es-CL')}
