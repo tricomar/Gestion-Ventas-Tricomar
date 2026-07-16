@@ -18,6 +18,43 @@ from middleware.tenant import require_super_admin
 
 router = APIRouter(prefix="/super-admin", tags=["super-admin"])
 
+# Endpoint público para obtener información de la cuenta del usuario
+@router.get("/my-account")
+async def get_my_account(current_user: User = Depends(get_current_user)):
+    """
+    Obtiene la información de la cuenta del usuario actual.
+    Accesible para todos los usuarios autenticados.
+    """
+    if not current_user.account_id:
+        # Super-admin sin account_id
+        return {
+            "id": None,
+            "business_name": "Super Admin",
+            "plan": "unlimited",
+            "max_stores": 999,
+            "max_employees": 999,
+            "stores": [],
+            "enabled_modules": AVAILABLE_MODULES
+        }
+    
+    try:
+        account = await db.accounts.find_one({"id": current_user.account_id}, {"_id": 0})
+        
+        if not account:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Cuenta no encontrada"
+            )
+        
+        return account
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al obtener cuenta: {str(e)}"
+        )
+
 @router.get("/accounts")
 async def list_accounts(current_user: User = Depends(get_current_user)):
     """

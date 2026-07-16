@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { DollarSign, TrendingUp, TrendingDown, Wallet, ChevronLeft, Calendar, BarChart3, LineChart as LineChartIcon } from 'lucide-react';
+import { DollarSign, TrendingUp, TrendingDown, Wallet, ChevronLeft, Calendar, BarChart3, LineChart as LineChartIcon, ChevronRight } from 'lucide-react';
 import { useSettings } from '../context/SettingsContext';
+import { useAccount } from '../context/AccountContext';
 import { 
   ComposedChart, 
   Line, 
@@ -34,6 +35,7 @@ const MetricCard = ({ title, value, icon: Icon, color }) => (
 
 const RealtimeMetrics = ({ refreshTrigger }) => {
   const { settings } = useSettings();
+  const { account } = useAccount();
   const [metrics, setMetrics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showPeriod, setShowPeriod] = useState('month'); // 'month' or 'historic'
@@ -43,6 +45,7 @@ const RealtimeMetrics = ({ refreshTrigger }) => {
   const [chartType, setChartType] = useState('both'); // 'bars', 'lines', 'both'
   const [loadingChart, setLoadingChart] = useState(false);
   const [error, setError] = useState(null);
+  const [currentStoresPage, setCurrentStoresPage] = useState(0); // Para paginación de tiendas
 
   useEffect(() => {
     fetchMetrics();
@@ -97,6 +100,76 @@ const RealtimeMetrics = ({ refreshTrigger }) => {
     setShowPeriod('month');
     setSelectedHistoricMonth(null);
     setError(null);
+  };
+
+  // Helper: Obtener tiendas activas del account
+  const getActiveStores = () => {
+    if (!account || !account.stores) return [];
+    return account.stores.filter(store => store.active).slice(0, account.max_stores || 2);
+  };
+
+  // Helper: Renderizar columna de tienda
+  const renderStoreColumn = (store, storeData, index) => {
+    const colors = ['#D4F0A5', '#FADBB0', '#FFE4E6', '#E0E7FF', '#FEF3C7'];
+    const color = colors[index % colors.length];
+    
+    return (
+      <div key={store.id}>
+        <div 
+          className="mb-3 px-4 py-2 border-2 border-slate-900 rounded-lg text-center font-black text-lg"
+          style={{ backgroundColor: color }}
+        >
+          {store.name.toUpperCase()}
+        </div>
+        <div className="space-y-3">
+          <MetricCard
+            title="Compras"
+            value={storeData?.compras || 0}
+            icon={Wallet}
+            color="#FFF7ED"
+          />
+          <MetricCard
+            title="Ganancia"
+            value={storeData?.utilidades || 0}
+            icon={TrendingUp}
+            color="#D1FAE5"
+          />
+          <MetricCard
+            title="IVA a favor"
+            value={storeData?.iva_a_favor || 0}
+            icon={DollarSign}
+            color="#DBEAFE"
+          />
+        </div>
+      </div>
+    );
+  };
+
+  // Helper: Renderizar columna general
+  const renderGeneralColumn = (generalData) => {
+    return (
+      <div>
+        <div 
+          className="mb-3 px-4 py-2 border-2 border-slate-900 rounded-lg text-center font-black text-lg bg-white"
+        >
+          GENERAL
+        </div>
+        <div className="space-y-3">
+          <MetricCard
+            title="Otros Ingresos"
+            value={generalData?.otros_ingresos || 0}
+            icon={TrendingUp}
+            color="#E0E7FF"
+          />
+          <MetricCard
+            title="Egresos"
+            value={generalData?.egresos || 0}
+            icon={TrendingDown}
+            color="#FEE2E2"
+          />
+        </div>
+      </div>
+    );
   };
 
   if (loading && !metrics && !selectedHistoricMonth) {

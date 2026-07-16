@@ -12,6 +12,7 @@ import ExpensesRecordPage from './pages/ExpensesRecordPage';
 import IncomeRecordPage from './pages/IncomeRecordPage';
 import SuperAdminPage from './pages/SuperAdminPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { AccountProvider } from './context/AccountContext';
 import { SettingsProvider } from './context/SettingsContext';
 import './App.css';
 
@@ -125,11 +126,13 @@ function AppRoutes() {
 function App() {
   return (
     <AuthProvider>
-      <SettingsProvider>
-        <BrowserRouter>
-          <AppRoutes />
-        </BrowserRouter>
-      </SettingsProvider>
+      <AccountProvider>
+        <SettingsProvider>
+          <BrowserRouter>
+            <AppRoutes />
+          </BrowserRouter>
+        </SettingsProvider>
+      </AccountProvider>
     </AuthProvider>
   );
 }
