@@ -42,13 +42,14 @@ async def get_expenses_calendar(
         month_start_utc = month_start_chile.astimezone(timezone.utc)
         month_end_utc = month_end_chile.astimezone(timezone.utc)
         
-        # Obtener todos los egresos del mes
-        expenses = await db.expenses.find({
-            'created_at': {
-                '$gte': month_start_utc.isoformat(),
-                '$lt': month_end_utc.isoformat()
-            }
-        }, {'_id': 0}).to_list(10000)
+        # Obtener todos los egresos del mes (con filtro de tenant)
+        tenant_filter = get_tenant_filter(current_user.dict())
+        tenant_filter['created_at'] = {
+            '$gte': month_start_utc.isoformat(),
+            '$lt': month_end_utc.isoformat()
+        }
+        
+        expenses = await db.expenses.find(tenant_filter, {'_id': 0}).to_list(10000)
         
         # Agrupar por día (en hora Chile)
         daily_totals = defaultdict(float)
@@ -70,12 +71,17 @@ async def get_expenses_calendar(
         year_start_utc = year_start_chile.astimezone(timezone.utc)
         year_end_utc = year_end_chile.astimezone(timezone.utc)
         
-        yearly_expenses = await db.expenses.find({
-            'created_at': {
-                '$gte': year_start_utc.isoformat(),
-                '$lt': year_end_utc.isoformat()
-            }
-        }, {'_id': 0, 'amount': 1}).to_list(100000)
+        # Filtro de tenant para total anual
+        tenant_filter_year = get_tenant_filter(current_user.dict())
+        tenant_filter_year['created_at'] = {
+            '$gte': year_start_utc.isoformat(),
+            '$lt': year_end_utc.isoformat()
+        }
+        
+        yearly_expenses = await db.expenses.find(
+            tenant_filter_year,
+            {'_id': 0, 'amount': 1}
+        ).to_list(100000)
         
         yearly_total = sum(exp.get('amount', 0) for exp in yearly_expenses)
         
@@ -113,13 +119,14 @@ async def get_day_expenses(
         day_start_utc = day_start_chile.astimezone(timezone.utc)
         day_end_utc = day_end_chile.astimezone(timezone.utc)
         
-        # Obtener egresos del día
-        expenses = await db.expenses.find({
-            'created_at': {
-                '$gte': day_start_utc.isoformat(),
-                '$lt': day_end_utc.isoformat()
-            }
-        }, {'_id': 0}).to_list(1000)
+        # Obtener egresos del día (con filtro de tenant)
+        tenant_filter = get_tenant_filter(current_user.dict())
+        tenant_filter['created_at'] = {
+            '$gte': day_start_utc.isoformat(),
+            '$lt': day_end_utc.isoformat()
+        }
+        
+        expenses = await db.expenses.find(tenant_filter, {'_id': 0}).to_list(1000)
         
         # Convertir timestamps a hora Chile para mostrar
         for expense in expenses:

@@ -36,13 +36,14 @@ async def get_sales_calendar(
         _, last_day = monthrange(year, month)
         end_date = f"{year}-{month:02d}-{last_day}T23:59:59"
         
-        # Obtener todas las ventas del mes
-        sales = await db.sales.find({
-            "date": {
-                "$gte": start_date,
-                "$lte": end_date
-            }
-        }, {"_id": 0}).to_list(10000)
+        # Obtener todas las ventas del mes (con filtro de tenant)
+        tenant_filter = get_tenant_filter(current_user.dict())
+        tenant_filter["date"] = {
+            "$gte": start_date,
+            "$lte": end_date
+        }
+        
+        sales = await db.sales.find(tenant_filter, {"_id": 0}).to_list(10000)
         
         # Agrupar por día
         daily_totals = {}
@@ -60,16 +61,20 @@ async def get_sales_calendar(
                 daily_totals[day] += total
                 monthly_total += total
         
-        # Obtener total del año
+        # Obtener total del año (con filtro de tenant)
         year_start = f"{year}-01-01T00:00:00"
         year_end = f"{year}-12-31T23:59:59"
         
-        year_sales = await db.sales.find({
-            "date": {
-                "$gte": year_start,
-                "$lte": year_end
-            }
-        }, {"_id": 0, "total": 1}).to_list(100000)
+        tenant_filter_year = get_tenant_filter(current_user.dict())
+        tenant_filter_year["date"] = {
+            "$gte": year_start,
+            "$lte": year_end
+        }
+        
+        year_sales = await db.sales.find(
+            tenant_filter_year,
+            {"_id": 0, "total": 1}
+        ).to_list(100000)
         
         yearly_total = sum(sale.get("total", 0) for sale in year_sales)
         
@@ -107,13 +112,14 @@ async def get_day_sales(
         start_datetime = f"{date}T00:00:00"
         end_datetime = f"{date}T23:59:59"
         
-        # Obtener ventas del día
-        sales = await db.sales.find({
-            "date": {
-                "$gte": start_datetime,
-                "$lte": end_datetime
-            }
-        }, {"_id": 0}).to_list(1000)
+        # Obtener ventas del día (con filtro de tenant)
+        tenant_filter = get_tenant_filter(current_user.dict())
+        tenant_filter["date"] = {
+            "$gte": start_datetime,
+            "$lte": end_datetime
+        }
+        
+        sales = await db.sales.find(tenant_filter, {"_id": 0}).to_list(1000)
         
         # Calcular total
         total = sum(sale.get("total", 0) for sale in sales)
@@ -147,12 +153,14 @@ async def get_month_summary(
         _, last_day = monthrange(year, month)
         end_date = f"{year}-{month:02d}-{last_day}T23:59:59"
         
-        sales = await db.sales.find({
-            "date": {
-                "$gte": start_date,
-                "$lte": end_date
-            }
-        }, {"_id": 0}).to_list(10000)
+        # Filtro de tenant
+        tenant_filter = get_tenant_filter(current_user.dict())
+        tenant_filter["date"] = {
+            "$gte": start_date,
+            "$lte": end_date
+        }
+        
+        sales = await db.sales.find(tenant_filter, {"_id": 0}).to_list(10000)
         
         total_revenue = sum(sale.get("total", 0) for sale in sales)
         total_cost = sum(sale.get("cost_price", 0) * sale.get("quantity", 0) for sale in sales)
@@ -198,12 +206,14 @@ async def get_year_summary(
         year_start = f"{year}-01-01T00:00:00"
         year_end = f"{year}-12-31T23:59:59"
         
-        sales = await db.sales.find({
-            "date": {
-                "$gte": year_start,
-                "$lte": year_end
-            }
-        }, {"_id": 0}).to_list(100000)
+        # Filtro de tenant
+        tenant_filter = get_tenant_filter(current_user.dict())
+        tenant_filter["date"] = {
+            "$gte": year_start,
+            "$lte": year_end
+        }
+        
+        sales = await db.sales.find(tenant_filter, {"_id": 0}).to_list(100000)
         
         # Agrupar por mes
         monthly_totals = {i: 0 for i in range(1, 13)}
