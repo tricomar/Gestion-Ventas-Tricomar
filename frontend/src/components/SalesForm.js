@@ -10,9 +10,9 @@ import { useStores } from '../hooks/useStores';
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
-const SalesForm = ({ onSuccess }) => {
+  const SalesForm = ({ onSuccess }) => {
   const { settings } = useSettings();
-  const { getStoreName } = useStores();
+  const { getStoreName, getStoreByKey, stores } = useStores();
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [productSearch, setProductSearch] = useState('');
   const [quantity, setQuantity] = useState('');
@@ -253,7 +253,9 @@ const SalesForm = ({ onSuccess }) => {
                   <div className="flex justify-between items-center">
                     <div>
                       <p className="font-bold">{prod.name}</p>
-                      <p className="text-xs text-slate-500">{getStoreName(prod.store || 'A')}</p>
+                      <p className="text-xs text-slate-500 font-mono font-bold">
+                        Código: {prod.store || 'A'}
+                      </p>
                     </div>
                     <span className="font-mono font-bold">
                       ${(prod.sale_price || 0).toLocaleString('es-CL')}
@@ -294,8 +296,8 @@ const SalesForm = ({ onSuccess }) => {
             <div className="mt-2 p-3 bg-slate-100 border-2 border-slate-900 rounded-xl">
               <div className="flex justify-between items-center">
                 <div>
-                  <span className="text-xs font-bold uppercase text-slate-500">
-                    {getStoreName(selectedProduct.store || 'A')}
+                  <span className="text-xs font-bold uppercase text-slate-500 font-mono">
+                    Código Tienda: {selectedProduct.store || 'A'}
                   </span>
                   <p className="font-mono font-bold">
                     ${(selectedProduct.sale_price || 0).toLocaleString('es-CL')}
@@ -303,7 +305,9 @@ const SalesForm = ({ onSuccess }) => {
                 </div>
                 <span 
                   className="px-3 py-1 rounded-full text-xs font-bold uppercase border-2 border-slate-900"
-                  style={{ backgroundColor: selectedProduct.store === 'A' ? '#D4F0A5' : '#FADBB0' }}
+                  style={{ 
+                    backgroundColor: getStoreByKey(selectedProduct.store || 'A')?.color || '#D4F0A5'
+                  }}
                 >
                   {selectedProduct.store || 'A'}
                 </span>
