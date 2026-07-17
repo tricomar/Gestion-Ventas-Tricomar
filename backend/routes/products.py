@@ -62,8 +62,12 @@ async def get_products(current_user: User = Depends(get_current_user)):
 
 @router.get("/search")
 async def search_products(q: str, current_user: User = Depends(get_current_user)):
+    # CRITICAL: Aplicar filtro de tenant para aislamiento multi-tenant
+    tenant_filter = get_tenant_filter(current_user.dict())
+    tenant_filter['name'] = {'$regex': q, '$options': 'i'}
+    
     products = await db.products.find(
-        {'name': {'$regex': q, '$options': 'i'}},
+        tenant_filter,
         {'_id': 0}
     ).sort('usage_count', -1).limit(10).to_list(10)
     return products

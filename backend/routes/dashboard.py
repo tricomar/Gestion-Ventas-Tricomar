@@ -96,8 +96,20 @@ async def get_realtime_metrics(current_user: User = Depends(get_current_user)):
         'created_at': {'$gte': month_start.isoformat(), '$lt': next_month_start.isoformat()}
     }, {'_id': 0}).to_list(100000)
     
-    def calculate_metrics(sales, store_code):
-        filtered_sales = [s for s in sales if s.get('store') == store_code]
+    def calculate_metrics(sales, store_code, store_index=None):
+        # Filtrar ventas por código de tienda
+        # Manejar códigos legacy (A, B, C) y códigos personalizados (PT, ST, TT)
+        filtered_sales = []
+        for s in sales:
+            sale_store = s.get('store')
+            # Coincidencia directa por código
+            if sale_store == store_code:
+                filtered_sales.append(s)
+            # Fallback: mapear códigos legacy A, B, C a índices 0, 1, 2
+            elif store_index is not None and sale_store in ['A', 'B', 'C', 'D', 'E']:
+                legacy_index = ord(sale_store) - ord('A')
+                if legacy_index == store_index:
+                    filtered_sales.append(s)
         
         # Compras: sum of cost prices
         compras = sum(s.get('cost_price', 0) * s.get('quantity', 0) for s in filtered_sales)
@@ -147,8 +159,8 @@ async def get_realtime_metrics(current_user: User = Depends(get_current_user)):
         store_code = store.get('code')
         store_id = store.get('id')
         
-        stores_day[store_id] = calculate_metrics(today_sales, store_code)
-        stores_month[store_id] = calculate_metrics(month_sales, store_code)
+        stores_day[store_id] = calculate_metrics(today_sales, store_code, index)
+        stores_month[store_id] = calculate_metrics(month_sales, store_code, index)
         
         store_info.append({
             'id': store_id,
@@ -235,8 +247,20 @@ async def get_historic_data(
         'created_at': {'$gte': month_start.isoformat(), '$lt': next_month_start.isoformat()}
     }, {'_id': 0}).to_list(100000)
     
-    def calculate_metrics(sales, store_code):
-        filtered_sales = [s for s in sales if s.get('store') == store_code]
+    def calculate_metrics(sales, store_code, store_index=None):
+        # Filtrar ventas por código de tienda
+        # Manejar códigos legacy (A, B, C) y códigos personalizados (PT, ST, TT)
+        filtered_sales = []
+        for s in sales:
+            sale_store = s.get('store')
+            # Coincidencia directa por código
+            if sale_store == store_code:
+                filtered_sales.append(s)
+            # Fallback: mapear códigos legacy A, B, C a índices 0, 1, 2
+            elif store_index is not None and sale_store in ['A', 'B', 'C', 'D', 'E']:
+                legacy_index = ord(sale_store) - ord('A')
+                if legacy_index == store_index:
+                    filtered_sales.append(s)
         
         compras = sum(s.get('cost_price', 0) * s.get('quantity', 0) for s in filtered_sales)
         
@@ -282,7 +306,7 @@ async def get_historic_data(
         store_code = store.get('code')
         store_id = store.get('id')
         
-        stores_data[store_id] = calculate_metrics(month_sales, store_code)
+        stores_data[store_id] = calculate_metrics(month_sales, store_code, index)
         
         store_info.append({
             'id': store_id,
@@ -347,11 +371,23 @@ async def get_historic_daily_data(
         day_entry = {'day': day}
         
         # Calculate metrics for each store dynamically
-        for store in stores:
+        for index, store in enumerate(stores):
             store_code = store.get('code')
             store_id = store.get('id')
             
-            store_sales = [s for s in day_sales if s.get('store') == store_code]
+            # Filtrar ventas con lógica legacy-compatible
+            store_sales = []
+            for s in day_sales:
+                sale_store = s.get('store')
+                # Coincidencia directa por código
+                if sale_store == store_code:
+                    store_sales.append(s)
+                # Fallback: mapear códigos legacy A, B, C a índices 0, 1, 2
+                elif sale_store in ['A', 'B', 'C', 'D', 'E']:
+                    legacy_index = ord(sale_store) - ord('A')
+                    if legacy_index == index:
+                        store_sales.append(s)
+            
             compras = sum(s.get('cost_price', 0) * s.get('quantity', 0) for s in store_sales)
             
             utilidades = 0

@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Verificar que el Dashboard muestre correctamente las métricas en tiempo real de 3 tiendas dinámicamente después de la refactorización del backend y frontend"
+user_problem_statement: "Verificar que los dos bugs críticos de multi-tenancy fueron resueltos correctamente: Bug #1 - Aislamiento de productos entre cuentas, Bug #2 - Métricas en tiempo real"
 
 frontend:
   - task: "Display 3 stores dynamically in RealtimeMetrics component"
@@ -169,19 +169,18 @@ backend:
 metadata:
   created_by: "testing_agent"
   version: "1.0"
-  test_sequence: 1
+  test_sequence: 2
   run_ui: true
   test_date: "2026-07-17"
-  test_account: "hola@tricomar.cl"
+  test_accounts: "ivan@laprimavera.cl, hola@tricomar.cl"
 
 test_plan:
   current_focus:
-    - "All tasks completed and verified"
+    - "Bug #1 - Multi-tenancy product isolation between accounts"
+    - "Bug #2 - Real-time metrics display for Account B"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
-
-agent_communication:
 
   - task: "SalesForm displays store CODE instead of full name"
     implemented: true
@@ -198,9 +197,36 @@ agent_communication:
           agent: "testing"
           comment: "Re-tested on 2026-07-17 after fix. ISSUE RESOLVED. Root cause was that products in database had old codes (A,B,C) instead of new codes (PT,ST,TT). The fix in useStores.js line 41 was correct (using store.code), but products collection needed migration. Created and ran /app/backend/scripts/update_product_codes.py to map A->PT, B->ST, C->TT. Verified all products now show correct codes: Cat Chow shows 'Código: PT', Pipa shows 'Código: ST', Cigarrillos shows 'Código: TT'. Selected product display also shows 'CÓDIGO TIENDA: TT' with badge. All functionality working correctly."
 
+  - task: "Bug #1 - Multi-tenancy product isolation between accounts"
+    implemented: true
+    working: true
+    file: "/app/backend/routes/products.py"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "Tested on 2026-07-17. VERIFIED FIXED. Account B (ivan@laprimavera.cl) searching for 'cat' shows 'No se encontró cat' with no product suggestions - correctly isolated from Account A's products. Account A (hola@tricomar.cl) searching for 'cat' shows 'Cat Chow Pescado Granel' with 'Código: PT' - correctly shows their own products. Backend endpoint /api/products/search properly implements tenant_filter using get_tenant_filter(current_user.dict()) to filter by account_id. Multi-tenancy isolation working correctly."
+
+  - task: "Bug #2 - Real-time metrics display for Account B"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/components/RealtimeMetrics.js"
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "Tested on 2026-07-17. VERIFIED WORKING. Account B (ivan@laprimavera.cl) dashboard correctly displays: Store name 'MINIMARKET LA PRIMAVERA', Compras: $2.900 (>0), Ganancia: $1.637,815 (>0), IVA a favor: $0. Metrics reflect the 2 registered sales (Pan and Cat Chow) as expected. Real-time metrics component properly fetches and displays account-specific data from /api/dashboard/realtime-metrics endpoint."
+
+agent_communication:
     - agent: "testing"
       message: "Completed comprehensive testing of dynamic 3-store dashboard metrics. All functionality working correctly. Login successful with hola@tricomar.cl account. Dashboard displays 3 stores (PETSHOP, GROWSHOP, TABAQUERIA) in both Total Mes and Histórico views. All metrics are correctly displayed. No critical issues found. Screenshots captured for documentation."
     - agent: "testing"
       message: "Tested SalesForm store code display (2026-07-17). FINDINGS: SalesForm.js correctly displays 'Código: X' in suggestions and 'CÓDIGO TIENDA: X' in selected product info with code badges. However, discovered BUG in useStores.js line 41: hook generates keys (A,B,C) from array index instead of using store.code from backend. Backend Store model has code field (PT,ST,TT) but frontend overwrites with A,B,C. User expects PT,ST,TT codes. Fix needed in useStores.js to use store.code instead of auto-generated keys."
     - agent: "testing"
       message: "RE-TEST COMPLETED (2026-07-17): Store code display issue RESOLVED. Main agent fixed useStores.js line 41 to use store.code from backend. However, initial re-test showed codes still displaying as A,B,C. Investigation revealed root cause: products in database had old codes. Database verification showed accounts had correct store codes (PT,ST,TT), but products collection had old codes (A,B,C). Created migration script /app/backend/scripts/update_product_codes.py to update all products: A->PT, B->ST, C->TT. Updated 4 products successfully. Final verification test PASSED: Cat Chow displays 'Código: PT', Pipa displays 'Código: ST', Cigarrillos displays 'Código: TT'. Selected product view shows 'CÓDIGO TIENDA: TT' with badge. All store codes now correctly display PT, ST, TT as expected."
+    - agent: "testing"
+      message: "MULTI-TENANCY BUG VERIFICATION COMPLETED (2026-07-17): Both critical bugs have been successfully fixed and verified. Bug #1 (Product Isolation): Account B cannot see Account A's products when searching - tenant isolation working correctly via get_tenant_filter() in /api/products/search endpoint. Bug #2 (Real-time Metrics): Account B dashboard displays correct store name 'MINIMARKET LA PRIMAVERA' with metrics showing values >0 (Compras: $2.900, Ganancia: $1.637,815) reflecting their 2 registered sales. All tests passed with screenshots captured for documentation."
