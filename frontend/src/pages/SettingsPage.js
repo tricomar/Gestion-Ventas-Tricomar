@@ -169,6 +169,31 @@ const SettingsPage = () => {
     }
   };
 
+  const handleSaveStoreNames = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+
+    try {
+      // Actualizar nombres de tiendas
+      await axios.put(`${API}/auth/account/stores`, {
+        stores: stores.map(store => ({
+          id: store.id,
+          name: storeNames[store.id] || store.name,
+          code: store.code
+        }))
+      });
+
+      toast.success('Nombres de tiendas actualizados');
+      // Recargar stores
+      window.location.reload();
+    } catch (error) {
+      toast.error('Error al guardar nombres de tiendas');
+      console.error('Error saving store names:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleSaveProfile = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -644,7 +669,7 @@ const SettingsPage = () => {
           )}
         </div>
 
-        {/* Store Settings Tab - Solo para Supervisor (NO super_admin) - SOLO LECTURA */}
+        {/* Store Settings Tab - Editable para account_admin y supervisor */}
         {activeTab === 'stores' && isSupervisor && !isSuperAdmin && (
           <div 
             className="bg-white border-2 border-slate-900 rounded-xl p-8"
@@ -652,39 +677,49 @@ const SettingsPage = () => {
           >
             <div className="flex items-center gap-3 mb-6">
               <Store className="w-6 h-6" />
-              <h2 className="text-2xl font-bold text-slate-900">Tiendas de la Cuenta</h2>
+              <h2 className="text-2xl font-bold text-slate-900">Configuración de Tiendas</h2>
             </div>
             
             <p className="text-sm text-slate-600 mb-6">
-              Estas son las tiendas asignadas a tu cuenta. Para agregar o modificar tiendas, contacta al administrador del sistema.
+              Personaliza los nombres de tus tiendas. Para agregar nuevas tiendas, contacta al super-administrador.
             </p>
             
             {stores && stores.length > 0 ? (
-              <div className="space-y-4">
+              <form onSubmit={handleSaveStoreNames} className="space-y-6">
                 {stores.map((store, index) => (
-                  <div 
-                    key={store.id}
-                    className="p-4 border-2 border-slate-200 rounded-xl bg-slate-50"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-bold text-slate-900">{store.name}</p>
-                        <p className="text-sm text-slate-600">Código: {store.code}</p>
-                      </div>
-                      {index === 0 && (
-                        <span className="px-3 py-1 bg-blue-100 text-blue-900 text-xs font-bold rounded-full">
-                          Por Defecto
-                        </span>
-                      )}
-                    </div>
+                  <div key={store.id}>
+                    <label className="block text-sm font-bold text-slate-700 mb-2">
+                      {index === 0 ? 'Tienda Principal' : `Tienda ${index + 1}`}
+                      {index === 0 && <span className="ml-2 text-xs text-blue-600">(Por defecto)</span>}
+                    </label>
+                    <input
+                      type="text"
+                      value={storeNames[store.id] || store.name}
+                      onChange={(e) => setStoreNames({...storeNames, [store.id]: e.target.value})}
+                      className="w-full px-4 py-3 border-2 border-slate-900 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-slate-900"
+                      required
+                      maxLength={50}
+                      placeholder={store.name}
+                    />
+                    <p className="text-xs text-slate-500 mt-1">Código: {store.code}</p>
                   </div>
                 ))}
-              </div>
+
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="flex items-center gap-2 px-6 py-3 bg-[#D4F0A5] border-2 border-slate-900 rounded-xl font-bold hover:bg-[#c5e196] disabled:opacity-50 transition-all"
+                  style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
+                >
+                  <Save className="w-5 h-5" />
+                  {saving ? 'Guardando...' : 'Guardar Cambios'}
+                </button>
+              </form>
             ) : (
               <div className="text-center py-8 text-slate-600">
                 <Store className="w-12 h-12 mx-auto mb-4 text-slate-400" />
                 <p>No hay tiendas configuradas para tu cuenta.</p>
-                <p className="text-sm mt-2">Contacta al administrador del sistema.</p>
+                <p className="text-sm mt-2">Contacta al super-administrador.</p>
               </div>
             )}
           </div>

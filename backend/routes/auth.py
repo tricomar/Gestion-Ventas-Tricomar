@@ -3,7 +3,7 @@ Router de autenticación
 Maneja registro, login y actualización de perfil
 """
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, status
 from datetime import datetime, timezone
 import bcrypt
 import uuid
@@ -200,3 +200,66 @@ async def get_account_info(current_user: User = Depends(get_current_user)):
         "stores": account.get("stores", []),
         "enabled_modules": account.get("enabled_modules", [])
     }
+
+@router.put("/account/stores")
+async def update_account_stores(
+    stores_data: dict,
+    current_user: User = Depends(get_current_user)
+):
+    """Actualizar nombres de tiendas de la cuenta (solo account_admin y supervisor)"""
+    # Verificar que el usuario tenga permisos
+    if current_user.role not in ["account_admin", "supervisor"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permisos para editar tiendas"
+        )
+    
+    if not current_user.account_id:
+        raise HTTPException(status_code=404, detail="Usuario no tiene cuenta asignada")
+    
+    try:
+        # Obtener cuenta actual
+        account = await db.accounts.find_one({"id": current_user.account_id}, {"_id": 0})
+        
+        if not account:
+            raise HTTPException(status_code=404, detail="Cuenta no encontrada")
+        
+        # Actualizar nombres de tiendas manteniendo otros campos
+        updated_stores = []
+        for new_store in stores_data.get("stores", []):
+            # Buscar la tienda existente
+            existing_store = next(
+                (s for s in account.get("stores", []) if s.get("id") == new_store.get("id")),
+                None
+            )
+            
+            if existing_store:
+                # Mantener todos los campos y actualizar solo el nombre
+                updated_store = existing_store.copy()
+                updated_store["name"] = new_store.get("name", existing_store.get("name"))
+                updated_stores.append(updated_store)
+        
+        # Actualizar en la base de datos
+        await db.accounts.update_one(
+            {"id": current_user.account_id},
+            {
+                "$set": {
+                    "stores": updated_stores,
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }
+            }
+        )
+        
+        return {
+            "success": True,
+            "message": "Nombres de tiendas actualizados exitosamente",
+            "stores": updated_stores
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al actualizar tiendas: {str(e)}"
+        )
