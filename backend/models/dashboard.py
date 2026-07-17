@@ -2,12 +2,11 @@ from pydantic import BaseModel
 from typing import Dict, List, Any
 
 class RealtimeMetrics(BaseModel):
-    store_a_day: Dict[str, float]
-    store_b_day: Dict[str, float]
-    store_a_month: Dict[str, float]
-    store_b_month: Dict[str, float]
+    stores_day: Dict[str, Dict[str, float]]  # {"store_id": {compras, iva_a_favor, utilidades}}
+    stores_month: Dict[str, Dict[str, float]]
     general_day: Dict[str, float]  # Otros Ingresos y Egresos (día)
     general_month: Dict[str, float]  # Otros Ingresos y Egresos (mes)
+    store_info: List[Dict[str, Any]]  # Información de las tiendas: [{id, name, code, color}]
 
 class DashboardStats(BaseModel):
     today_sales: float
