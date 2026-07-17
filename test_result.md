@@ -101,3 +101,86 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+
+user_problem_statement: "Verificar que el Dashboard muestre correctamente las métricas en tiempo real de 3 tiendas dinámicamente después de la refactorización del backend y frontend"
+
+frontend:
+  - task: "Display 3 stores dynamically in RealtimeMetrics component"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/components/RealtimeMetrics.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "Successfully verified that RealtimeMetrics component displays 3 stores (PETSHOP, GROWSHOP, TABAQUERIA) dynamically. All store names are correctly displayed in uppercase. Each store column shows: Compras, Ganancia, IVA a favor. General column shows: Otros Ingresos, Egresos. Tested on 2026-07-17."
+  
+  - task: "Total Mes view shows 3 store columns + General column"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/components/RealtimeMetrics.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "Total Mes view correctly displays 3 store columns (PETSHOP, GROWSHOP, TABAQUERIA) plus 1 General column. Layout is clean and properly organized in a grid. Screenshot captured: total_mes_3_stores.png"
+  
+  - task: "Histórico button functionality"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/components/RealtimeMetrics.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "Histórico button works correctly. Switches view to show historic months grid. Found 1 historic month (JUL 2026) available for testing. Screenshot captured: historico_grid.png"
+  
+  - task: "Historic month selection shows 3 stores"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/components/RealtimeMetrics.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "Historic month view correctly displays all 3 stores (PETSHOP, GROWSHOP, TABAQUERIA) when a month is selected. Data loads properly from API. Screenshot captured: historic_month_3_stores.png"
+
+backend:
+  - task: "Dynamic store metrics endpoint /api/dashboard/realtime-metrics"
+    implemented: true
+    working: true
+    file: "/app/backend/routes/dashboard.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "Backend endpoint /api/dashboard/realtime-metrics correctly returns dynamic payload with stores_day, stores_month, general_day, general_month, and store_info for 3 stores. API calls successful (4 realtime-metrics calls, 4 historic calls detected). No console errors."
+
+metadata:
+  created_by: "testing_agent"
+  version: "1.0"
+  test_sequence: 1
+  run_ui: true
+  test_date: "2026-07-17"
+  test_account: "hola@tricomar.cl"
+
+test_plan:
+  current_focus:
+    - "All tasks completed and verified"
+  stuck_tasks: []
+  test_all: true
+  test_priority: "high_first"
+
+agent_communication:
+    - agent: "testing"
+      message: "Completed comprehensive testing of dynamic 3-store dashboard metrics. All functionality working correctly. Login successful with hola@tricomar.cl account. Dashboard displays 3 stores (PETSHOP, GROWSHOP, TABAQUERIA) in both Total Mes and Histórico views. All metrics are correctly displayed. No critical issues found. Screenshots captured for documentation."

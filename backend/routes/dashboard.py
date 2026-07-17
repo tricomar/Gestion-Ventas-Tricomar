@@ -306,6 +306,14 @@ async def get_historic_daily_data(
     """Get daily metrics for a specific historic month for chart visualization"""
     from calendar import monthrange
     
+    # Obtener las tiendas de la cuenta del usuario
+    account = await db.accounts.find_one({"id": current_user.account_id}, {"_id": 0})
+    
+    if not account or not account.get("stores"):
+        return []
+    
+    stores = account.get("stores", [])
+    
     # Calculate date range for the specified month
     month_start = datetime(year, month, 1, tzinfo=timezone.utc)
     if month == 12:
@@ -315,6 +323,7 @@ async def get_historic_daily_data(
     
     # Get all sales for that month
     month_sales = await db.sales.find({
+        'account_id': current_user.account_id,
         'created_at': {'$gte': month_start.isoformat(), '$lt': next_month_start.isoformat()}
     }, {'_id': 0}).to_list(100000)
     
@@ -334,12 +343,39 @@ async def get_historic_daily_data(
             if day_start.isoformat() <= s.get('created_at', '') < day_end.isoformat()
         ]
         
-        # Calculate metrics for Store A
-        store_a_sales = [s for s in day_sales if s.get('store') == 'A']
-        compras_a = sum(s.get('cost_price', 0) * s.get('quantity', 0) for s in store_a_sales)
+        # Build day entry with dynamic stores
+        day_entry = {'day': day}
         
-        utilidades_a = 0
-        iva_a_favor_a = 0
-        for s in store_a_sales:
-            costo_total = s.get('cost_price', 0) * s.get('quantity', 0)
-            total = s.get('total', 0)
+        # Calculate metrics for each store dynamically
+        for store in stores:
+            store_code = store.get('code')
+            store_id = store.get('id')
+            
+            store_sales = [s for s in day_sales if s.get('store') == store_code]
+            compras = sum(s.get('cost_price', 0) * s.get('quantity', 0) for s in store_sales)
+            
+            utilidades = 0
+            iva_a_favor = 0
+            for s in store_sales:
+                costo_total = s.get('cost_price', 0) * s.get('quantity', 0)
+                total = s.get('total', 0)
+                
+                if s.get('has_tax', True):
+                    precio_sin_iva = total / 1.19
+                else:
+                    precio_sin_iva = total
+                    iva_a_favor += total / 1.19 * 0.19
+                
+                ganancia_venta = precio_sin_iva - costo_total
+                utilidades += ganancia_venta
+            
+            # Add store metrics to day entry using store_id as key
+            day_entry[store_id] = {
+                'compras': compras,
+                'utilidades': utilidades,
+                'iva_a_favor': iva_a_favor
+            }
+        
+        daily_data.append(day_entry)
+    
+    return daily_data

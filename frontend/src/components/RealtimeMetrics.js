@@ -104,12 +104,6 @@ const RealtimeMetrics = ({ refreshTrigger }) => {
     setError(null);
   };
 
-  // Helper: Obtener tiendas activas del account
-  const getActiveStores = () => {
-    if (!account || !account.stores) return [];
-    return account.stores.filter(store => store.active).slice(0, account.max_stores || 2);
-  };
-
   // Helper: Renderizar columna de tienda
   const renderStoreColumn = (store, storeData, index) => {
     const colors = ['#D4F0A5', '#FADBB0', '#FFE4E6', '#E0E7FF', '#FEF3C7'];
@@ -192,15 +186,37 @@ const RealtimeMetrics = ({ refreshTrigger }) => {
     );
   }
 
-  const currentMetrics = showPeriod === 'month' && metrics
-    ? { 
-        store_a: metrics.store_a_month, 
-        store_b: metrics.store_b_month,
-        general: metrics.general_month
-      }
-    : selectedHistoricMonth?.data
-      ? selectedHistoricMonth.data
-      : { store_a: {}, store_b: {}, general: {} };
+  // Determinar qué métricas mostrar según el periodo seleccionado
+  const getCurrentStores = () => {
+    if (showPeriod === 'month' && metrics) {
+      return metrics.stores_month;
+    } else if (selectedHistoricMonth?.data) {
+      return selectedHistoricMonth.data.stores;
+    }
+    return {};
+  };
+
+  const getCurrentGeneral = () => {
+    if (showPeriod === 'month' && metrics) {
+      return metrics.general_month;
+    } else if (selectedHistoricMonth?.data) {
+      return selectedHistoricMonth.data.general;
+    }
+    return { otros_ingresos: 0, egresos: 0 };
+  };
+
+  const getCurrentStoreInfo = () => {
+    if (showPeriod === 'month' && metrics) {
+      return metrics.store_info || [];
+    } else if (selectedHistoricMonth?.data) {
+      return selectedHistoricMonth.data.store_info || [];
+    }
+    return [];
+  };
+
+  const currentStores = getCurrentStores();
+  const currentGeneral = getCurrentGeneral();
+  const currentStoreInfo = getCurrentStoreInfo();
 
   // Si estamos en vista histórica y hay un mes seleccionado
   if (showPeriod === 'historic' && selectedHistoricMonth) {
@@ -228,18 +244,20 @@ const RealtimeMetrics = ({ refreshTrigger }) => {
           </h3>
         </div>
 
-        {/* Metrics Grid - Dinámico según max_stores */}
+        {/* Metrics Grid - Dinámico según tiendas disponibles */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Renderizar tiendas dinámicamente */}
-          {getActiveStores().map((store, index) => {
-            // Mapear store.id a los datos correspondientes
-            const storeKey = index === 0 ? 'store_a' : index === 1 ? 'store_b' : `store_${String.fromCharCode(97 + index)}`;
-            const storeData = currentMetrics[storeKey] || {};
-            return renderStoreColumn(store, storeData, index);
+          {currentStoreInfo.map((storeInfo, index) => {
+            const storeData = currentStores[storeInfo.id] || {};
+            return renderStoreColumn(
+              { id: storeInfo.id, name: storeInfo.name },
+              storeData,
+              index
+            );
           })}
 
           {/* Columna General */}
-          {renderGeneralColumn(currentMetrics.general || {})}
+          {renderGeneralColumn(currentGeneral)}
         </div>
 
         {/* Chart Section */}
@@ -315,89 +333,65 @@ const RealtimeMetrics = ({ refreshTrigger }) => {
                     iconType="circle"
                   />
                   
-                  {/* Store A - Compras */}
-                  {(chartType === 'bars' || chartType === 'both') && (
-                    <Bar 
-                      dataKey="store_a.compras" 
-                      name={`${settings.store_a_name} - Compras`}
-                      fill="#D4F0A5" 
-                      stroke="#0f172a"
-                      strokeWidth={2}
-                    />
-                  )}
-                  {(chartType === 'lines' || chartType === 'both') && (
-                    <Line 
-                      type="monotone" 
-                      dataKey="store_a.compras" 
-                      name={chartType === 'lines' ? `${settings.store_a_name} - Compras` : undefined}
-                      stroke="#84cc16" 
-                      strokeWidth={3}
-                      dot={{ fill: '#84cc16', r: 4 }}
-                    />
-                  )}
+                  {/* Generar dinámicamente barras y líneas para cada tienda */}
+                  {currentStoreInfo.map((storeInfo, index) => {
+                    const barColors = ['#D4F0A5', '#FADBB0', '#FFE4E6', '#E0E7FF', '#FEF3C7'];
+                    const lineColors = {
+                      compras: ['#84cc16', '#f97316', '#ec4899', '#8b5cf6', '#eab308'],
+                      utilidades: ['#10b981', '#3b82f6', '#f43f5e', '#6366f1', '#f59e0b']
+                    };
+                    
+                    const barFill = barColors[index % barColors.length];
+                    const comprasStroke = lineColors.compras[index % lineColors.compras.length];
+                    const utilidadesStroke = lineColors.utilidades[index % lineColors.utilidades.length];
+                    
+                    return (
+                      <React.Fragment key={storeInfo.id}>
+                        {/* Compras */}
+                        {(chartType === 'bars' || chartType === 'both') && (
+                          <Bar 
+                            dataKey={`${storeInfo.id}.compras`}
+                            name={`${storeInfo.name} - Compras`}
+                            fill={barFill}
+                            stroke="#0f172a"
+                            strokeWidth={2}
+                          />
+                        )}
+                        {(chartType === 'lines' || chartType === 'both') && (
+                          <Line 
+                            type="monotone" 
+                            dataKey={`${storeInfo.id}.compras`}
+                            name={chartType === 'lines' ? `${storeInfo.name} - Compras` : undefined}
+                            stroke={comprasStroke}
+                            strokeWidth={3}
+                            dot={{ fill: comprasStroke, r: 4 }}
+                          />
+                        )}
 
-                  {/* Store A - Ganancia */}
-                  {(chartType === 'bars' || chartType === 'both') && (
-                    <Bar 
-                      dataKey="store_a.utilidades" 
-                      name={`${settings.store_a_name} - Ganancia`}
-                      fill="#D1FAE5" 
-                      stroke="#0f172a"
-                      strokeWidth={2}
-                    />
-                  )}
-                  {(chartType === 'lines' || chartType === 'both') && (
-                    <Line 
-                      type="monotone" 
-                      dataKey="store_a.utilidades" 
-                      name={chartType === 'lines' ? `${settings.store_a_name} - Ganancia` : undefined}
-                      stroke="#10b981" 
-                      strokeWidth={3}
-                      dot={{ fill: '#10b981', r: 4 }}
-                    />
-                  )}
-
-                  {/* Store B - Compras */}
-                  {(chartType === 'bars' || chartType === 'both') && (
-                    <Bar 
-                      dataKey="store_b.compras" 
-                      name={`${settings.store_b_name} - Compras`}
-                      fill="#FADBB0" 
-                      stroke="#0f172a"
-                      strokeWidth={2}
-                    />
-                  )}
-                  {(chartType === 'lines' || chartType === 'both') && (
-                    <Line 
-                      type="monotone" 
-                      dataKey="store_b.compras" 
-                      name={chartType === 'lines' ? `${settings.store_b_name} - Compras` : undefined}
-                      stroke="#f97316" 
-                      strokeWidth={3}
-                      dot={{ fill: '#f97316', r: 4 }}
-                    />
-                  )}
-
-                  {/* Store B - Ganancia */}
-                  {(chartType === 'bars' || chartType === 'both') && (
-                    <Bar 
-                      dataKey="store_b.utilidades" 
-                      name={`${settings.store_b_name} - Ganancia`}
-                      fill="#DBEAFE" 
-                      stroke="#0f172a"
-                      strokeWidth={2}
-                    />
-                  )}
-                  {(chartType === 'lines' || chartType === 'both') && (
-                    <Line 
-                      type="monotone" 
-                      dataKey="store_b.utilidades" 
-                      name={chartType === 'lines' ? `${settings.store_b_name} - Ganancia` : undefined}
-                      stroke="#3b82f6" 
-                      strokeWidth={3}
-                      dot={{ fill: '#3b82f6', r: 4 }}
-                    />
-                  )}
+                        {/* Utilidades */}
+                        {(chartType === 'bars' || chartType === 'both') && (
+                          <Bar 
+                            dataKey={`${storeInfo.id}.utilidades`}
+                            name={`${storeInfo.name} - Ganancia`}
+                            fill={barFill}
+                            stroke="#0f172a"
+                            strokeWidth={2}
+                            opacity={0.7}
+                          />
+                        )}
+                        {(chartType === 'lines' || chartType === 'both') && (
+                          <Line 
+                            type="monotone" 
+                            dataKey={`${storeInfo.id}.utilidades`}
+                            name={chartType === 'lines' ? `${storeInfo.name} - Ganancia` : undefined}
+                            stroke={utilidadesStroke}
+                            strokeWidth={3}
+                            dot={{ fill: utilidadesStroke, r: 4 }}
+                          />
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
@@ -453,14 +447,17 @@ const RealtimeMetrics = ({ refreshTrigger }) => {
         /* Stores Grid - Total Mes - Dinámico */
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Renderizar tiendas dinámicamente */}
-          {getActiveStores().map((store, index) => {
-            const storeKey = index === 0 ? 'store_a' : index === 1 ? 'store_b' : `store_${String.fromCharCode(97 + index)}`;
-            const storeData = currentMetrics[storeKey] || {};
-            return renderStoreColumn(store, storeData, index);
+          {currentStoreInfo.map((storeInfo, index) => {
+            const storeData = currentStores[storeInfo.id] || {};
+            return renderStoreColumn(
+              { id: storeInfo.id, name: storeInfo.name },
+              storeData,
+              index
+            );
           })}
 
           {/* Columna General */}
-          {renderGeneralColumn(currentMetrics.general || {})}
+          {renderGeneralColumn(currentGeneral)}
         </div>
       ) : (
         /* Historic Grid - Last 2 years */
