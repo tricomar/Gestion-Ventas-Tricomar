@@ -3,6 +3,7 @@ import axios from 'axios';
 import { DollarSign, TrendingUp, TrendingDown, Wallet, ChevronLeft, Calendar, BarChart3, LineChart as LineChartIcon, ChevronRight } from 'lucide-react';
 import { useSettings } from '../context/SettingsContext';
 import { useAccount } from '../context/AccountContext';
+import { useStores } from '../hooks/useStores';
 import { 
   ComposedChart, 
   Line, 
@@ -36,6 +37,7 @@ const MetricCard = ({ title, value, icon: Icon, color }) => (
 const RealtimeMetrics = ({ refreshTrigger }) => {
   const { settings } = useSettings();
   const { account } = useAccount();
+  const { stores } = useStores();
   const [metrics, setMetrics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showPeriod, setShowPeriod] = useState('month'); // 'month' or 'historic'
