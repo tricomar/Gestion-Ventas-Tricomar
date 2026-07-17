@@ -38,7 +38,7 @@ export const useStores = () => {
       .slice(0, account.max_stores || 2)
       .map((store, index) => ({
         ...store,
-        key: String.fromCharCode(65 + index), // A, B, C, D, etc.
+        key: store.code || String.fromCharCode(65 + index), // Usar code del backend, fallback a A, B, C
         color: colors[index % colors.length],
         active: store.active !== false // Normalizar: undefined o true = true
       }));
