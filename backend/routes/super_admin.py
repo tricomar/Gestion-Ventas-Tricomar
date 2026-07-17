@@ -237,7 +237,8 @@ async def add_store_to_account(
         new_store = {
             "id": f"store_{uuid.uuid4().hex[:8]}",
             "name": request.name,
-            "code": request.code
+            "code": request.code,
+            "active": True
         }
         
         # Agregar a la cuenta

@@ -31,15 +31,16 @@ export const useStores = () => {
       ];
     }
 
-    // Retornar tiendas activas del account
+    // Retornar tiendas del account (activas o sin campo active definido)
     const colors = ['#D4F0A5', '#FADBB0', '#FFE4E6', '#E0E7FF', '#FEF3C7'];
     return account.stores
-      .filter(store => store.active)
+      .filter(store => store.active !== false) // Solo excluir si explícitamente es false
       .slice(0, account.max_stores || 2)
       .map((store, index) => ({
         ...store,
         key: String.fromCharCode(65 + index), // A, B, C, D, etc.
-        color: colors[index % colors.length]
+        color: colors[index % colors.length],
+        active: store.active !== false // Normalizar: undefined o true = true
       }));
   }, [account, settings]);
 
