@@ -3,23 +3,25 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import { X } from 'lucide-react';
 import { useSettings } from '../context/SettingsContext';
+import { useStores } from '../hooks/useStores';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
-const CustomerForm = ({ customer, initialName, storeAName, storeBName, onClose, onSuccess }) => {
+const CustomerForm = ({ customer, initialName, onClose, onSuccess }) => {
   const { settings, loading: settingsLoading } = useSettings();
+  const { stores, loading: storesLoading } = useStores();
   
   const [formData, setFormData] = useState({
     name: customer?.name || initialName || '',
     address: customer?.address || '',
     phone: customer?.phone || '',
-    store: customer?.store || 'A'
+    store: customer?.store || (stores && stores.length > 0 ? stores[0].id : '')
   });
   const [loading, setLoading] = useState(false);
   
-  // Wait for settings to load before rendering form
-  if (settingsLoading) {
+  // Wait for settings and stores to load before rendering form
+  if (settingsLoading || storesLoading) {
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-xl border-2 border-slate-900 p-6 w-full max-w-md" style={{ boxShadow: '8px 8px 0px 0px rgba(15,23,42,1)' }}>
@@ -33,10 +35,6 @@ const CustomerForm = ({ customer, initialName, storeAName, storeBName, onClose, 
       </div>
     );
   }
-  
-  // Calculate store names AFTER loading is complete
-  const finalStoreAName = storeAName || settings.store_a_name || 'Tienda A';
-  const finalStoreBName = storeBName || settings.store_b_name || 'Tienda B';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -117,10 +115,14 @@ const CustomerForm = ({ customer, initialName, storeAName, storeBName, onClose, 
               value={formData.store}
               onChange={(e) => setFormData({ ...formData, store: e.target.value })}
               className="w-full px-3 py-2 border-2 border-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900"
+              required
             >
-              <option value="A">{finalStoreAName}</option>
-              <option value="B">{finalStoreBName}</option>
-              <option value="Ambas">Ambas</option>
+              <option value="">Selecciona una tienda</option>
+              {stores && stores.map(store => (
+                <option key={store.id} value={store.id}>
+                  {store.name}
+                </option>
+              ))}
             </select>
           </div>
 

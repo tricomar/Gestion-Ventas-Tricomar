@@ -43,8 +43,8 @@ async def register(user_input: UserCreate):
             "stores": [
                 {
                     "id": f"store_{uuid.uuid4().hex[:8]}",
-                    "name": "Mi Tienda",
-                    "code": "A"
+                    "name": "Primera Tienda",
+                    "code": "PT"
                 }
             ],
             "enabled_modules": ["sales"],  # Solo ventas en plan free

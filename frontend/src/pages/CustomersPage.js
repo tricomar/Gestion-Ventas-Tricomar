@@ -13,7 +13,7 @@ const API = `${BACKEND_URL}/api`;
 const CustomersPage = () => {
   const navigate = useNavigate();
   const { settings } = useSettings();
-  const { getStoreName } = useStores();
+  const { stores, getStoreName } = useStores();
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -95,33 +95,20 @@ const CustomersPage = () => {
             >
               Todas
             </button>
-            <button
-              onClick={() => setFilterStore('A')}
-              className={`px-4 py-2 rounded-lg font-bold border-2 border-slate-900 ${
-                filterStore === 'A' ? 'bg-lime-200' : 'bg-white'
-              }`}
-              style={{ boxShadow: '2px 2px 0px 0px rgba(15,23,42,1)' }}
-            >
-              {getStoreName('A')}
-            </button>
-            <button
-              onClick={() => setFilterStore('B')}
-              className={`px-4 py-2 rounded-lg font-bold border-2 border-slate-900 ${
-                filterStore === 'B' ? 'bg-orange-200' : 'bg-white'
-              }`}
-              style={{ boxShadow: '2px 2px 0px 0px rgba(15,23,42,1)' }}
-            >
-              {getStoreName('B')}
-            </button>
-            <button
-              onClick={() => setFilterStore('Ambas')}
-              className={`px-4 py-2 rounded-lg font-bold border-2 border-slate-900 ${
-                filterStore === 'Ambas' ? 'bg-blue-200' : 'bg-white'
-              }`}
-              style={{ boxShadow: '2px 2px 0px 0px rgba(15,23,42,1)' }}
-            >
-              Ambas Tiendas
-            </button>
+            {stores && stores.map((store, index) => (
+              <button
+                key={store.id}
+                onClick={() => setFilterStore(store.id)}
+                className={`px-4 py-2 rounded-lg font-bold border-2 border-slate-900 ${
+                  filterStore === store.id 
+                    ? index === 0 ? 'bg-lime-200' : 'bg-orange-200'
+                    : 'bg-white'
+                }`}
+                style={{ boxShadow: '2px 2px 0px 0px rgba(15,23,42,1)' }}
+              >
+                {store.name}
+              </button>
+            ))}
           </div>
 
           <button
