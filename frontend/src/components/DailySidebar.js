@@ -3,12 +3,14 @@ import axios from 'axios';
 import { Trash2, DollarSign, TrendingUp, TrendingDown, Edit2, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSettings } from '../context/SettingsContext';
+import { useStores } from '../hooks/useStores';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const DailySidebar = ({ refreshTrigger, onDelete }) => {
   const { settings } = useSettings();
+  const { getStoreName } = useStores();
   const [sales, setSales] = useState([]);
   const [expenses, setExpenses] = useState([]);
   const [income, setIncome] = useState([]);
@@ -266,7 +268,7 @@ const DailySidebar = ({ refreshTrigger, onDelete }) => {
                         {record.quantity} x ${record.price.toLocaleString('es-CL')}
                       </p>
                       <p className="text-xs text-slate-600">
-                        {record.store === 'A' ? settings.store_a_name : settings.store_b_name} {record.has_tax ? '(Con IVA)' : '(Sin IVA)'}
+                        {getStoreName(record.store)} {record.has_tax ? '(Con IVA)' : '(Sin IVA)'}
                       </p>
                       {record.customer && (
                         <p className="text-sm text-slate-600">Cliente: {record.customer}</p>

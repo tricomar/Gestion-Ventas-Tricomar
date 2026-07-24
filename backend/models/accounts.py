@@ -43,6 +43,7 @@ class AddStoreRequest(BaseModel):
 class UpdateStoreRequest(BaseModel):
     """Request para actualizar una tienda"""
     name: str
+    code: Optional[str] = None  # Código personalizado de la tienda
 
 # Constantes de módulos disponibles
 AVAILABLE_MODULES = {

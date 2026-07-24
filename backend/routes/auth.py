@@ -234,9 +234,10 @@ async def update_account_stores(
             )
             
             if existing_store:
-                # Mantener todos los campos y actualizar solo el nombre
+                # Mantener todos los campos y actualizar el nombre y código
                 updated_store = existing_store.copy()
                 updated_store["name"] = new_store.get("name", existing_store.get("name"))
+                updated_store["code"] = new_store.get("code", existing_store.get("code"))
                 updated_stores.append(updated_store)
         
         # Actualizar en la base de datos

@@ -293,6 +293,9 @@ async def update_store(
         for store in stores:
             if store["id"] == store_id:
                 store["name"] = request.name
+                # Actualizar código si se proporciona
+                if request.code is not None:
+                    store["code"] = request.code
                 store_found = True
                 break
         
