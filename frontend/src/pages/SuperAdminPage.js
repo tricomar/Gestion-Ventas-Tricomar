@@ -820,7 +820,7 @@ const SuperAdminPage = () => {
                     type="text"
                     value={editingStoreData.code}
                     onChange={(e) => setEditingStoreData({...editingStoreData, code: e.target.value.toUpperCase()})}
-                    className="w-full px-4 py-3 border-2 border-slate-900 rounded-xl"
+                    className="w-full px-4 py-3 border-2 border-slate-900 rounded-xl font-mono font-bold"
                     placeholder="Ej: TC"
                     maxLength={3}
                   />

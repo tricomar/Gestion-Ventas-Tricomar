@@ -55,6 +55,7 @@ const SettingsPage = () => {
   
   // Store settings - Dinámico basado en useStores
   const [storeNames, setStoreNames] = useState({});
+  const [storeCodes, setStoreCodes] = useState({});
   
   // Account info para validar límites
   const [accountInfo, setAccountInfo] = useState(null);
@@ -104,14 +105,17 @@ const SettingsPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
-  // Inicializar nombres de tiendas desde useStores
+  // Inicializar nombres y códigos de tiendas desde useStores
   useEffect(() => {
     if (stores && stores.length > 0) {
       const names = {};
+      const codes = {};
       stores.forEach(store => {
         names[store.id] = store.name;
+        codes[store.id] = store.code || '';
       });
       setStoreNames(names);
+      setStoreCodes(codes);
     }
   }, [stores]);
 
@@ -175,20 +179,20 @@ const SettingsPage = () => {
     setSaving(true);
 
     try {
-      // Actualizar nombres de tiendas
+      // Actualizar nombres y códigos de tiendas
       await axios.put(`${API}/auth/account/stores`, {
         stores: stores.map(store => ({
           id: store.id,
           name: storeNames[store.id] || store.name,
-          code: store.code
+          code: storeCodes[store.id] || store.code
         }))
       });
 
-      toast.success('Nombres de tiendas actualizados');
+      toast.success('Tiendas actualizadas correctamente');
       // Recargar stores
       window.location.reload();
     } catch (error) {
-      toast.error('Error al guardar nombres de tiendas');
+      toast.error('Error al guardar cambios');
       console.error('Error saving store names:', error);
     } finally {
       setSaving(false);
@@ -705,21 +709,45 @@ const SettingsPage = () => {
             {stores && stores.length > 0 ? (
               <form onSubmit={handleSaveStoreNames} className="space-y-6">
                 {stores.map((store, index) => (
-                  <div key={store.id}>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">
+                  <div key={store.id} className="border-2 border-slate-900 rounded-xl p-4 bg-slate-50">
+                    <label className="block text-sm font-bold text-slate-700 mb-3">
                       {index === 0 ? 'Tienda Principal' : `Tienda ${index + 1}`}
                       {index === 0 && <span className="ml-2 text-xs text-blue-600">(Por defecto)</span>}
                     </label>
-                    <input
-                      type="text"
-                      value={storeNames[store.id] || store.name}
-                      onChange={(e) => setStoreNames({...storeNames, [store.id]: e.target.value})}
-                      className="w-full px-4 py-3 border-2 border-slate-900 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-slate-900"
-                      required
-                      maxLength={50}
-                      placeholder={store.name}
-                    />
-                    <p className="text-xs text-slate-500 mt-1">Código: {store.code}</p>
+                    
+                    {/* Nombre de la tienda */}
+                    <div className="mb-3">
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">
+                        Nombre de la Tienda
+                      </label>
+                      <input
+                        type="text"
+                        value={storeNames[store.id] || store.name}
+                        onChange={(e) => setStoreNames({...storeNames, [store.id]: e.target.value})}
+                        className="w-full px-4 py-3 border-2 border-slate-900 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-slate-900"
+                        required
+                        maxLength={50}
+                        placeholder={store.name}
+                      />
+                    </div>
+
+                    {/* Código de la tienda */}
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">
+                        Código de la Tienda
+                      </label>
+                      <input
+                        type="text"
+                        value={storeCodes[store.id] || store.code}
+                        onChange={(e) => setStoreCodes({...storeCodes, [store.id]: e.target.value.toUpperCase()})}
+                        className="w-full px-4 py-3 border-2 border-slate-900 rounded-xl font-mono font-bold focus:outline-none focus:ring-2 focus:ring-slate-900"
+                        maxLength={3}
+                        placeholder={store.code}
+                      />
+                      <p className="text-xs text-slate-500 mt-1">
+                        Máximo 3 caracteres. Se usará en registros y reportes.
+                      </p>
+                    </div>
                   </div>
                 ))}
 
