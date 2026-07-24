@@ -21,6 +21,7 @@ from .expenses_records import router as expenses_records_router
 from .income_records import router as income_records_router
 from .indicators import router as indicators_router
 from .super_admin import router as super_admin_router
+from .import_export import router as import_export_router
 
 # Crear el router principal con prefijo /api
 api_router = APIRouter(prefix="/api")
@@ -42,5 +43,6 @@ api_router.include_router(expenses_records_router)
 api_router.include_router(income_records_router)
 api_router.include_router(indicators_router)
 api_router.include_router(super_admin_router)
+api_router.include_router(import_export_router, prefix="/import-export", tags=["import-export"])
 
 __all__ = ["api_router"]

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { Home, Settings as SettingsIcon, Save, User, Store, Users, Plus, Edit2, Trash2, X, Database, AlertTriangle } from 'lucide-react';
+import { Home, Settings as SettingsIcon, Save, User, Store, Users, Plus, Edit2, Trash2, X, Database, AlertTriangle, Upload, Download } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useSettings } from '../context/SettingsContext';
 import { useAuth } from '../context/AuthContext';
 import { useStores } from '../hooks/useStores';
+import ImportProducts from '../components/ImportProducts';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -667,6 +668,23 @@ const SettingsPage = () => {
               Gestión de Empleados
             </button>
           )}
+          
+          {/* Importar Datos - Solo para account_admin y supervisor */}
+          {isSupervisor && (
+            <button
+              onClick={() => setActiveTab('import')}
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold border-2 border-slate-900 transition-all ${
+                activeTab === 'import' 
+                  ? 'bg-slate-900 text-white' 
+                  : 'bg-white text-slate-900 hover:bg-slate-50'
+              }`}
+              style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
+              data-testid="import-tab-btn"
+            >
+              <Database className="w-5 h-5" />
+              Importar Datos
+            </button>
+          )}
         </div>
 
         {/* Store Settings Tab - Editable para account_admin y supervisor */}
@@ -905,6 +923,28 @@ const SettingsPage = () => {
             {users.length === 0 && (
               <p className="text-center text-slate-500 py-8">No hay empleados registrados</p>
             )}
+          </div>
+        )}
+
+        {/* Importar Datos Tab - Solo para account_admin y supervisor */}
+        {activeTab === 'import' && isSupervisor && (
+          <div 
+            className="bg-white border-2 border-slate-900 rounded-xl p-8"
+            style={{ boxShadow: '8px 8px 0px 0px rgba(15,23,42,1)' }}
+          >
+            <div className="flex items-center gap-3 mb-6">
+              <Database className="w-6 h-6" />
+              <h2 className="text-2xl font-bold text-slate-900">Importar Datos</h2>
+            </div>
+            
+            <div className="bg-blue-50 border-2 border-blue-900 rounded-lg p-4 mb-6">
+              <p className="text-sm text-blue-900">
+                <strong>📥 Importa productos masivamente desde Excel</strong><br/>
+                Descarga la plantilla, complétala con tus productos y súbela para importarlos automáticamente.
+              </p>
+            </div>
+
+            <ImportProducts />
           </div>
         )}
 
