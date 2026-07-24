@@ -7,6 +7,7 @@ class RealtimeMetrics(BaseModel):
     general_day: Dict[str, float]  # Otros Ingresos y Egresos (día)
     general_month: Dict[str, float]  # Otros Ingresos y Egresos (mes)
     store_info: List[Dict[str, Any]]  # Información de las tiendas: [{id, name, code, color}]
+    today_sales: float = 0  # Total de ventas del día
 
 class DashboardStats(BaseModel):
     today_sales: float

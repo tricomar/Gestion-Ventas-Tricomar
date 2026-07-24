@@ -169,15 +169,14 @@ backend:
 metadata:
   created_by: "testing_agent"
   version: "1.0"
-  test_sequence: 2
+  test_sequence: 3
   run_ui: true
-  test_date: "2026-07-17"
-  test_accounts: "ivan@laprimavera.cl, hola@tricomar.cl"
+  test_date: "2026-07-24"
+  test_accounts: "hola@tricomar.cl"
 
 test_plan:
   current_focus:
-    - "Bug #1 - Multi-tenancy product isolation between accounts"
-    - "Bug #2 - Real-time metrics display for Account B"
+    - "Total Hoy updates after registering new sale"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -221,6 +220,18 @@ test_plan:
           agent: "testing"
           comment: "Tested on 2026-07-17. VERIFIED WORKING. Account B (ivan@laprimavera.cl) dashboard correctly displays: Store name 'MINIMARKET LA PRIMAVERA', Compras: $2.900 (>0), Ganancia: $1.637,815 (>0), IVA a favor: $0. Metrics reflect the 2 registered sales (Pan and Cat Chow) as expected. Real-time metrics component properly fetches and displays account-specific data from /api/dashboard/realtime-metrics endpoint."
 
+  - task: "Total Hoy updates after registering new sale"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/pages/DashboardPage.js, /app/backend/routes/dashboard.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "Tested on 2026-07-24. VERIFIED WORKING. Bug fix confirmed: Backend endpoint /api/dashboard/realtime-metrics now correctly returns today_sales field (calculated on line 174, returned on line 182 in dashboard.py). Frontend DashboardPage.js correctly fetches this value (lines 51-65) and displays it with data-testid='daily-total-display' (line 94-96). Test flow: Login with hola@tricomar.cl → Initial Total Hoy: $3,500 → Register sale: Cat Chow $3,500 (quantity 1) → Updated Total Hoy: $7,000. Increment matches exactly ($3,500). Refresh mechanism works via onSuccess callback triggering refreshTrigger state update. No console errors. Network activity normal (6 realtime-metrics requests, 1 POST /api/sales). Screenshots: total_hoy_initial.png, sale_form_filled.png, total_hoy_updated.png."
+
 agent_communication:
     - agent: "testing"
       message: "Completed comprehensive testing of dynamic 3-store dashboard metrics. All functionality working correctly. Login successful with hola@tricomar.cl account. Dashboard displays 3 stores (PETSHOP, GROWSHOP, TABAQUERIA) in both Total Mes and Histórico views. All metrics are correctly displayed. No critical issues found. Screenshots captured for documentation."
@@ -230,3 +241,5 @@ agent_communication:
       message: "RE-TEST COMPLETED (2026-07-17): Store code display issue RESOLVED. Main agent fixed useStores.js line 41 to use store.code from backend. However, initial re-test showed codes still displaying as A,B,C. Investigation revealed root cause: products in database had old codes. Database verification showed accounts had correct store codes (PT,ST,TT), but products collection had old codes (A,B,C). Created migration script /app/backend/scripts/update_product_codes.py to update all products: A->PT, B->ST, C->TT. Updated 4 products successfully. Final verification test PASSED: Cat Chow displays 'Código: PT', Pipa displays 'Código: ST', Cigarrillos displays 'Código: TT'. Selected product view shows 'CÓDIGO TIENDA: TT' with badge. All store codes now correctly display PT, ST, TT as expected."
     - agent: "testing"
       message: "MULTI-TENANCY BUG VERIFICATION COMPLETED (2026-07-17): Both critical bugs have been successfully fixed and verified. Bug #1 (Product Isolation): Account B cannot see Account A's products when searching - tenant isolation working correctly via get_tenant_filter() in /api/products/search endpoint. Bug #2 (Real-time Metrics): Account B dashboard displays correct store name 'MINIMARKET LA PRIMAVERA' with metrics showing values >0 (Compras: $2.900, Ganancia: $1.637,815) reflecting their 2 registered sales. All tests passed with screenshots captured for documentation."
+    - agent: "testing"
+      message: "TOTAL HOY UPDATE BUG FIX VERIFIED (2026-07-24): Successfully tested the fix for 'Total Hoy' not updating after registering a new sale. Backend endpoint /api/dashboard/realtime-metrics now correctly returns today_sales field (line 182 in dashboard.py). Frontend DashboardPage.js correctly fetches and displays the value (lines 51-65). Test results: Initial Total Hoy: $3,500 → Registered sale: Cat Chow $3,500 → Updated Total Hoy: $7,000. Increment matches exactly ($3,500). Refresh mechanism works correctly via onSuccess callback. No console errors. Network activity shows proper API calls (6 realtime-metrics requests, 1 POST /api/sales). Screenshots captured: total_hoy_initial.png, sale_form_filled.png, total_hoy_updated.png. Bug fix confirmed working."

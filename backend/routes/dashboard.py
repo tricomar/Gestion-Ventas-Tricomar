@@ -39,7 +39,8 @@ async def get_realtime_metrics(current_user: User = Depends(get_current_user)):
             stores_month={},
             general_day={"otros_ingresos": 0, "egresos": 0},
             general_month={"otros_ingresos": 0, "egresos": 0},
-            store_info=[]
+            store_info=[],
+            today_sales=0
         )
     
     stores = account.get("stores", [])
@@ -169,12 +170,16 @@ async def get_realtime_metrics(current_user: User = Depends(get_current_user)):
             'color': colors[index % len(colors)]
         })
     
+    # Calcular total de ventas del día
+    today_sales_total = sum(sale.get('total', 0) for sale in today_sales)
+    
     return RealtimeMetrics(
         stores_day=stores_day,
         stores_month=stores_month,
         general_day=calculate_general_metrics(today_income, today_expenses),
         general_month=calculate_general_metrics(month_income, month_expenses),
-        store_info=store_info
+        store_info=store_info,
+        today_sales=today_sales_total
     )
 
 @router.get("/historic-months")
