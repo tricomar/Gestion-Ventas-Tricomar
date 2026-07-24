@@ -31,12 +31,13 @@ async def get_sales_calendar(
         if year < 2000 or year > 2100:
             raise HTTPException(status_code=400, detail="Año inválido")
         
-        # Construir fechas de inicio y fin del mes
-        start_date = f"{year}-{month:02d}-01T00:00:00"
+        # Construir fechas de inicio y fin del mes (solo fechas, sin hora)
+        start_date = f"{year}-{month:02d}-01"
         _, last_day = monthrange(year, month)
-        end_date = f"{year}-{month:02d}-{last_day}T23:59:59"
+        end_date = f"{year}-{month:02d}-{last_day}"
         
         # Obtener todas las ventas del mes (con filtro de tenant)
+        # El campo 'date' en sales es solo la fecha (YYYY-MM-DD), sin hora
         tenant_filter = get_tenant_filter(current_user.dict())
         tenant_filter["date"] = {
             "$gte": start_date,
@@ -50,20 +51,24 @@ async def get_sales_calendar(
         monthly_total = 0
         
         for sale in sales:
-            # Extraer día de la fecha
+            # Extraer día de la fecha (formato: YYYY-MM-DD)
             sale_date = sale.get("date", "")
             if sale_date:
-                day = int(sale_date.split("T")[0].split("-")[2])
-                total = sale.get("total", 0)
-                
-                if day not in daily_totals:
-                    daily_totals[day] = 0
-                daily_totals[day] += total
-                monthly_total += total
+                # El formato es YYYY-MM-DD, extraer el día
+                parts = sale_date.split("-")
+                if len(parts) == 3:
+                    day = int(parts[2])
+                    total = sale.get("total", 0)
+                    
+                    if day not in daily_totals:
+                        daily_totals[day] = 0
+                    daily_totals[day] += total
+                    monthly_total += total
         
         # Obtener total del año (con filtro de tenant)
-        year_start = f"{year}-01-01T00:00:00"
-        year_end = f"{year}-12-31T23:59:59"
+        # El campo 'date' en sales es solo la fecha (YYYY-MM-DD), sin hora
+        year_start = f"{year}-01-01"
+        year_end = f"{year}-12-31"
         
         tenant_filter_year = get_tenant_filter(current_user.dict())
         tenant_filter_year["date"] = {
@@ -113,11 +118,9 @@ async def get_day_sales(
         end_datetime = f"{date}T23:59:59"
         
         # Obtener ventas del día (con filtro de tenant)
+        # El campo 'date' en sales es solo la fecha (YYYY-MM-DD), sin hora
         tenant_filter = get_tenant_filter(current_user.dict())
-        tenant_filter["date"] = {
-            "$gte": start_datetime,
-            "$lte": end_datetime
-        }
+        tenant_filter["date"] = date  # Comparación exacta con la fecha
         
         sales = await db.sales.find(tenant_filter, {"_id": 0}).to_list(1000)
         
@@ -149,9 +152,9 @@ async def get_month_summary(
     Obtiene un resumen detallado del mes
     """
     try:
-        start_date = f"{year}-{month:02d}-01T00:00:00"
+        start_date = f"{year}-{month:02d}-01"
         _, last_day = monthrange(year, month)
-        end_date = f"{year}-{month:02d}-{last_day}T23:59:59"
+        end_date = f"{year}-{month:02d}-{last_day}"
         
         # Filtro de tenant
         tenant_filter = get_tenant_filter(current_user.dict())
@@ -203,8 +206,8 @@ async def get_year_summary(
     Obtiene un resumen del año con totales por mes
     """
     try:
-        year_start = f"{year}-01-01T00:00:00"
-        year_end = f"{year}-12-31T23:59:59"
+        year_start = f"{year}-01-01"
+        year_end = f"{year}-12-31"
         
         # Filtro de tenant
         tenant_filter = get_tenant_filter(current_user.dict())
@@ -221,8 +224,11 @@ async def get_year_summary(
         for sale in sales:
             sale_date = sale.get("date", "")
             if sale_date:
-                month = int(sale_date.split("T")[0].split("-")[1])
-                monthly_totals[month] += sale.get("total", 0)
+                # El formato es YYYY-MM-DD
+                parts = sale_date.split("-")
+                if len(parts) >= 2:
+                    month = int(parts[1])
+                    monthly_totals[month] += sale.get("total", 0)
         
         total_year = sum(monthly_totals.values())
         

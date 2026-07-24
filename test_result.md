@@ -169,14 +169,14 @@ backend:
 metadata:
   created_by: "testing_agent"
   version: "1.0"
-  test_sequence: 3
+  test_sequence: 4
   run_ui: true
   test_date: "2026-07-24"
   test_accounts: "hola@tricomar.cl"
 
 test_plan:
   current_focus:
-    - "Total Hoy updates after registering new sale"
+    - "Sales Records date filtering bug fix"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -232,6 +232,18 @@ test_plan:
           agent: "testing"
           comment: "Tested on 2026-07-24. VERIFIED WORKING. Bug fix confirmed: Backend endpoint /api/dashboard/realtime-metrics now correctly returns today_sales field (calculated on line 174, returned on line 182 in dashboard.py). Frontend DashboardPage.js correctly fetches this value (lines 51-65) and displays it with data-testid='daily-total-display' (line 94-96). Test flow: Login with hola@tricomar.cl → Initial Total Hoy: $3,500 → Register sale: Cat Chow $3,500 (quantity 1) → Updated Total Hoy: $7,000. Increment matches exactly ($3,500). Refresh mechanism works via onSuccess callback triggering refreshTrigger state update. No console errors. Network activity normal (6 realtime-metrics requests, 1 POST /api/sales). Screenshots: total_hoy_initial.png, sale_form_filled.png, total_hoy_updated.png."
 
+  - task: "Sales Records date filtering bug fix"
+    implemented: true
+    working: true
+    file: "/app/backend/routes/sales_records.py, /app/frontend/src/pages/SalesRecordPage.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "Tested on 2026-07-24. VERIFIED WORKING. Bug fix confirmed: Backend endpoints /api/sales-records/calendar/{year}/{month} and /api/sales-records/day/{date} now correctly filter sales using exact date string comparison (YYYY-MM-DD format) instead of datetime ranges. The 'date' field in sales collection is stored as string (YYYY-MM-DD) without time component. Test results for July 2026 with account hola@tricomar.cl: Calendar correctly displays July 2026 with proper daily totals (Day 16: $12,300, Day 24: $7,000). Monthly summary shows Total del Mes: $19,300 and Ventas del Mes: 5 registros. KEY BUG FIX VERIFIED: Clicking day 24 now correctly shows '2 ventas registradas' badge (previously showed '5 registros' incorrectly). Day 24 panel displays exactly 2 Cat Chow Pescado Granel sales at $3,500 each with timestamps (🕐 00:00), quantity, payment method. Day 16 panel shows '3 ventas registradas' with 3 sales: Cat Chow $3,500, Pipa $5,000, Cigarrillos $3,800 (total $12,300). All sales display complete information including product name, total, quantity, payment method, customer name, and time. No console errors. API calls working correctly (GET /api/sales-records/calendar/2026/7, GET /api/sales-records/day/2026-07-24, GET /api/sales-records/day/2026-07-16). Screenshots: sales_records_page.png, calendar_with_totals.png, day_24_details.png, day_16_details_final.png."
+
 agent_communication:
     - agent: "testing"
       message: "Completed comprehensive testing of dynamic 3-store dashboard metrics. All functionality working correctly. Login successful with hola@tricomar.cl account. Dashboard displays 3 stores (PETSHOP, GROWSHOP, TABAQUERIA) in both Total Mes and Histórico views. All metrics are correctly displayed. No critical issues found. Screenshots captured for documentation."
@@ -243,3 +255,5 @@ agent_communication:
       message: "MULTI-TENANCY BUG VERIFICATION COMPLETED (2026-07-17): Both critical bugs have been successfully fixed and verified. Bug #1 (Product Isolation): Account B cannot see Account A's products when searching - tenant isolation working correctly via get_tenant_filter() in /api/products/search endpoint. Bug #2 (Real-time Metrics): Account B dashboard displays correct store name 'MINIMARKET LA PRIMAVERA' with metrics showing values >0 (Compras: $2.900, Ganancia: $1.637,815) reflecting their 2 registered sales. All tests passed with screenshots captured for documentation."
     - agent: "testing"
       message: "TOTAL HOY UPDATE BUG FIX VERIFIED (2026-07-24): Successfully tested the fix for 'Total Hoy' not updating after registering a new sale. Backend endpoint /api/dashboard/realtime-metrics now correctly returns today_sales field (line 182 in dashboard.py). Frontend DashboardPage.js correctly fetches and displays the value (lines 51-65). Test results: Initial Total Hoy: $3,500 → Registered sale: Cat Chow $3,500 → Updated Total Hoy: $7,000. Increment matches exactly ($3,500). Refresh mechanism works correctly via onSuccess callback. No console errors. Network activity shows proper API calls (6 realtime-metrics requests, 1 POST /api/sales). Screenshots captured: total_hoy_initial.png, sale_form_filled.png, total_hoy_updated.png. Bug fix confirmed working."
+    - agent: "testing"
+      message: "SALES RECORDS DATE BUG FIX VERIFIED (2026-07-24): Successfully verified the fix for sales records date filtering. Backend endpoints /api/sales-records/calendar and /api/sales-records/day now correctly compare dates using exact string format (YYYY-MM-DD) instead of datetime ranges. Test results for July 2026: Calendar displays correct totals (Day 16: $12,300 with 3 sales, Day 24: $7,000 with 2 sales). Monthly summary shows Total: $19,300 and 5 registros. KEY FIX VERIFIED: Clicking day 24 now correctly shows '2 ventas registradas' (not '5 registros' as before). Day 24 displays 2 Cat Chow sales at $3,500 each with timestamps. Day 16 displays 3 sales (Cat Chow $3,500, Pipa $5,000, Cigarrillos $3,800) totaling $12,300. All sales show complete information (product, total, quantity, payment method, customer, time). No console errors. API calls working correctly. Screenshots: sales_records_page.png, calendar_with_totals.png, day_24_details.png, day_16_details_final.png. Bug fix confirmed working."
