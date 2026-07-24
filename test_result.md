@@ -102,7 +102,56 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Verificar la nueva funcionalidad de Importar Datos en la página de Configuración para usuarios con rol account_admin o supervisor"
+user_problem_statement: "Verificar que el reloj se haya movido correctamente a la barra lateral y muestre el formato correcto"
+
+frontend:
+  - task: "Clock removed from economic indicators bar"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/components/EconomicIndicators.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "Tested on 2026-07-24. VERIFIED: Clock has been successfully removed from the economic indicators bar. The economic indicators section now only displays: UF, Dólar, Bitcoin, Euro, UTM. No time display (HH:MM:SS format) found in the indicators area. Economic indicators bar is clean and shows only financial indicators as expected. Screenshots: dashboard_full_view.png, dashboard_with_sidebar.png"
+  
+  - task: "Clock relocated to sidebar 'Registros del Día' header"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/components/DailySidebar.js, /app/frontend/src/components/ServerClock.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "Tested on 2026-07-24. VERIFIED: Clock successfully relocated to sidebar header. The ServerClock component is now displayed in the header of 'Registros del Día' sidebar (line 150 in DailySidebar.js). Clock is positioned on the right side of the header, with 'Registros del Día' title on the left. Layout uses flexbox with justify-between for proper horizontal alignment. Clock includes Clock icon (lucide-react) and displays time in HH:MM:SS format. Screenshots show clock at 14:20:17, 14:20:19, 14:20:20 confirming it updates every second."
+  
+  - task: "Clock format: HH:MM:SS with country code (no date, no 'Servidor')"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/components/ServerClock.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "Tested on 2026-07-24. VERIFIED: Clock format is correct. Format: [Clock Icon] HH:MM:SS [Country Code]. Time displays in HH:MM:SS format (e.g., 14:20:17) using JetBrains Mono monospace font. Country code displays as ISO 3166-1 code (shows 'INT' for international timezone, would show 'CL' for Chile timezone). NO date is displayed in the clock area. NO 'Servidor' word is present. Clock area only shows: icon + time + country code. The date 'viernes, 24 de julio de 2026' appears below the clock in a separate section, not as part of the clock display."
+  
+  - task: "Clock updates every second"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/components/ServerClock.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "Tested on 2026-07-24. VERIFIED: Clock updates correctly every second. Test sequence: Initial time 14:20:17 → After 2 seconds: 14:20:19 → Confirmed clock increments properly. The useEffect hook (lines 8-13 in ServerClock.js) sets up a setInterval that updates the time state every 1000ms (1 second). Clock display refreshes smoothly without flickering."
 
 frontend:
   - task: "Display 3 stores dynamically in RealtimeMetrics component"
@@ -169,14 +218,14 @@ backend:
 metadata:
   created_by: "testing_agent"
   version: "1.0"
-  test_sequence: 4
+  test_sequence: 5
   run_ui: true
   test_date: "2026-07-24"
   test_accounts: "hola@tricomar.cl"
 
 test_plan:
   current_focus:
-    - "Importar Datos functionality verification"
+    - "Clock relocation verification completed"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -293,6 +342,8 @@ test_plan:
           comment: "Tested on 2026-07-24. VERIFIED WORKING. File input element (input[type='file']#file-input) is present with correct accept attribute '.xlsx,.xls' for Excel files. 'Seleccionar Archivo' button/label is visible and clickable. 'Importar Productos' button is present and correctly disabled when no file is selected (expected behavior). Button states are properly managed based on file selection. UI follows neobrutalist design with proper borders and shadows. All interactive elements are accessible and functional."
 
 agent_communication:
+    - agent: "testing"
+      message: "CLOCK RELOCATION VERIFICATION COMPLETED (2026-07-24): Successfully tested the clock relocation from economic indicators bar to sidebar 'Registros del Día'. ALL REQUIREMENTS MET: ✅ Clock removed from economic indicators bar (only shows UF, Dólar, Bitcoin, Euro, UTM) ✅ Clock relocated to sidebar header next to 'Registros del Día' title ✅ Clock format correct: [Clock Icon] HH:MM:SS [Country Code] ✅ No date displayed in clock ✅ No 'Servidor' word ✅ Clock updates every second (verified: 14:20:17 → 14:20:19) ✅ Layout correct: title left, clock right using flexbox justify-between ✅ Uses JetBrains Mono monospace font. Country code shows 'INT' (international) due to server timezone configuration - would show 'CL' in production with Chile timezone. Screenshots captured: dashboard_full_view.png, dashboard_with_sidebar.png. Feature is production-ready."
     - agent: "testing"
       message: "Completed comprehensive testing of dynamic 3-store dashboard metrics. All functionality working correctly. Login successful with hola@tricomar.cl account. Dashboard displays 3 stores (PETSHOP, GROWSHOP, TABAQUERIA) in both Total Mes and Histórico views. All metrics are correctly displayed. No critical issues found. Screenshots captured for documentation."
     - agent: "testing"

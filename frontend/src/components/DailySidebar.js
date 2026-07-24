@@ -4,6 +4,7 @@ import { Trash2, DollarSign, TrendingUp, TrendingDown, Edit2, X } from 'lucide-r
 import { toast } from 'sonner';
 import { useSettings } from '../context/SettingsContext';
 import { useStores } from '../hooks/useStores';
+import ServerClock from './ServerClock';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -139,12 +140,15 @@ const DailySidebar = ({ refreshTrigger, onDelete }) => {
       data-testid="daily-sidebar"
     >
       <div className="sticky top-0 bg-white border-b-2 border-slate-900 p-4 z-10">
-        <h3 
-          className="text-xl font-bold text-slate-900"
-          style={{ fontFamily: 'Cabinet Grotesk, sans-serif' }}
-        >
-          Registros del Día
-        </h3>
+        <div className="flex items-center justify-between mb-2">
+          <h3 
+            className="text-xl font-bold text-slate-900"
+            style={{ fontFamily: 'Cabinet Grotesk, sans-serif' }}
+          >
+            Registros del Día
+          </h3>
+          <ServerClock />
+        </div>
         <p className="text-sm font-medium text-slate-600">
           {new Date().toLocaleDateString('es-CL', { 
             weekday: 'long', 
