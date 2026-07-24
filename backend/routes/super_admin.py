@@ -272,12 +272,15 @@ async def update_store(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Actualiza el nombre de una tienda.
+    Actualiza el nombre y código de una tienda.
     Solo accesible para super-admin.
     """
     require_super_admin(current_user.dict())
     
     try:
+        print(f"[DEBUG] Actualizando tienda {store_id} de cuenta {account_id}")
+        print(f"[DEBUG] Request data: name={request.name}, code={request.code}")
+        
         account = await db.accounts.find_one({"id": account_id}, {"_id": 0})
         
         if not account:
@@ -292,10 +295,13 @@ async def update_store(
         
         for store in stores:
             if store["id"] == store_id:
+                print(f"[DEBUG] Tienda encontrada. Antes: name={store.get('name')}, code={store.get('code')}")
                 store["name"] = request.name
-                # Actualizar código si se proporciona
-                if request.code is not None:
+                # Actualizar código siempre que venga en el request
+                if hasattr(request, 'code') and request.code is not None:
                     store["code"] = request.code
+                    print(f"[DEBUG] Actualizando código a: {request.code}")
+                print(f"[DEBUG] Después: name={store.get('name')}, code={store.get('code')}")
                 store_found = True
                 break
         

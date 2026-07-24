@@ -203,7 +203,8 @@ const SuperAdminPage = () => {
       
       toast.success('Tienda actualizada exitosamente');
       setShowStoreEditModal(false);
-      await selectAccount(selectedAccount.id); // Recargar
+      setEditingStoreData({ id: '', name: '', code: '' }); // Limpiar estado
+      await selectAccount(selectedAccount.id); // Recargar datos
     } catch (error) {
       console.error('Error updating store:', error);
       toast.error(error.response?.data?.detail || 'Error al actualizar tienda');
