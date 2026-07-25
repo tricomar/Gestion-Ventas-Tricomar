@@ -8,6 +8,7 @@ import DatabaseManagementPage from './pages/DatabaseManagementPage';
 import TiendasGlobalesPage from './pages/TiendasGlobalesPage';
 import InventoryPage from './pages/InventoryPage';
 import ReportsPage from './pages/ReportsPage';
+import AnalyticsPage from './pages/AnalyticsPage';
 import SettingsPage from './pages/SettingsPage';
 import CustomersPage from './pages/CustomersPage';
 import SalesRecordPage from './pages/SalesRecordPage';
@@ -103,6 +104,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <ReportsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/analytics"
+          element={
+            <ProtectedRoute>
+              <AnalyticsPage />
             </ProtectedRoute>
           }
         />

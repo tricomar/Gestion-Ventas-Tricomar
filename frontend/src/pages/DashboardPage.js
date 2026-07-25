@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { LogOut, TrendingUp, TrendingDown, DollarSign, PlusCircle, Package, FileText, Settings, Users, Menu, ChevronDown, Calendar as CalendarIcon } from 'lucide-react';
+import { LogOut, TrendingUp, TrendingDown, DollarSign, PlusCircle, Package, FileText, Settings, Users, Menu, ChevronDown, Calendar as CalendarIcon, BarChart3 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import SalesForm from '../components/SalesForm';
 import ExpenseForm from '../components/ExpenseForm';
@@ -220,13 +220,22 @@ const DashboardPage = () => {
                 </button>
                 {/* Reportes - Oculto para Empleados */}
                 {!isEmployee && (
-                  <button
-                    onClick={() => { navigate('/reports'); setShowMenu(false); }}
-                    className="w-full text-left px-4 py-2 hover:bg-slate-100 font-bold flex items-center gap-2 border-b-2 border-slate-200"
-                  >
-                    <FileText className="w-4 h-4" />
-                    Reportes
-                  </button>
+                  <>
+                    <button
+                      onClick={() => { navigate('/reports'); setShowMenu(false); }}
+                      className="w-full text-left px-4 py-2 hover:bg-slate-100 font-bold flex items-center gap-2 border-b-2 border-slate-200"
+                    >
+                      <FileText className="w-4 h-4" />
+                      Reportes
+                    </button>
+                    <button
+                      onClick={() => { navigate('/analytics'); setShowMenu(false); }}
+                      className="w-full text-left px-4 py-2 hover:bg-slate-100 font-bold flex items-center gap-2 border-b-2 border-slate-200"
+                    >
+                      <BarChart3 className="w-4 h-4" />
+                      Analítica
+                    </button>
+                  </>
                 )}
                 <button
                   onClick={() => { navigate('/settings'); setShowMenu(false); }}
