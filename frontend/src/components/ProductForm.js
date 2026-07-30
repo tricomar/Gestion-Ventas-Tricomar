@@ -137,11 +137,17 @@ const ProductForm = ({ product, onClose }) => {
                 value={sku}
                 onChange={(e) => setSku(e.target.value)}
                 maxLength={15}
-                className="w-full bg-white border-2 border-slate-900 rounded-xl px-4 py-3 font-medium text-slate-900 focus:ring-0 focus:outline-none focus:border-indigo-500 transition-all"
+                className={`w-full bg-white border-2 rounded-xl px-4 py-3 font-medium text-slate-900 focus:ring-0 focus:outline-none transition-all ${
+                  sku.length > 15 
+                    ? 'border-red-500 focus:border-red-600' 
+                    : 'border-slate-900 focus:border-indigo-500'
+                }`}
                 placeholder="Hasta 15 caracteres"
                 data-testid="product-sku-input"
               />
-              <p className="text-xs text-slate-500 mt-1">{sku.length}/15 caracteres</p>
+              <p className={`text-xs mt-1 ${sku.length > 15 ? 'text-red-600 font-bold' : 'text-slate-500'}`}>
+                {sku.length}/15 caracteres {sku.length > 15 && '⚠️ Excede el límite'}
+              </p>
             </div>
             <div>
               <label className="block text-xs font-bold tracking-widest uppercase text-slate-500 mb-2">

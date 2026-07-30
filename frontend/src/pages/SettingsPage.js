@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { Home, Settings as SettingsIcon, Save, User, Store, Users, Plus, Edit2, Trash2, X, Database, AlertTriangle, Upload, Download } from 'lucide-react';
+import { Home, Settings as SettingsIcon, Save, User, Store, Users, Plus, Edit2, Trash2, X, Database, AlertTriangle, Upload, Download, Package, Tag } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useSettings } from '../context/SettingsContext';
 import { useAuth } from '../context/AuthContext';
@@ -26,7 +26,13 @@ const SettingsPage = () => {
   const { refreshSettings } = useSettings();
   const { user, logout } = useAuth();
   const { stores, loading: storesLoading } = useStores(); // Hook para obtener tiendas dinámicas
-  const [activeTab, setActiveTab] = useState('profile'); // 'stores', 'profile', 'users', or 'database' - Inicia en Mi Perfil
+  const [activeTab, setActiveTab] = useState('profile'); // 'stores', 'profile', 'users', 'inventory', or 'database' - Inicia en Mi Perfil
+  
+  // Categories management
+  const [categories, setCategories] = useState([]);
+  const [newCategory, setNewCategory] = useState('');
+  const [editingCategoryIndex, setEditingCategoryIndex] = useState(null);
+  const [editingCategoryValue, setEditingCategoryValue] = useState('');
   
   // Database reset
   const [showResetModal, setShowResetModal] = useState(false);
@@ -123,6 +129,11 @@ const SettingsPage = () => {
     if (user) {
       setProfileName(user.name);
       setProfileEmail(user.email);
+      
+      // Cargar categorías desde settings
+      if (settings?.product_categories) {
+        setCategories(settings.product_categories);
+      }
       
       // Cargar cuentas si es super-admin
       if (user.role === 'super_admin') {
@@ -236,6 +247,59 @@ const SettingsPage = () => {
     } catch (error) {
       const errorMsg = error.response?.data?.detail || 'Error al actualizar perfil';
       toast.error(errorMsg);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Category Management Functions
+  const handleAddCategory = () => {
+    if (!newCategory.trim()) {
+      toast.error('Ingresa un nombre de categoría');
+      return;
+    }
+    if (categories.includes(newCategory.trim())) {
+      toast.error('Esta categoría ya existe');
+      return;
+    }
+    setCategories([...categories, newCategory.trim()]);
+    setNewCategory('');
+  };
+
+  const handleEditCategory = (index) => {
+    setEditingCategoryIndex(index);
+    setEditingCategoryValue(categories[index]);
+  };
+
+  const handleSaveEditCategory = (index) => {
+    if (!editingCategoryValue.trim()) {
+      toast.error('El nombre de categoría no puede estar vacío');
+      return;
+    }
+    const updatedCategories = [...categories];
+    updatedCategories[index] = editingCategoryValue.trim();
+    setCategories(updatedCategories);
+    setEditingCategoryIndex(null);
+    setEditingCategoryValue('');
+  };
+
+  const handleDeleteCategory = (index) => {
+    const updatedCategories = categories.filter((_, i) => i !== index);
+    setCategories(updatedCategories);
+    toast.success('Categoría eliminada');
+  };
+
+  const handleSaveCategories = async () => {
+    setSaving(true);
+    try {
+      await axios.put(`${API}/settings`, {
+        product_categories: categories
+      });
+      toast.success('Categorías guardadas exitosamente');
+      window.location.reload(); // Recargar para actualizar el context
+    } catch (error) {
+      toast.error('Error al guardar categorías');
+      console.error('Error saving categories:', error);
     } finally {
       setSaving(false);
     }
@@ -689,6 +753,23 @@ const SettingsPage = () => {
               Importar Datos
             </button>
           )}
+          
+          {/* Gestión de Inventario - Solo para account_admin y supervisor */}
+          {isSupervisor && (
+            <button
+              onClick={() => setActiveTab('inventory')}
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold border-2 border-slate-900 transition-all ${
+                activeTab === 'inventory' 
+                  ? 'bg-slate-900 text-white' 
+                  : 'bg-white text-slate-900 hover:bg-slate-50'
+              }`}
+              style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
+              data-testid="inventory-tab-btn"
+            >
+              <Package className="w-5 h-5" />
+              Inventario
+            </button>
+          )}
         </div>
 
         {/* Store Settings Tab - Editable para account_admin y supervisor */}
@@ -973,6 +1054,135 @@ const SettingsPage = () => {
             </div>
 
             <ImportProducts />
+          </div>
+        )}
+
+        {/* Inventory Management Tab - Gestión de Categorías */}
+        {activeTab === 'inventory' && isSupervisor && (
+          <div 
+            className="bg-white border-2 border-slate-900 rounded-xl p-8"
+            style={{ boxShadow: '8px 8px 0px 0px rgba(15,23,42,1)' }}
+          >
+            <div className="flex items-center gap-3 mb-6">
+              <Tag className="w-6 h-6" />
+              <h2 className="text-2xl font-bold text-slate-900">Categorías de Productos</h2>
+            </div>
+            
+            <div className="bg-blue-50 border-2 border-blue-900 rounded-lg p-4 mb-6">
+              <p className="text-sm text-blue-900">
+                <strong>🏷️ Gestiona las categorías de tu inventario</strong><br/>
+                Estas categorías estarán disponibles al crear o editar productos.
+              </p>
+            </div>
+
+            {/* Add New Category */}
+            <div className="mb-8">
+              <label className="block text-sm font-bold text-slate-700 mb-2">
+                Agregar Nueva Categoría
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newCategory}
+                  onChange={(e) => setNewCategory(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleAddCategory()}
+                  placeholder="Ej: Alimentos, Accesorios..."
+                  className="flex-1 px-4 py-3 border-2 border-slate-900 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-slate-900"
+                  data-testid="new-category-input"
+                />
+                <button
+                  onClick={handleAddCategory}
+                  className="px-6 py-3 bg-[#D4F0A5] border-2 border-slate-900 rounded-xl font-bold hover:bg-[#c5e196] transition-all"
+                  style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
+                  data-testid="add-category-btn"
+                >
+                  <Plus className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Categories List */}
+            <div className="space-y-3 mb-8">
+              <h3 className="text-lg font-bold text-slate-900 mb-4">Categorías Actuales ({categories.length})</h3>
+              {categories.length === 0 ? (
+                <p className="text-slate-500 text-center py-8">No hay categorías creadas</p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {categories.map((category, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between p-4 bg-slate-50 border-2 border-slate-900 rounded-xl"
+                      data-testid={`category-item-${index}`}
+                    >
+                      {editingCategoryIndex === index ? (
+                        <input
+                          type="text"
+                          value={editingCategoryValue}
+                          onChange={(e) => setEditingCategoryValue(e.target.value)}
+                          onKeyPress={(e) => e.key === 'Enter' && handleSaveEditCategory(index)}
+                          className="flex-1 px-3 py-1 border-2 border-slate-900 rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-slate-900"
+                          autoFocus
+                          data-testid={`edit-category-input-${index}`}
+                        />
+                      ) : (
+                        <span className="font-bold text-slate-900">{category}</span>
+                      )}
+                      <div className="flex items-center gap-2 ml-4">
+                        {editingCategoryIndex === index ? (
+                          <>
+                            <button
+                              onClick={() => handleSaveEditCategory(index)}
+                              className="p-2 bg-green-100 hover:bg-green-200 rounded-lg transition-colors"
+                              data-testid={`save-category-${index}`}
+                            >
+                              <Save className="w-4 h-4 text-green-700" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                setEditingCategoryIndex(null);
+                                setEditingCategoryValue('');
+                              }}
+                              className="p-2 hover:bg-slate-200 rounded-lg transition-colors"
+                              data-testid={`cancel-edit-category-${index}`}
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => handleEditCategory(index)}
+                              className="p-2 hover:bg-slate-200 rounded-lg transition-colors"
+                              data-testid={`edit-category-${index}`}
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteCategory(index)}
+                              className="p-2 hover:bg-red-100 rounded-lg transition-colors"
+                              data-testid={`delete-category-${index}`}
+                            >
+                              <Trash2 className="w-4 h-4 text-red-600" />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Save Button */}
+            <button
+              onClick={handleSaveCategories}
+              disabled={saving}
+              className="w-full px-6 py-4 bg-slate-900 text-white border-2 border-slate-900 rounded-xl font-bold hover:bg-slate-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
+              data-testid="save-categories-btn"
+            >
+              {saving ? 'Guardando...' : 'Guardar Categorías'}
+            </button>
           </div>
         )}
 

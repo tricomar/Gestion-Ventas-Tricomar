@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { Package, Plus, Edit, Trash2, Home } from 'lucide-react';
+import { Package, Plus, Edit, Trash2, Home, Download } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useSettings } from '../context/SettingsContext';
 import { useStores } from '../hooks/useStores';
 import ProductForm from '../components/ProductForm';
+import * as XLSX from 'xlsx';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -91,6 +92,61 @@ const InventoryPage = () => {
     }
   };
 
+  const handleExportToExcel = () => {
+    if (products.length === 0) {
+      toast.error('No hay productos para exportar');
+      return;
+    }
+
+    // Preparar datos para Excel
+    const excelData = products.map(product => ({
+      'Tienda': getStoreName(product.store),
+      'Código Tienda': product.store,
+      'Nombre Producto': product.name,
+      'SKU': product.sku || '',
+      'Categoría': product.category || '',
+      'Precio Costo': product.cost_price,
+      'Precio Venta': product.sale_price,
+      'IVA (19%)': product.sale_price ? (product.sale_price - (product.sale_price / 1.19)).toFixed(0) : 0,
+      'Ganancia': product.sale_price ? ((product.sale_price / 1.19) - product.cost_price).toFixed(0) : 0,
+      'Fecha Creación': new Date(product.created_at).toLocaleDateString('es-CL'),
+    }));
+
+    // Crear workbook y worksheet
+    const ws = XLSX.utils.json_to_sheet(excelData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Inventario');
+
+    // Ajustar ancho de columnas
+    const colWidths = [
+      { wch: 15 }, // Tienda
+      { wch: 12 }, // Código Tienda
+      { wch: 30 }, // Nombre Producto
+      { wch: 15 }, // SKU
+      { wch: 15 }, // Categoría
+      { wch: 12 }, // Precio Costo
+      { wch: 12 }, // Precio Venta
+      { wch: 12 }, // IVA
+      { wch: 12 }, // Ganancia
+      { wch: 15 }, // Fecha Creación
+    ];
+    ws['!cols'] = colWidths;
+
+    // Generar archivo Excel
+    const fileName = `inventario_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+
+    toast.success(`✓ Inventario exportado: ${fileName}`, {
+      duration: 4000,
+      style: {
+        background: '#D4F0A5',
+        color: '#0f172a',
+        border: '2px solid #0f172a',
+        fontWeight: 'bold',
+      }
+    });
+  };
+
   const handleEdit = (product) => {
     setEditingProduct(product);
     setShowForm(true);
@@ -125,13 +181,26 @@ const InventoryPage = () => {
             <p className="text-base font-medium text-slate-600">Administra tu catálogo de productos</p>
           </div>
         </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 text-slate-900 border-2 border-slate-900 rounded-xl px-6 py-3 font-bold transition-all"
-          style={{
-            backgroundColor: '#D4F0A5',
-            boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)'
-          }}
+        <div className="flex gap-3">
+          <button
+            onClick={handleExportToExcel}
+            className="flex items-center gap-2 text-slate-900 border-2 border-slate-900 rounded-xl px-6 py-3 font-bold transition-all hover:bg-slate-50"
+            style={{
+              backgroundColor: '#FADBB0',
+              boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)'
+            }}
+            data-testid="export-inventory-btn"
+          >
+            <Download className="w-5 h-5" />
+            <span className="hidden sm:inline">Exportar Excel</span>
+          </button>
+          <button
+            onClick={() => setShowForm(true)}
+            className="flex items-center gap-2 text-slate-900 border-2 border-slate-900 rounded-xl px-6 py-3 font-bold transition-all"
+            style={{
+              backgroundColor: '#D4F0A5',
+              boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)'
+            }}
           onMouseEnter={(e) => e.target.style.transform = 'translateY(-2px)'}
           onMouseLeave={(e) => e.target.style.transform = 'translateY(0)'}
           data-testid="add-product-btn"
