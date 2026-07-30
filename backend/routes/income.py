@@ -63,11 +63,18 @@ async def get_other_income(date: Optional[str] = None, current_user: User = Depe
 
 @router.put("/{income_id}", response_model=OtherIncome)
 async def update_other_income(income_id: str, income_input: OtherIncomeCreate, current_user: User = Depends(get_current_user)):
+    # Validar permisos: solo account_admin y supervisor pueden editar
+    if current_user.role not in ['account_admin', 'supervisor']:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permisos para editar registros de otros ingresos"
+        )
+    
     existing = await db.other_income.find_one(get_tenant_filter(current_user.dict(), {'id': income_id}), {'_id': 0})
     if not existing:
         raise HTTPException(status_code=404, detail="Income not found")
     
-    # Update income data
+    # Update income data (sin modificar created_at ni date)
     update_data = income_input.model_dump()
     await db.other_income.update_one(get_tenant_filter(current_user.dict(), {'id': income_id}), {'$set': update_data})
     
@@ -84,6 +91,13 @@ async def update_other_income(income_id: str, income_input: OtherIncomeCreate, c
 
 @router.delete("/{income_id}")
 async def delete_other_income(income_id: str, current_user: User = Depends(get_current_user)):
+    # Validar permisos: solo account_admin y supervisor pueden eliminar
+    if current_user.role not in ['account_admin', 'supervisor']:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permisos para eliminar registros de otros ingresos"
+        )
+    
     result = await db.other_income.delete_one(get_tenant_filter(current_user.dict(), {'id': income_id}))
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Income not found")

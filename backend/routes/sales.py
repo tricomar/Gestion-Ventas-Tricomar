@@ -218,6 +218,13 @@ async def get_sales(date: Optional[str] = None, current_user: User = Depends(get
 
 @router.put("/{sale_id}", response_model=Sale)
 async def update_sale(sale_id: str, sale_input: SaleCreate, current_user: User = Depends(get_current_user)):
+    # Validar permisos: solo account_admin y supervisor pueden editar
+    if current_user.role not in ['account_admin', 'supervisor']:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permisos para editar registros de ventas"
+        )
+    
     # Filtro de tenant
     tenant_filter = get_tenant_filter(current_user.dict(), {'id': sale_id})
     
@@ -225,7 +232,7 @@ async def update_sale(sale_id: str, sale_input: SaleCreate, current_user: User =
     if not existing:
         raise HTTPException(status_code=404, detail="Venta no encontrada")
     
-    # Update sale data
+    # Update sale data (sin modificar created_at ni date)
     update_data = sale_input.model_dump()
     await db.sales.update_one(tenant_filter, {'$set': update_data})
     
@@ -242,6 +249,13 @@ async def update_sale(sale_id: str, sale_input: SaleCreate, current_user: User =
 
 @router.delete("/{sale_id}")
 async def delete_sale(sale_id: str, current_user: User = Depends(get_current_user)):
+    # Validar permisos: solo account_admin y supervisor pueden eliminar
+    if current_user.role not in ['account_admin', 'supervisor']:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permisos para eliminar registros de ventas"
+        )
+    
     # Filtro de tenant
     tenant_filter = get_tenant_filter(current_user.dict(), {'id': sale_id})
     

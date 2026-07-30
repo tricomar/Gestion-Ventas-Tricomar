@@ -63,11 +63,18 @@ async def get_expenses(date: Optional[str] = None, current_user: User = Depends(
 
 @router.put("/{expense_id}", response_model=Expense)
 async def update_expense(expense_id: str, expense_input: ExpenseCreate, current_user: User = Depends(get_current_user)):
+    # Validar permisos: solo account_admin y supervisor pueden editar
+    if current_user.role not in ['account_admin', 'supervisor']:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permisos para editar registros de egresos"
+        )
+    
     existing = await db.expenses.find_one(get_tenant_filter(current_user.dict(), {'id': expense_id}), {'_id': 0})
     if not existing:
         raise HTTPException(status_code=404, detail="Expense not found")
     
-    # Update expense data
+    # Update expense data (sin modificar created_at ni date)
     update_data = expense_input.model_dump()
     await db.expenses.update_one(get_tenant_filter(current_user.dict(), {'id': expense_id}), {'$set': update_data})
     
@@ -84,6 +91,13 @@ async def update_expense(expense_id: str, expense_input: ExpenseCreate, current_
 
 @router.delete("/{expense_id}")
 async def delete_expense(expense_id: str, current_user: User = Depends(get_current_user)):
+    # Validar permisos: solo account_admin y supervisor pueden eliminar
+    if current_user.role not in ['account_admin', 'supervisor']:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permisos para eliminar registros de egresos"
+        )
+    
     result = await db.expenses.delete_one(get_tenant_filter(current_user.dict(), {'id': expense_id}))
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Expense not found")

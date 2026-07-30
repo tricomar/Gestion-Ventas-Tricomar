@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Trash2, DollarSign, TrendingUp, TrendingDown, Edit2, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { useStores } from '../hooks/useStores';
 import ServerClock from './ServerClock';
@@ -10,6 +11,7 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const DailySidebar = ({ refreshTrigger, onDelete }) => {
+  const { user } = useAuth();
   const { settings } = useSettings();
   const { getStoreName } = useStores();
   const [sales, setSales] = useState([]);
@@ -17,6 +19,9 @@ const DailySidebar = ({ refreshTrigger, onDelete }) => {
   const [income, setIncome] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editModal, setEditModal] = useState({ open: false, type: null, data: null });
+  
+  // Check if user can edit/delete records
+  const canEditRecords = user?.role === 'account_admin' || user?.role === 'supervisor';
 
   useEffect(() => {
     fetchTodayData();
@@ -242,26 +247,30 @@ const DailySidebar = ({ refreshTrigger, onDelete }) => {
                       <span className="text-xs text-slate-600">
                         {formatTime(record.created_at)}
                       </span>
-                      <button
-                        onClick={() => handleEdit(
-                          isSale ? 'sales' : isExpense ? 'expenses' : 'other-income',
-                          record
-                        )}
-                        className="p-1 hover:bg-slate-900 hover:text-white rounded transition-colors"
-                        data-testid={`edit-record-${record.id}`}
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(
-                          isSale ? 'sales' : isExpense ? 'expenses' : 'other-income',
-                          record.id
-                        )}
-                        className="p-1 hover:bg-slate-900 hover:text-white rounded transition-colors"
-                        data-testid={`delete-record-${record.id}`}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {canEditRecords && (
+                        <>
+                          <button
+                            onClick={() => handleEdit(
+                              isSale ? 'sales' : isExpense ? 'expenses' : 'other-income',
+                              record
+                            )}
+                            className="p-1 hover:bg-slate-900 hover:text-white rounded transition-colors"
+                            data-testid={`edit-record-${record.id}`}
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(
+                              isSale ? 'sales' : isExpense ? 'expenses' : 'other-income',
+                              record.id
+                            )}
+                            className="p-1 hover:bg-slate-900 hover:text-white rounded transition-colors"
+                            data-testid={`delete-record-${record.id}`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
 

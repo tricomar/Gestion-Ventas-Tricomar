@@ -164,6 +164,12 @@ const InventoryPage = () => {
                   <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider">
                     Nombre Producto
                   </th>
+                  <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider">
+                    SKU
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider">
+                    Categoría
+                  </th>
                   <th className="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider">
                     Precio Venta
                   </th>
@@ -189,6 +195,18 @@ const InventoryPage = () => {
                     </td>
                     <td className="px-6 py-4 font-bold text-slate-900">
                       {product.name}
+                    </td>
+                    <td className="px-6 py-4 text-slate-600 font-mono text-sm">
+                      {product.sku || '-'}
+                    </td>
+                    <td className="px-6 py-4">
+                      {product.category ? (
+                        <span className="px-2 py-1 bg-slate-100 border border-slate-900 rounded text-xs font-medium">
+                          {product.category}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400">-</span>
+                      )}
                     </td>
                     <td className="px-6 py-4 text-right font-mono font-bold text-lg text-slate-900">
                       ${(product.sale_price || 0).toLocaleString('es-CL')}

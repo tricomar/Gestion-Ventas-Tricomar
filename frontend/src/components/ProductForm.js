@@ -15,6 +15,8 @@ const ProductForm = ({ product, onClose }) => {
   const [store, setStore] = useState('A');
   const [costPrice, setCostPrice] = useState('');
   const [salePrice, setSalePrice] = useState('');
+  const [sku, setSku] = useState('');
+  const [category, setCategory] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -23,6 +25,8 @@ const ProductForm = ({ product, onClose }) => {
       setStore(product.store);
       setCostPrice(product.cost_price.toString());
       setSalePrice(product.sale_price.toString());
+      setSku(product.sku || '');
+      setCategory(product.category || '');
     }
   }, [product]);
 
@@ -35,7 +39,9 @@ const ProductForm = ({ product, onClose }) => {
         name,
         store,
         cost_price: parseFloat(costPrice),
-        sale_price: parseFloat(salePrice)
+        sale_price: parseFloat(salePrice),
+        sku: sku || null,
+        category: category || null
       };
 
       if (product) {
@@ -118,6 +124,43 @@ const ProductForm = ({ product, onClose }) => {
                 </option>
               ))}
             </select>
+          </div>
+
+          {/* SKU and Category Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold tracking-widest uppercase text-slate-500 mb-2">
+                SKU (Código)
+              </label>
+              <input
+                type="text"
+                value={sku}
+                onChange={(e) => setSku(e.target.value)}
+                maxLength={15}
+                className="w-full bg-white border-2 border-slate-900 rounded-xl px-4 py-3 font-medium text-slate-900 focus:ring-0 focus:outline-none focus:border-indigo-500 transition-all"
+                placeholder="Hasta 15 caracteres"
+                data-testid="product-sku-input"
+              />
+              <p className="text-xs text-slate-500 mt-1">{sku.length}/15 caracteres</p>
+            </div>
+            <div>
+              <label className="block text-xs font-bold tracking-widest uppercase text-slate-500 mb-2">
+                Categoría
+              </label>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="w-full bg-white border-2 border-slate-900 rounded-xl px-4 py-3 font-medium text-slate-900 cursor-pointer focus:ring-0 focus:outline-none focus:border-indigo-500"
+                data-testid="product-category-select"
+              >
+                <option value="">Sin categoría</option>
+                {settings?.product_categories?.map((cat, idx) => (
+                  <option key={idx} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/* Prices Grid */}

@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 from datetime import datetime, timezone
 from typing import Optional
 import uuid
@@ -8,6 +8,15 @@ class ProductBase(BaseModel):
     store: str = "A"  # Default A
     cost_price: float = 0
     sale_price: float = 0
+    sku: Optional[str] = None
+    category: Optional[str] = None
+    
+    @field_validator('sku')
+    @classmethod
+    def validate_sku(cls, v):
+        if v and len(v) > 15:
+            raise ValueError('SKU no puede tener más de 15 caracteres')
+        return v
 
 class ProductCreate(ProductBase):
     pass
