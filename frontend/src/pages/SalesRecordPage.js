@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
-import { ChevronLeft, ChevronRight, ArrowLeft, Calendar as CalendarIcon, TrendingUp, DollarSign, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ArrowLeft, Calendar as CalendarIcon, TrendingUp, DollarSign, Plus, Edit2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import PastSaleForm from '../components/PastSaleForm';
 
@@ -75,6 +75,28 @@ const SalesRecordPage = () => {
     fetchCalendarData();
     if (selectedDay) {
       fetchDaySales(selectedDay);
+    }
+  };
+
+  const handleDeleteSale = async (saleId) => {
+    if (!window.confirm('¿Estás seguro de eliminar esta venta?')) {
+      return;
+    }
+
+    try {
+      await axios.delete(`${API}/sales/${saleId}`);
+      toast.success('Venta eliminada exitosamente');
+      fetchCalendarData();
+      if (selectedDay) {
+        fetchDaySales(selectedDay);
+      }
+    } catch (error) {
+      if (error.response?.status === 403) {
+        toast.error('No tienes permisos para eliminar registros');
+      } else {
+        toast.error('Error al eliminar venta');
+      }
+      console.error('Error deleting sale:', error);
     }
   };
 
@@ -321,7 +343,7 @@ const SalesRecordPage = () => {
                           className="p-3 border-2 border-slate-900 rounded-lg bg-slate-50"
                         >
                           <div className="flex justify-between items-start mb-2">
-                            <div>
+                            <div className="flex-1">
                               <div className="font-bold text-sm">{sale.product_name}</div>
                               {timeStr && (
                                 <div className="text-xs text-indigo-600 font-mono font-bold mt-0.5">
@@ -329,11 +351,22 @@ const SalesRecordPage = () => {
                                 </div>
                               )}
                             </div>
-                            <div 
-                              className="text-sm font-mono font-bold"
-                              style={{ fontFamily: 'JetBrains Mono, monospace' }}
-                            >
-                              ${sale.total.toLocaleString('es-CL')}
+                            <div className="flex items-center gap-2">
+                              <div 
+                                className="text-sm font-mono font-bold"
+                                style={{ fontFamily: 'JetBrains Mono, monospace' }}
+                              >
+                                ${sale.total.toLocaleString('es-CL')}
+                              </div>
+                              {canEdit && (
+                                <button
+                                  onClick={() => handleDeleteSale(sale.id)}
+                                  className="p-1 hover:bg-red-100 rounded transition-colors"
+                                  title="Eliminar venta"
+                                >
+                                  <Trash2 className="w-4 h-4 text-red-600" />
+                                </button>
+                              )}
                             </div>
                           </div>
                           <div className="text-xs text-slate-600">

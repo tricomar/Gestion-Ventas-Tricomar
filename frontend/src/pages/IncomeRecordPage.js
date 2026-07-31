@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
-import { ChevronLeft, ChevronRight, ArrowLeft, Calendar as CalendarIcon, TrendingUp, DollarSign, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ArrowLeft, Calendar as CalendarIcon, TrendingUp, DollarSign, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import PastIncomeForm from '../components/PastIncomeForm';
 
@@ -75,6 +75,28 @@ const IncomeRecordPage = () => {
     fetchCalendarData();
     if (selectedDay) {
       fetchDayIncome(selectedDay);
+    }
+  };
+
+  const handleDeleteIncome = async (incomeId) => {
+    if (!window.confirm('¿Estás seguro de eliminar este ingreso?')) {
+      return;
+    }
+
+    try {
+      await axios.delete(`${API}/other-income/${incomeId}`);
+      toast.success('Ingreso eliminado exitosamente');
+      fetchCalendarData();
+      if (selectedDay) {
+        fetchDayIncome(selectedDay);
+      }
+    } catch (error) {
+      if (error.response?.status === 403) {
+        toast.error('No tienes permisos para eliminar registros');
+      } else {
+        toast.error('Error al eliminar ingreso');
+      }
+      console.error('Error deleting income:', error);
     }
   };
 
@@ -321,7 +343,7 @@ const IncomeRecordPage = () => {
                           className="p-3 border-2 border-slate-900 rounded-lg bg-slate-50"
                         >
                           <div className="flex justify-between items-start mb-2">
-                            <div>
+                            <div className="flex-1">
                               <div className="font-bold text-sm">{sale.description}</div>
                               {timeStr && (
                                 <div className="text-xs text-indigo-600 font-mono font-bold mt-0.5">
@@ -329,11 +351,22 @@ const IncomeRecordPage = () => {
                                 </div>
                               )}
                             </div>
-                            <div 
-                              className="text-sm font-mono font-bold"
-                              style={{ fontFamily: 'JetBrains Mono, monospace' }}
-                            >
-                              ${sale.amount.toLocaleString('es-CL')}
+                            <div className="flex items-center gap-2">
+                              <div 
+                                className="text-sm font-mono font-bold"
+                                style={{ fontFamily: 'JetBrains Mono, monospace' }}
+                              >
+                                ${sale.amount.toLocaleString('es-CL')}
+                              </div>
+                              {canEdit && (
+                                <button
+                                  onClick={() => handleDeleteIncome(sale.id)}
+                                  className="p-1 hover:bg-red-100 rounded transition-colors"
+                                  title="Eliminar ingreso"
+                                >
+                                  <Trash2 className="w-4 h-4 text-red-600" />
+                                </button>
+                              )}
                             </div>
                           </div>
                         </div>
