@@ -201,13 +201,14 @@ const InventoryPage = () => {
               backgroundColor: '#D4F0A5',
               boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)'
             }}
-          onMouseEnter={(e) => e.target.style.transform = 'translateY(-2px)'}
-          onMouseLeave={(e) => e.target.style.transform = 'translateY(0)'}
-          data-testid="add-product-btn"
-        >
-          <Plus className="w-5 h-5" />
-          Nuevo Producto
-        </button>
+            onMouseEnter={(e) => e.target.style.transform = 'translateY(-2px)'}
+            onMouseLeave={(e) => e.target.style.transform = 'translateY(0)'}
+            data-testid="add-product-btn"
+          >
+            <Plus className="w-5 h-5" />
+            Nuevo Producto
+          </button>
+        </div>
       </div>
 
       {/* Products Table */}

@@ -58,7 +58,7 @@ const AnalyticsPage = () => {
 
   const fetchAllData = async () => {
     setLoading(true);
-    try:
+    try {
       const params = {
         period,
         ...(storeFilter !== 'all' && { store_id: storeFilter }),
