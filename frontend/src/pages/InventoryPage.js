@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { Package, Plus, Edit, Trash2, Home, Download } from 'lucide-react';
+import { Package, Plus, Edit, Trash2, Home, Download, Search, Filter } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useSettings } from '../context/SettingsContext';
 import { useStores } from '../hooks/useStores';
@@ -16,13 +16,22 @@ const InventoryPage = () => {
   const { settings } = useSettings();
   const { getStoreName } = useStores();
   const [products, setProducts] = useState([]);
+  const [filteredProducts, setFilteredProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  
+  // Filters
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
 
   useEffect(() => {
     fetchProducts();
   }, []);
+  
+  useEffect(() => {
+    filterProducts();
+  }, [products, searchQuery, selectedCategory]);
 
   const fetchProducts = async () => {
     try {
@@ -34,6 +43,26 @@ const InventoryPage = () => {
     } finally {
       setLoading(false);
     }
+  };
+  
+  const filterProducts = () => {
+    let filtered = [...products];
+    
+    // Filter by search query (name or SKU)
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(product => 
+        product.name.toLowerCase().includes(query) ||
+        (product.sku && product.sku.toLowerCase().includes(query))
+      );
+    }
+    
+    // Filter by category
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter(product => product.category === selectedCategory);
+    }
+    
+    setFilteredProducts(filtered);
   };
 
   const handleDelete = async (productId) => {
@@ -211,6 +240,53 @@ const InventoryPage = () => {
         </div>
       </div>
 
+      {/* Search and Filter Bar */}
+      <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Search by Name or SKU */}
+        <div className="md:col-span-2">
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Buscar por nombre o SKU..."
+              className="w-full pl-12 pr-4 py-3 bg-white border-2 border-slate-900 rounded-xl font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
+              data-testid="search-products-input"
+            />
+          </div>
+        </div>
+        
+        {/* Filter by Category */}
+        <div>
+          <div className="relative">
+            <Filter className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="w-full pl-12 pr-4 py-3 bg-white border-2 border-slate-900 rounded-xl font-medium text-slate-900 cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-900"
+              data-testid="filter-category-select"
+            >
+              <option value="all">Todas las categorías</option>
+              {settings?.product_categories?.map((cat, idx) => (
+                <option key={idx} value={cat}>{cat}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+      
+      {/* Results count */}
+      {(searchQuery || selectedCategory !== 'all') && (
+        <div className="mb-4">
+          <p className="text-sm text-slate-600">
+            Mostrando <strong>{filteredProducts.length}</strong> de <strong>{products.length}</strong> productos
+            {searchQuery && ` con "${searchQuery}"`}
+            {selectedCategory !== 'all' && ` en categoría "${selectedCategory}"`}
+          </p>
+        </div>
+      )}
+
       {/* Products Table */}
       {loading ? (
         <p className="text-center text-slate-600 font-medium">Cargando productos...</p>
@@ -218,6 +294,20 @@ const InventoryPage = () => {
         <div className="text-center py-12">
           <Package className="w-16 h-16 mx-auto text-slate-400 mb-4" />
           <p className="text-slate-600 font-medium">No hay productos registrados</p>
+        </div>
+      ) : filteredProducts.length === 0 ? (
+        <div className="text-center py-12">
+          <Package className="w-16 h-16 mx-auto text-slate-400 mb-4" />
+          <p className="text-slate-600 font-medium">No se encontraron productos con los filtros seleccionados</p>
+          <button
+            onClick={() => {
+              setSearchQuery('');
+              setSelectedCategory('all');
+            }}
+            className="mt-4 px-4 py-2 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-all"
+          >
+            Limpiar filtros
+          </button>
         </div>
       ) : (
         <div 
@@ -249,7 +339,7 @@ const InventoryPage = () => {
                 </tr>
               </thead>
               <tbody className="divide-y-2 divide-slate-900">
-                {products.map((product, index) => (
+                {filteredProducts.map((product, index) => (
                   <tr 
                     key={product.id}
                     className={index % 2 === 0 ? 'bg-white' : 'bg-slate-50'}

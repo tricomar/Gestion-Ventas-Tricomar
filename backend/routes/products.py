@@ -64,7 +64,12 @@ async def get_products(current_user: User = Depends(get_current_user)):
 async def search_products(q: str, current_user: User = Depends(get_current_user)):
     # CRITICAL: Aplicar filtro de tenant para aislamiento multi-tenant
     tenant_filter = get_tenant_filter(current_user.dict())
-    tenant_filter['name'] = {'$regex': q, '$options': 'i'}
+    
+    # Buscar por nombre O por SKU
+    tenant_filter['$or'] = [
+        {'name': {'$regex': q, '$options': 'i'}},
+        {'sku': {'$regex': q, '$options': 'i'}}
+    ]
     
     products = await db.products.find(
         tenant_filter,

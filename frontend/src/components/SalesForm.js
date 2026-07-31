@@ -232,7 +232,7 @@ const API = `${BACKEND_URL}/api`;
                 if (!e.target.value) setSelectedProduct(null);
               }}
               className="w-full bg-white border-2 border-slate-900 rounded-xl px-4 py-3 font-medium text-slate-900 focus:ring-0 focus:outline-none focus:border-indigo-500 transition-all"
-              placeholder="Buscar producto..."
+              placeholder="Buscar por nombre o SKU..."
               required
               data-testid="sales-product-input"
             />
@@ -253,9 +253,21 @@ const API = `${BACKEND_URL}/api`;
                   <div className="flex justify-between items-center">
                     <div>
                       <p className="font-bold">{prod.name}</p>
-                      <p className="text-xs text-slate-500 font-mono font-bold">
-                        Código: {prod.store || 'A'}
-                      </p>
+                      <div className="flex gap-3 mt-1">
+                        {prod.sku && (
+                          <p className="text-xs text-slate-500 font-mono font-bold">
+                            SKU: {prod.sku}
+                          </p>
+                        )}
+                        <p className="text-xs text-slate-500 font-mono font-bold">
+                          Código: {prod.store || 'A'}
+                        </p>
+                        {prod.category && (
+                          <span className="text-xs bg-slate-100 px-2 py-0.5 rounded font-medium">
+                            {prod.category}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <span className="font-mono font-bold">
                       ${(prod.sale_price || 0).toLocaleString('es-CL')}

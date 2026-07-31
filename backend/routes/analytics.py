@@ -333,6 +333,7 @@ async def get_temporal_analytics(
 async def get_products_analytics(
     period: str = Query("month"),
     store_id: Optional[str] = Query(None),
+    category: Optional[str] = Query(None),
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
     current_user: User = Depends(get_current_user)
@@ -341,6 +342,7 @@ async def get_products_analytics(
     Análisis de productos:
     - Top 10 productos por unidades y por ingresos
     - Productos con baja rotación
+    - Filtrado por categoría opcional
     """
     try:
         dates = get_date_range(period, start_date, end_date)
@@ -358,6 +360,16 @@ async def get_products_analytics(
         }
         
         sales = await db.sales.find(sales_filter, {"_id": 0}).to_list(100000)
+        
+        # Si hay filtro de categoría, obtener productos de esa categoría y filtrar ventas
+        if category and category != "all":
+            products_in_category = await db.products.find(
+                {**get_tenant_filter(current_user.dict()), "category": category},
+                {"_id": 0, "name": 1}
+            ).to_list(10000)
+            
+            category_product_names = {p.get("name") for p in products_in_category}
+            sales = [s for s in sales if s.get("product_name") in category_product_names]
         
         # Agrupar por producto
         product_stats = defaultdict(lambda: {"name": "", "units": 0, "revenue": 0})

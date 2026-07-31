@@ -4,6 +4,7 @@ import { BarChart3, TrendingUp, TrendingDown, Calendar, Store, RefreshCw, X } fr
 import { format, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { toast } from 'sonner';
+import { useSettings } from '../context/SettingsContext';
 import KPICards from '../components/analytics/KPICards';
 import TemporalCharts from '../components/analytics/TemporalCharts';
 import ProductsCharts from '../components/analytics/ProductsCharts';
@@ -14,8 +15,10 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const AnalyticsPage = () => {
+  const { settings } = useSettings();
   const [period, setPeriod] = useState('month');
   const [storeFilter, setStoreFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState(new Date());
   
@@ -45,7 +48,7 @@ const AnalyticsPage = () => {
     }, 30000);
     
     return () => clearInterval(interval);
-  }, [period, storeFilter, customStartDate, customEndDate]);
+  }, [period, storeFilter, categoryFilter, customStartDate, customEndDate]);
 
   const fetchStores = async () => {
     try {
@@ -67,11 +70,16 @@ const AnalyticsPage = () => {
           end_date: customEndDate
         })
       };
+      
+      const productsParams = {
+        ...params,
+        ...(categoryFilter !== 'all' && { category: categoryFilter })
+      };
 
       const [summaryRes, temporalRes, productsRes, storesPaymentsRes, customersRes] = await Promise.all([
         axios.get(`${API}/analytics/summary`, { params }),
         axios.get(`${API}/analytics/temporal`, { params }),
-        axios.get(`${API}/analytics/products`, { params }),
+        axios.get(`${API}/analytics/products`, { params: productsParams }),
         axios.get(`${API}/analytics/stores-payments`, { params }),
         axios.get(`${API}/analytics/customers`, { params })
       ]);
@@ -182,6 +190,25 @@ const AnalyticsPage = () => {
                 {stores.map((store) => (
                   <option key={store.id} value={store.code}>
                     {store.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          
+          {/* Selector de categoría */}
+          {settings?.product_categories && settings.product_categories.length > 0 && (
+            <div className="flex items-center gap-2 bg-white border-2 border-slate-900 rounded-xl px-3 py-2">
+              <BarChart3 className="w-5 h-5 text-slate-600" />
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="font-bold text-slate-900 bg-transparent outline-none cursor-pointer"
+              >
+                <option value="all">Todas las Categorías</option>
+                {settings.product_categories.map((cat, idx) => (
+                  <option key={idx} value={cat}>
+                    {cat}
                   </option>
                 ))}
               </select>
