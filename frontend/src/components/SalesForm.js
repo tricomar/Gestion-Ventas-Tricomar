@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { Search, Plus, Calendar } from 'lucide-react';
+import { Search, Plus } from 'lucide-react';
 import ProductForm from './ProductForm';
 import CustomerForm from './CustomerForm';
-import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { useStores } from '../hooks/useStores';
 
@@ -12,7 +11,6 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
   const SalesForm = ({ onSuccess }) => {
-  const { user } = useAuth();
   const { settings } = useSettings();
   const { getStoreName, getStoreByKey, stores } = useStores();
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -23,13 +21,9 @@ const API = `${BACKEND_URL}/api`;
   const [customerSearch, setCustomerSearch] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('Efectivo');
   const [hasTax, setHasTax] = useState(true);
-  const [customDate, setCustomDate] = useState(''); // Fecha personalizada para admin/supervisor
   const [loading, setLoading] = useState(false);
   const [showProductForm, setShowProductForm] = useState(false);
   const [showCustomerForm, setShowCustomerForm] = useState(false);
-  
-  // Check if user can create records
-  const canCreateRecords = user?.role === 'account_admin' || user?.role === 'supervisor';
   
   const [productSuggestions, setProductSuggestions] = useState([]);
   const [customerSuggestions, setCustomerSuggestions] = useState([]);
@@ -137,7 +131,7 @@ const API = `${BACKEND_URL}/api`;
     setLoading(true);
 
     try {
-      const saleData = {
+      await axios.post(`${API}/sales`, {
         product_id: selectedProduct.id,
         product_name: selectedProduct.name,
         quantity: parseFloat(quantity),
@@ -149,14 +143,7 @@ const API = `${BACKEND_URL}/api`;
         customer_id: selectedCustomer?.id || null,
         customer_name: selectedCustomer?.name || null,
         payment_method: paymentMethod
-      };
-      
-      // Si hay fecha personalizada, agregarla
-      if (customDate) {
-        saleData.custom_date = customDate;
-      }
-      
-      await axios.post(`${API}/sales`, saleData);
+      });
 
       toast.success('Venta registrada exitosamente');
       
@@ -169,7 +156,6 @@ const API = `${BACKEND_URL}/api`;
       setCustomerSearch('');
       setPaymentMethod('Efectivo');
       setHasTax(true);
-      setCustomDate(''); // Reset custom date
       
       if (onSuccess) onSuccess();
     } catch (error) {
@@ -217,26 +203,6 @@ const API = `${BACKEND_URL}/api`;
       }
     }
   };
-
-  // Si el usuario no tiene permisos, mostrar mensaje
-  if (!canCreateRecords) {
-    return (
-      <div 
-        className="bg-white border-2 border-slate-900 rounded-xl p-6 md:p-8"
-        style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
-      >
-        <h2 
-          className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 mb-4"
-          style={{ fontFamily: 'Cabinet Grotesk, sans-serif' }}
-        >
-          Acceso Restringido
-        </h2>
-        <p className="text-slate-600">
-          Solo los administradores y supervisores pueden registrar ventas.
-        </p>
-      </div>
-    );
-  }
 
   return (
     <div 
@@ -495,27 +461,6 @@ const API = `${BACKEND_URL}/api`;
             <option value="Transferencia">Transferencia</option>
           </select>
         </div>
-
-        {/* Custom Date (solo para admin/supervisor) */}
-        {canCreateRecords && (
-          <div>
-            <label className="block text-xs font-bold tracking-widest uppercase text-slate-500 mb-2 flex items-center gap-2">
-              <Calendar className="w-4 h-4" />
-              Fecha del Registro (Opcional)
-            </label>
-            <input
-              type="date"
-              value={customDate}
-              onChange={(e) => setCustomDate(e.target.value)}
-              max={new Date().toISOString().split('T')[0]}
-              className="w-full bg-white border-2 border-slate-900 rounded-xl px-4 py-3 font-medium text-slate-900 focus:ring-0 focus:outline-none focus:border-indigo-500"
-              data-testid="sales-custom-date-input"
-            />
-            <p className="text-xs text-slate-500 mt-1">
-              Si no seleccionas una fecha, se usará la fecha y hora actual
-            </p>
-          </div>
-        )}
 
         {/* Total Editable with IVA Checkbox */}
         <div className="bg-slate-100 border-2 border-slate-900 rounded-xl p-4">

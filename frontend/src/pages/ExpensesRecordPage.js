@@ -30,7 +30,7 @@ const ExpensesRecordPage = () => {
   const currentMonth = currentDate.getMonth() + 1;
 
   // Permisos de edición: solo admin y supervisor
-  const canEdit = user?.role === 'admin' || user?.role === 'supervisor';
+  const canEdit = user?.role === 'account_admin' || user?.role === 'supervisor';
 
   useEffect(() => {
     fetchCalendarData();
