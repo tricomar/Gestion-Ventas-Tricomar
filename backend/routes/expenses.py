@@ -37,23 +37,14 @@ async def create_expense(expense_input: ExpenseCreate, current_user: User = Depe
 
 @router.get("", response_model=List[Expense])
 async def get_expenses(date: Optional[str] = None, current_user: User = Depends(get_current_user)):
-    query = {}
-    if date:
-        # Parse date in Chile timezone
-        target_date = datetime.fromisoformat(date).replace(hour=0, minute=0, second=0, microsecond=0)
-        chile_start = target_date.replace(tzinfo=CHILE_TZ)
-        chile_end = chile_start + timedelta(days=1)
-        
-        # Convertir a UTC para la query
-        utc_start = chile_start.astimezone(timezone.utc)
-        utc_end = chile_end.astimezone(timezone.utc)
-        
-        query['created_at'] = {
-            '$gte': utc_start.isoformat(),
-            '$lt': utc_end.isoformat()
-        }
+    # CRITICAL: Filtro de tenant para multi-tenancy
+    tenant_filter = get_tenant_filter(current_user.dict())
     
-    expenses = await db.expenses.find(query, {'_id': 0}).sort('created_at', -1).to_list(1000)
+    if date:
+        # Filtrar por el campo 'date' que se guarda como 'YYYY-MM-DD'
+        tenant_filter['date'] = date
+    
+    expenses = await db.expenses.find(tenant_filter, {'_id': 0}).sort('created_at', -1).to_list(1000)
     
     for expense in expenses:
         if isinstance(expense.get('created_at'), str):

@@ -165,23 +165,8 @@ async def get_sales(date: Optional[str] = None, current_user: User = Depends(get
     tenant_filter = get_tenant_filter(current_user.dict())
     
     if date:
-        # Parse date in Chile timezone
-        # date viene como 'YYYY-MM-DD' (ejemplo: '2026-07-15')
-        # Necesitamos buscar todas las ventas de ese día en hora Chile
-        
-        # Crear inicio y fin del día en zona horaria de Chile
-        target_date = datetime.fromisoformat(date).replace(hour=0, minute=0, second=0, microsecond=0)
-        chile_start = target_date.replace(tzinfo=CHILE_TZ)
-        chile_end = chile_start + timedelta(days=1)
-        
-        # Convertir a UTC para la query
-        utc_start = chile_start.astimezone(timezone.utc)
-        utc_end = chile_end.astimezone(timezone.utc)
-        
-        tenant_filter['created_at'] = {
-            '$gte': utc_start.isoformat(),
-            '$lt': utc_end.isoformat()
-        }
+        # Simplemente filtrar por el campo 'date' que se guarda como 'YYYY-MM-DD'
+        tenant_filter['date'] = date
     
     sales = await db.sales.find(tenant_filter, {'_id': 0}).sort('created_at', -1).to_list(1000)
     
