@@ -25,6 +25,7 @@ const SalesRecordPage = () => {
   const [daySales, setDaySales] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showPastSaleForm, setShowPastSaleForm] = useState(false);
+  const [editModal, setEditModal] = useState({ open: false, data: null });
 
   const currentYear = currentDate.getFullYear();
   const currentMonth = currentDate.getMonth() + 1;
@@ -97,6 +98,45 @@ const SalesRecordPage = () => {
         toast.error('Error al eliminar venta');
       }
       console.error('Error deleting sale:', error);
+    }
+  };
+
+  const handleEditSale = (sale) => {
+    setEditModal({ open: true, data: { ...sale } });
+  };
+
+  const handleUpdateSale = async (e) => {
+    e.preventDefault();
+    
+    try {
+      const payload = {
+        product_id: editModal.data.product_id,
+        product_name: editModal.data.product_name,
+        quantity: parseFloat(editModal.data.quantity),
+        price: parseFloat(editModal.data.price),
+        total: parseFloat(editModal.data.total),
+        cost_price: parseFloat(editModal.data.cost_price || 0),
+        store: editModal.data.store,
+        has_tax: editModal.data.has_tax,
+        customer_id: editModal.data.customer_id || null,
+        customer_name: editModal.data.customer_name || null,
+        payment_method: editModal.data.payment_method
+      };
+
+      await axios.put(`${API}/sales/${editModal.data.id}`, payload);
+      toast.success('Venta actualizada exitosamente');
+      setEditModal({ open: false, data: null });
+      fetchCalendarData();
+      if (selectedDay) {
+        fetchDaySales(selectedDay);
+      }
+    } catch (error) {
+      if (error.response?.status === 403) {
+        toast.error('No tienes permisos para editar registros');
+      } else {
+        toast.error('Error al actualizar venta');
+      }
+      console.error('Error updating sale:', error);
     }
   };
 
@@ -359,13 +399,22 @@ const SalesRecordPage = () => {
                                 ${sale.total.toLocaleString('es-CL')}
                               </div>
                               {canEdit && (
-                                <button
-                                  onClick={() => handleDeleteSale(sale.id)}
-                                  className="p-1 hover:bg-red-100 rounded transition-colors"
-                                  title="Eliminar venta"
-                                >
-                                  <Trash2 className="w-4 h-4 text-red-600" />
-                                </button>
+                                <>
+                                  <button
+                                    onClick={() => handleEditSale(sale)}
+                                    className="p-1 hover:bg-blue-100 rounded transition-colors"
+                                    title="Editar venta"
+                                  >
+                                    <Edit2 className="w-4 h-4 text-blue-600" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteSale(sale.id)}
+                                    className="p-1 hover:bg-red-100 rounded transition-colors"
+                                    title="Eliminar venta"
+                                  >
+                                    <Trash2 className="w-4 h-4 text-red-600" />
+                                  </button>
+                                </>
                               )}
                             </div>
                           </div>
@@ -396,6 +445,108 @@ const SalesRecordPage = () => {
           onSuccess={handlePastSaleSuccess}
           initialDate={`${currentYear}-${currentMonth.toString().padStart(2, '0')}-${new Date().getDate().toString().padStart(2, '0')}`}
         />
+      )}
+
+      {/* Modal de Edición */}
+      {editModal.open && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div 
+            className="bg-white border-2 border-slate-900 rounded-xl p-6 max-w-md w-full"
+            style={{ boxShadow: '8px 8px 0px 0px rgba(15,23,42,1)' }}
+          >
+            <h3 className="text-xl font-bold mb-4">Editar Venta</h3>
+            <form onSubmit={handleUpdateSale} className="space-y-4">
+              <div>
+                <label className="block text-sm font-bold mb-2">Producto</label>
+                <input
+                  type="text"
+                  value={editModal.data.product_name}
+                  className="w-full px-3 py-2 border-2 border-slate-900 rounded-lg bg-slate-100"
+                  disabled
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-bold mb-2">Cantidad</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={editModal.data.quantity}
+                    onChange={(e) => setEditModal({
+                      ...editModal,
+                      data: { ...editModal.data, quantity: e.target.value }
+                    })}
+                    className="w-full px-3 py-2 border-2 border-slate-900 rounded-lg"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-bold mb-2">Precio Unit.</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={editModal.data.price}
+                    onChange={(e) => setEditModal({
+                      ...editModal,
+                      data: { ...editModal.data, price: e.target.value }
+                    })}
+                    className="w-full px-3 py-2 border-2 border-slate-900 rounded-lg"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold mb-2">Total</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={editModal.data.total}
+                  onChange={(e) => setEditModal({
+                    ...editModal,
+                    data: { ...editModal.data, total: e.target.value }
+                  })}
+                  className="w-full px-3 py-2 border-2 border-slate-900 rounded-lg"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold mb-2">Método de Pago</label>
+                <select
+                  value={editModal.data.payment_method}
+                  onChange={(e) => setEditModal({
+                    ...editModal,
+                    data: { ...editModal.data, payment_method: e.target.value }
+                  })}
+                  className="w-full px-3 py-2 border-2 border-slate-900 rounded-lg"
+                >
+                  <option value="Efectivo">Efectivo</option>
+                  <option value="Tarjeta">Tarjeta</option>
+                  <option value="Transferencia">Transferencia</option>
+                </select>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 bg-slate-900 text-white rounded-lg font-bold hover:bg-slate-800"
+                >
+                  Guardar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditModal({ open: false, data: null })}
+                  className="flex-1 px-4 py-2 bg-slate-200 text-slate-900 rounded-lg font-bold hover:bg-slate-300"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );
