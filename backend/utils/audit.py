@@ -3,7 +3,7 @@ Helper functions para auditoría
 """
 from typing import Dict, Any, Optional
 from datetime import datetime, timezone
-from database import db
+from utils import db
 import uuid
 
 
