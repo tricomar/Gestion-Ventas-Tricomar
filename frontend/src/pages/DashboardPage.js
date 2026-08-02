@@ -170,17 +170,6 @@ const DashboardPage = () => {
                   </div>
                 )}
               </div>
-              
-              <button
-                onClick={logout}
-                className="p-3 bg-white border-2 border-slate-900 rounded-xl hover:bg-slate-50 transition-all"
-                style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
-                onMouseEnter={(e) => e.target.style.transform = 'translateY(-2px)'}
-                onMouseLeave={(e) => e.target.style.transform = 'translateY(0)'}
-                data-testid="logout-btn"
-              >
-                <LogOut className="w-5 h-5" />
-              </button>
             </div>
           </div>
 
@@ -240,10 +229,18 @@ const DashboardPage = () => {
                 )}
                 <button
                   onClick={() => { navigate('/settings'); setShowMenu(false); }}
-                  className="w-full text-left px-4 py-2 hover:bg-slate-100 font-bold flex items-center gap-2 rounded-b-lg"
+                  className="w-full text-left px-4 py-2 hover:bg-slate-100 font-bold flex items-center gap-2 border-b-2 border-slate-200"
                 >
                   <Settings className="w-4 h-4" />
                   Configuración
+                </button>
+                <button
+                  onClick={() => { logout(); setShowMenu(false); }}
+                  className="w-full text-left px-4 py-2 hover:bg-red-50 font-bold flex items-center gap-2 rounded-b-lg text-red-600"
+                  data-testid="logout-menu-btn"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Cerrar Sesión
                 </button>
               </div>
             )}
