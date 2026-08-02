@@ -283,7 +283,7 @@ const DailySidebar = ({ refreshTrigger, onDelete }) => {
                         {record.quantity} x ${record.price.toLocaleString('es-CL')}
                       </p>
                       <p className="text-xs text-slate-600">
-                        {getStoreName(record.store)} {record.has_tax ? '(Con IVA)' : '(Sin IVA)'}
+                        {getStoreName(record.store)}
                       </p>
                       {record.customer && (
                         <p className="text-sm text-slate-600">Cliente: {record.customer}</p>
@@ -292,7 +292,7 @@ const DailySidebar = ({ refreshTrigger, onDelete }) => {
                         <span className="text-xs bg-slate-900 text-white px-2 py-1 rounded-full">
                           {record.payment_method}
                         </span>
-                        <span className="font-mono font-bold text-lg">
+                        <span className={`font-mono font-bold text-lg ${record.has_tax ? 'text-slate-900' : 'text-red-600'}`}>
                           ${record.total.toLocaleString('es-CL')}
                         </span>
                       </div>
