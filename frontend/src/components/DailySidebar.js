@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { useStores } from '../hooks/useStores';
 import ServerClock from './ServerClock';
+import { getChileDate } from '../utils/dateUtils';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -29,7 +30,8 @@ const DailySidebar = ({ refreshTrigger, onDelete }) => {
 
   const fetchTodayData = async () => {
     try {
-      const today = new Date().toISOString().split('T')[0];
+      // Usar fecha de Chile en lugar de UTC del navegador
+      const today = getChileDate();
       const [salesRes, expensesRes, incomeRes] = await Promise.all([
         axios.get(`${API}/sales?date=${today}`),
         axios.get(`${API}/expenses?date=${today}`),

@@ -13,6 +13,7 @@ import RealtimeMetrics from '../components/RealtimeMetrics';
 import EconomicIndicators from '../components/EconomicIndicators';
 import NotesCalendar from '../components/NotesCalendar';
 import DailyNotes from '../components/DailyNotes';
+import { getChileDate } from '../utils/dateUtils';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -23,7 +24,7 @@ const DashboardPage = () => {
   const [activeTab, setActiveTab] = useState('sales');
   const [todayTotal, setTodayTotal] = useState(0);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(getChileDate());
   const [showMenu, setShowMenu] = useState(false);
   const [showRecordsMenu, setShowRecordsMenu] = useState(false);
 

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { BarChart3, TrendingUp, TrendingDown, Calendar, Store, RefreshCw, X } from 'lucide-react';
+import { BarChart3, TrendingUp, TrendingDown, Calendar, Store, RefreshCw, X, Home } from 'lucide-react';
 import { format, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { useSettings } from '../context/SettingsContext';
+import { useNavigate } from 'react-router-dom';
 import KPICards from '../components/analytics/KPICards';
 import TemporalCharts from '../components/analytics/TemporalCharts';
 import ProductsCharts from '../components/analytics/ProductsCharts';
@@ -16,6 +17,7 @@ const API = `${BACKEND_URL}/api`;
 
 const AnalyticsPage = () => {
   const { settings } = useSettings();
+  const navigate = useNavigate();
   const [period, setPeriod] = useState('month');
   const [storeFilter, setStoreFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -133,15 +135,26 @@ const AnalyticsPage = () => {
             </div>
           </div>
           
-          <button
-            onClick={fetchAllData}
-            disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 bg-white border-2 border-slate-900 rounded-xl font-bold hover:bg-slate-50 disabled:opacity-50"
-            style={{ boxShadow: '3px 3px 0px 0px rgba(15,23,42,1)' }}
-          >
-            <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
-            Actualizar
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate('/')}
+              className="flex items-center gap-2 px-4 py-2 bg-white border-2 border-slate-900 rounded-xl font-bold hover:bg-slate-50 transition-all"
+              style={{ boxShadow: '3px 3px 0px 0px rgba(15,23,42,1)' }}
+            >
+              <Home className="w-5 h-5" />
+              Volver al Dashboard
+            </button>
+            
+            <button
+              onClick={fetchAllData}
+              disabled={loading}
+              className="flex items-center gap-2 px-4 py-2 bg-white border-2 border-slate-900 rounded-xl font-bold hover:bg-slate-50 disabled:opacity-50"
+              style={{ boxShadow: '3px 3px 0px 0px rgba(15,23,42,1)' }}
+            >
+              <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} />
+              Actualizar
+            </button>
+          </div>
         </div>
 
         {/* Filtros */}

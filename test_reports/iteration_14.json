@@ -1,0 +1,22 @@
+{
+  "summary": "Verified Chile timezone date fix in DailySidebar and new 'Volver al Dashboard' button in AnalyticsPage. Login worked with hola@tricomar.cl / QWEasd123$ (though this account is not documented in /app/memory/test_credentials.md).",
+  "tested_scope": ["frontend", "integration"],
+  "passed": [
+    "Login flow works with hola@tricomar.cl credentials -> lands on /dashboard",
+    "DailySidebar loads and issues GET /api/sales?date=YYYY-MM-DD, /api/expenses?date=..., /api/other-income?date=... using Chile-timezone date (2026-08-01 while UTC was 2026-08-02) - confirmed via network capture",
+    "Sidebar renders today's records (Ventas $17.000, 3 sales entries visible immediately)",
+    "getChileDate() utility executed in browser returns correct America/Santiago date (2026-08-01)",
+    "Analytics page loads at /analytics (accessed via Menú -> Analítica) with H1 'Analítica'",
+    "'Volver al Dashboard' button present in Analytics header, includes Home icon (svg), positioned next to 'Actualizar' button",
+    "Clicking 'Volver al Dashboard' navigates to /dashboard successfully",
+    "Sidebar remains visible and populated after returning to dashboard (E2E flow complete)"
+  ],
+  "failed": [],
+  "action_items": [
+    "Consider adding hola@tricomar.cl to /app/memory/test_credentials.md (was used in test but only carlos@tricomar.cl is documented as super_admin)",
+    "Minor (out of scope): The sidebar header still shows 'domingo, 2 de agosto de 2026' via new Date().toLocaleDateString() at DailySidebar.js line 160 while the fetch correctly uses Chile date 2026-08-01. Header could also use getChileDate/formatChileDate for full consistency, but does not affect the reported bug fix."
+  ],
+  "success_rate": {"backend": "N/A (frontend-focused test; sidebar API calls returned 200 with data)", "frontend": "100%"},
+  "retest_needed": false,
+  "full_testing_deferred": true
+}
