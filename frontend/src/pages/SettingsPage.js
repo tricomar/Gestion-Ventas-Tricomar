@@ -23,7 +23,7 @@ const ROLES = [
 const SettingsPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { refreshSettings } = useSettings();
+  const { settings, refreshSettings } = useSettings();
   const { user, logout } = useAuth();
   const { stores, loading: storesLoading } = useStores(); // Hook para obtener tiendas dinámicas
   const [activeTab, setActiveTab] = useState('profile'); // 'stores', 'profile', 'users', 'inventory', or 'database' - Inicia en Mi Perfil
@@ -130,11 +130,6 @@ const SettingsPage = () => {
       setProfileName(user.name);
       setProfileEmail(user.email);
       
-      // Cargar categorías desde settings
-      if (settings?.product_categories) {
-        setCategories(settings.product_categories);
-      }
-      
       // Cargar cuentas si es super-admin
       if (user.role === 'super_admin') {
         fetchAccounts();
@@ -152,6 +147,13 @@ const SettingsPage = () => {
       setLoading(false);
     }
   }, [user]);
+
+  // Cargar categorías cuando settings esté disponible
+  useEffect(() => {
+    if (settings?.product_categories) {
+      setCategories(settings.product_categories);
+    }
+  }, [settings]);
 
   const fetchAccounts = async () => {
     try {

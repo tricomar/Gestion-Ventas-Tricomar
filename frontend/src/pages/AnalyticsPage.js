@@ -206,7 +206,7 @@ const AnalyticsPage = () => {
                 className="font-bold text-slate-900 bg-transparent outline-none cursor-pointer"
               >
                 <option value="all">Todas las Categorías</option>
-                {settings.product_categories.map((cat, idx) => (
+                {settings?.product_categories?.map((cat, idx) => (
                   <option key={idx} value={cat}>
                     {cat}
                   </option>
