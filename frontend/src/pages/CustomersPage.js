@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { Users, Plus, Edit2, Trash2, Eye, Phone, MapPin, TrendingUp } from 'lucide-react';
+import { Users, Plus, Edit2, Trash2, Eye, Phone, MapPin, TrendingUp, Home } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import CustomerForm from '../components/CustomerForm';
 import { useSettings } from '../context/SettingsContext';
@@ -74,10 +74,11 @@ const CustomersPage = () => {
           </div>
           <button
             onClick={() => navigate('/')}
-            className="px-6 py-3 bg-white border-2 border-slate-900 rounded-xl font-bold hover:bg-slate-50"
+            className="flex items-center gap-2 px-6 py-3 bg-white border-2 border-slate-900 rounded-xl font-bold hover:bg-slate-50"
             style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
           >
-            ← Volver al Dashboard
+            <Home className="w-5 h-5" />
+            Volver al Dashboard
           </button>
         </div>
       </header>
