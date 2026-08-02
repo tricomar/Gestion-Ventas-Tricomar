@@ -23,6 +23,7 @@ from .indicators import router as indicators_router
 from .super_admin import router as super_admin_router
 from .import_export import router as import_export_router
 from .analytics import router as analytics_router
+from .audit import router as audit_router
 
 # Crear el router principal con prefijo /api
 api_router = APIRouter(prefix="/api")
@@ -46,5 +47,6 @@ api_router.include_router(indicators_router)
 api_router.include_router(super_admin_router)
 api_router.include_router(import_export_router, prefix="/import-export", tags=["import-export"])
 api_router.include_router(analytics_router, prefix="/analytics", tags=["analytics"])
+api_router.include_router(audit_router, prefix="/audit", tags=["audit"])
 
 __all__ = ["api_router"]

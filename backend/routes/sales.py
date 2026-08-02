@@ -13,6 +13,7 @@ from models.sales import Sale, SaleCreate, SaleCreateWithDate
 from utils import db, get_current_user, require_admin
 from models.users import User
 from middleware.tenant import get_tenant_filter, add_account_id_to_document
+from utils.audit import create_audit_log
 
 # Zona horaria de Chile
 CHILE_TZ = ZoneInfo('America/Santiago')
@@ -217,9 +218,39 @@ async def update_sale(sale_id: str, sale_input: SaleCreate, current_user: User =
     if not existing:
         raise HTTPException(status_code=404, detail="Venta no encontrada")
     
+    # Guardar datos antiguos para auditoría
+    old_data = {
+        "product_name": existing.get('product_name'),
+        "quantity": existing.get('quantity'),
+        "price": existing.get('price'),
+        "total": existing.get('total'),
+        "payment_method": existing.get('payment_method')
+    }
+    
     # Update sale data (sin modificar created_at ni date)
     update_data = sale_input.model_dump()
     await db.sales.update_one(tenant_filter, {'$set': update_data})
+    
+    # Guardar datos nuevos para auditoría
+    new_data = {
+        "product_name": update_data.get('product_name'),
+        "quantity": update_data.get('quantity'),
+        "price": update_data.get('price'),
+        "total": update_data.get('total'),
+        "payment_method": update_data.get('payment_method')
+    }
+    
+    # Crear log de auditoría
+    await create_audit_log(
+        account_id=current_user.account_id,
+        user_id=current_user.id,
+        user_name=current_user.name,
+        action="update",
+        record_type="sale",
+        record_id=sale_id,
+        old_data=old_data,
+        new_data=new_data
+    )
     
     # Fetch updated sale
     updated = await db.sales.find_one(tenant_filter, {'_id': 0})
@@ -244,7 +275,34 @@ async def delete_sale(sale_id: str, current_user: User = Depends(get_current_use
     # Filtro de tenant
     tenant_filter = get_tenant_filter(current_user.dict(), {'id': sale_id})
     
+    # Obtener datos antes de eliminar para auditoría
+    existing = await db.sales.find_one(tenant_filter, {'_id': 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Venta no encontrada")
+    
+    old_data = {
+        "product_name": existing.get('product_name'),
+        "quantity": existing.get('quantity'),
+        "price": existing.get('price'),
+        "total": existing.get('total'),
+        "payment_method": existing.get('payment_method'),
+        "date": existing.get('date')
+    }
+    
     result = await db.sales.delete_one(tenant_filter)
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Venta no encontrada")
+    
+    # Crear log de auditoría
+    await create_audit_log(
+        account_id=current_user.account_id,
+        user_id=current_user.id,
+        user_name=current_user.name,
+        action="delete",
+        record_type="sale",
+        record_id=sale_id,
+        old_data=old_data,
+        new_data=None
+    )
+    
     return {"message": "Venta eliminada"}

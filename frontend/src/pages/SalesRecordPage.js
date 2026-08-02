@@ -472,6 +472,7 @@ const SalesRecordPage = () => {
                   <input
                     type="number"
                     step="0.01"
+                    min="0.01"
                     value={editModal.data.quantity}
                     onChange={(e) => setEditModal({
                       ...editModal,
@@ -487,6 +488,7 @@ const SalesRecordPage = () => {
                   <input
                     type="number"
                     step="0.01"
+                    min="0"
                     value={editModal.data.price}
                     onChange={(e) => setEditModal({
                       ...editModal,
@@ -503,6 +505,7 @@ const SalesRecordPage = () => {
                 <input
                   type="number"
                   step="0.01"
+                  min="0.01"
                   value={editModal.data.total}
                   onChange={(e) => setEditModal({
                     ...editModal,
@@ -511,6 +514,7 @@ const SalesRecordPage = () => {
                   className="w-full px-3 py-2 border-2 border-slate-900 rounded-lg"
                   required
                 />
+                <p className="text-xs text-slate-500 mt-1">El total debe ser mayor a 0</p>
               </div>
 
               <div>

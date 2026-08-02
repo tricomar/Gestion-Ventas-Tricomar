@@ -463,6 +463,7 @@ const ExpensesRecordPage = () => {
                 <input
                   type="number"
                   step="0.01"
+                  min="0.01"
                   value={editModal.data.amount}
                   onChange={(e) => setEditModal({
                     ...editModal,
@@ -471,6 +472,7 @@ const ExpensesRecordPage = () => {
                   className="w-full px-3 py-2 border-2 border-slate-900 rounded-lg"
                   required
                 />
+                <p className="text-xs text-slate-500 mt-1">El monto debe ser mayor a 0</p>
               </div>
 
               <div>
