@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { useStores } from '../hooks/useStores';
 import ServerClock from './ServerClock';
-import { getChileDate } from '../utils/dateUtils';
+import { getChileDate, getChileDateTime } from '../utils/dateUtils';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -157,7 +157,7 @@ const DailySidebar = ({ refreshTrigger, onDelete }) => {
           <ServerClock />
         </div>
         <p className="text-sm font-medium text-slate-600">
-          {new Date().toLocaleDateString('es-CL', { 
+          {getChileDateTime().toLocaleDateString('es-CL', { 
             weekday: 'long', 
             year: 'numeric', 
             month: 'long', 
