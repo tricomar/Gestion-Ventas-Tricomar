@@ -18,6 +18,8 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showSessionExpired, setShowSessionExpired] = useState(false);
+  const [sessionExpiredReason, setSessionExpiredReason] = useState('expired'); // 'expired' o 'manual'
 
   useEffect(() => {
     const storedToken = localStorage.getItem('token');
@@ -76,7 +78,8 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = () => {
+  const logout = (reason = 'manual') => {
+    setSessionExpiredReason(reason);
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setToken(null);
@@ -84,8 +87,32 @@ export const AuthProvider = ({ children }) => {
     delete axios.defaults.headers.common['Authorization'];
   };
 
+  const handleSessionExpired = () => {
+    setShowSessionExpired(true);
+  };
+
+  const reauthenticate = async (email, password) => {
+    const result = await login(email, password);
+    if (result.success) {
+      setShowSessionExpired(false);
+    }
+    return result;
+  };
+
   return (
-    <AuthContext.Provider value={{ user, token, login, register, logout, loading }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      token, 
+      login, 
+      register, 
+      logout, 
+      loading, 
+      showSessionExpired,
+      setShowSessionExpired,
+      handleSessionExpired,
+      reauthenticate,
+      sessionExpiredReason
+    }}>
       {children}
     </AuthContext.Provider>
   );

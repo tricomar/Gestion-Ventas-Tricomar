@@ -15,9 +15,11 @@ import SalesRecordPage from './pages/SalesRecordPage';
 import ExpensesRecordPage from './pages/ExpensesRecordPage';
 import IncomeRecordPage from './pages/IncomeRecordPage';
 import SuperAdminPage from './pages/SuperAdminPage';
+import SessionExpiredModal from './components/SessionExpiredModal';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AccountProvider } from './context/AccountContext';
 import { SettingsProvider } from './context/SettingsContext';
+import { setupAxiosInterceptor } from './utils/axiosInterceptor';
 import './App.css';
 
 // Componente para redirigir según rol
@@ -56,6 +58,29 @@ const PublicRoute = ({ children }) => {
 };
 
 function AppRoutes() {
+  const { 
+    user, 
+    showSessionExpired, 
+    setShowSessionExpired, 
+    handleSessionExpired, 
+    reauthenticate, 
+    logout,
+    sessionExpiredReason 
+  } = useAuth();
+  const navigate = useNavigate();
+
+  // Configurar interceptor de Axios
+  useEffect(() => {
+    setupAxiosInterceptor(handleSessionExpired);
+  }, [handleSessionExpired]);
+
+  // Manejar logout desde el modal
+  const handleLogoutFromModal = () => {
+    logout('manual');
+    setShowSessionExpired(false);
+    navigate('/login');
+  };
+
   return (
     <>
       <Routes>
@@ -180,6 +205,14 @@ function AppRoutes() {
           }
         />
       </Routes>
+      
+      {/* Modal de Sesión Expirada */}
+      <SessionExpiredModal 
+        isOpen={showSessionExpired}
+        onReauthenticate={reauthenticate}
+        onLogout={handleLogoutFromModal}
+      />
+      
       <Toaster position="top-right" />
     </>
   );
