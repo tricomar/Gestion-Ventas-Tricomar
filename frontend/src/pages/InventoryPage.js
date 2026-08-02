@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { Package, Plus, Edit, Trash2, Home, Download, Search, Filter } from 'lucide-react';
+import { Package, Plus, Edit, Trash2, Home, Download, Search, Filter, Calculator } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useSettings } from '../context/SettingsContext';
 import { useStores } from '../hooks/useStores';
 import ProductForm from '../components/ProductForm';
+import PriceCalculatorModal from '../components/PriceCalculatorModal';
 import * as XLSX from 'xlsx';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -20,6 +21,7 @@ const InventoryPage = () => {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [showPriceCalculator, setShowPriceCalculator] = useState(false);
   
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -187,6 +189,14 @@ const InventoryPage = () => {
     fetchProducts();
   };
 
+  const handleCalculatorClose = () => {
+    setShowPriceCalculator(false);
+  };
+
+  const handleProductUpdated = () => {
+    fetchProducts(); // Refrescar lista de productos después de aplicar precio
+  };
+
   return (
     <div className="p-6 md:p-8" style={{ backgroundColor: '#F4F4F0', minHeight: '100vh' }}>
       {/* Header */}
@@ -211,6 +221,18 @@ const InventoryPage = () => {
           >
             <Home className="w-5 h-5" />
             Volver al Dashboard
+          </button>
+          <button
+            onClick={() => setShowPriceCalculator(true)}
+            className="flex items-center gap-2 text-slate-900 border-2 border-slate-900 rounded-xl px-6 py-3 font-bold transition-all hover:bg-purple-100"
+            style={{
+              backgroundColor: '#E9D5FF',
+              boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)'
+            }}
+            data-testid="price-calculator-btn"
+          >
+            <Calculator className="w-5 h-5" />
+            <span className="hidden sm:inline">Calculadora</span>
           </button>
           <button
             onClick={handleExportToExcel}
@@ -403,6 +425,15 @@ const InventoryPage = () => {
         <ProductForm
           product={editingProduct}
           onClose={handleFormClose}
+        />
+      )}
+
+      {/* Price Calculator Modal */}
+      {showPriceCalculator && (
+        <PriceCalculatorModal
+          isOpen={showPriceCalculator}
+          onClose={handleCalculatorClose}
+          onProductUpdated={handleProductUpdated}
         />
       )}
     </div>
