@@ -44,7 +44,7 @@ const KPICards = ({ data }) => {
       color: '#E0E7FF'
     },
     {
-      title: 'Tienda Top',
+      title: 'Tienda/Caja Top',
       value: data.top_store?.name || 'N/A',
       subtitle: data.top_store ? formatCurrency(data.top_store.total) : '',
       icon: Store,

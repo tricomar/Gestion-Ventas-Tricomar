@@ -309,7 +309,7 @@ const API = `${BACKEND_URL}/api`;
               <div className="flex justify-between items-center">
                 <div>
                   <span className="text-xs font-bold uppercase text-slate-500 font-mono">
-                    Código Tienda: {selectedProduct.store || 'A'}
+                    Código Tienda/Caja: {selectedProduct.store || 'A'}
                   </span>
                   <p className="font-mono font-bold">
                     ${(selectedProduct.sale_price || 0).toLocaleString('es-CL')}

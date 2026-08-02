@@ -129,8 +129,8 @@ const InventoryPage = () => {
 
     // Preparar datos para Excel
     const excelData = products.map(product => ({
-      'Tienda': getStoreName(product.store),
-      'Código Tienda': product.store,
+      'Tienda/Caja': getStoreName(product.store),
+      'Código Tienda/Caja': product.store,
       'Nombre Producto': product.name,
       'SKU': product.sku || '',
       'Categoría': product.category || '',
@@ -148,8 +148,8 @@ const InventoryPage = () => {
 
     // Ajustar ancho de columnas
     const colWidths = [
-      { wch: 15 }, // Tienda
-      { wch: 12 }, // Código Tienda
+      { wch: 15 }, // Tienda/Caja
+      { wch: 12 }, // Código Tienda/Caja
       { wch: 30 }, // Nombre Producto
       { wch: 15 }, // SKU
       { wch: 15 }, // Categoría
@@ -319,7 +319,7 @@ const InventoryPage = () => {
               <thead>
                 <tr className="bg-slate-900 text-white">
                   <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider">
-                    Tienda
+                    Tienda/Caja
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider">
                     Nombre Producto

@@ -244,7 +244,7 @@ const SettingsPage = () => {
         }))
       });
 
-      toast.success('Tiendas actualizadas correctamente');
+      toast.success('Tiendas/Cajas actualizadas correctamente');
       // Recargar stores
       window.location.reload();
     } catch (error) {
@@ -818,8 +818,8 @@ const SettingsPage = () => {
             Mi Perfil
           </button>
           
-          {/* Tiendas - Solo para Super-Admin y Supervisor */}
-          {/* Tiendas - Solo para Supervisor (NO para super_admin) */}
+          {/* Tiendas/Cajas - Solo para Super-Admin y Supervisor */}
+          {/* Tiendas/Cajas - Solo para Supervisor (NO para super_admin) */}
           {isSupervisor && !isSuperAdmin && (
             <button
               onClick={() => setActiveTab('stores')}
@@ -832,7 +832,7 @@ const SettingsPage = () => {
               data-testid="stores-tab-btn"
             >
               <Store className="w-5 h-5" />
-              Tiendas
+              Tiendas/Cajas
             </button>
           )}
           
@@ -913,7 +913,7 @@ const SettingsPage = () => {
           >
             <div className="flex items-center gap-3 mb-6">
               <Store className="w-6 h-6" />
-              <h2 className="text-2xl font-bold text-slate-900">Configuración de Tiendas</h2>
+              <h2 className="text-2xl font-bold text-slate-900">Configuración de Tiendas/Cajas</h2>
             </div>
             
             <p className="text-sm text-slate-600 mb-6">
@@ -925,14 +925,14 @@ const SettingsPage = () => {
                 {stores.map((store, index) => (
                   <div key={store.id} className="border-2 border-slate-900 rounded-xl p-4 bg-slate-50">
                     <label className="block text-sm font-bold text-slate-700 mb-3">
-                      {index === 0 ? 'Tienda Principal' : `Tienda ${index + 1}`}
+                      {index === 0 ? 'Tienda/Caja Principal' : `Tienda/Caja ${index + 1}`}
                       {index === 0 && <span className="ml-2 text-xs text-blue-600">(Por defecto)</span>}
                     </label>
                     
                     {/* Nombre de la tienda */}
                     <div className="mb-3">
                       <label className="block text-xs font-semibold text-slate-600 mb-1">
-                        Nombre de la Tienda
+                        Nombre de la Tienda/Caja
                       </label>
                       <input
                         type="text"
@@ -948,7 +948,7 @@ const SettingsPage = () => {
                     {/* Código de la tienda */}
                     <div>
                       <label className="block text-xs font-semibold text-slate-600 mb-1">
-                        Código de la Tienda
+                        Código de la Tienda/Caja
                       </label>
                       <input
                         type="text"

@@ -166,7 +166,7 @@ const CustomersPage = () => {
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-bold uppercase">Cliente</th>
                     <th className="px-6 py-3 text-left text-xs font-bold uppercase">Contacto</th>
-                    <th className="px-6 py-3 text-left text-xs font-bold uppercase">Tienda</th>
+                    <th className="px-6 py-3 text-left text-xs font-bold uppercase">Tienda/Caja</th>
                     <th className="px-6 py-3 text-left text-xs font-bold uppercase">Compras</th>
                     <th className="px-6 py-3 text-left text-xs font-bold uppercase">Gasto Total</th>
                     <th className="px-6 py-3 text-left text-xs font-bold uppercase">Última Compra</th>

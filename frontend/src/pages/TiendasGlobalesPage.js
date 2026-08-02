@@ -89,7 +89,7 @@ const TiendasGlobalesPage = () => {
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
       
-      toast.success('Tienda actualizada exitosamente');
+      toast.success('Tienda/Caja actualizada exitosamente');
       setShowEditModal(false);
       fetchAllStores();
     } catch (error) {
@@ -120,7 +120,7 @@ const TiendasGlobalesPage = () => {
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
       
-      toast.success('Tienda eliminada exitosamente');
+      toast.success('Tienda/Caja eliminada exitosamente');
       fetchAllStores();
     } catch (error) {
       console.error('Error deleting store:', error);
@@ -144,7 +144,7 @@ const TiendasGlobalesPage = () => {
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
             <Store className="w-8 h-8 text-slate-900" />
-            <h1 className="text-4xl font-black text-slate-900">Gestión de Tiendas</h1>
+            <h1 className="text-4xl font-black text-slate-900">Gestión de Tiendas/Cajas</h1>
           </div>
           <p className="text-slate-600">Todas las tiendas del sistema organizadas por cuenta</p>
         </div>
@@ -158,7 +158,7 @@ const TiendasGlobalesPage = () => {
             <table className="w-full">
               <thead className="bg-slate-100">
                 <tr className="border-b-2 border-slate-900">
-                  <th className="text-left py-4 px-6 font-bold">Nombre Tienda</th>
+                  <th className="text-left py-4 px-6 font-bold">Nombre Tienda/Caja</th>
                   <th className="text-left py-4 px-6 font-bold">Cuenta Vinculada</th>
                   <th className="text-left py-4 px-6 font-bold">Propietario</th>
                   <th className="text-left py-4 px-6 font-bold">Fecha Creación</th>
@@ -233,11 +233,11 @@ const TiendasGlobalesPage = () => {
               className="bg-white border-4 border-slate-900 rounded-2xl p-8 max-w-lg w-full"
               style={{ boxShadow: '12px 12px 0px 0px rgba(15,23,42,1)' }}
             >
-              <h2 className="text-2xl font-black mb-6">Editar Tienda</h2>
+              <h2 className="text-2xl font-black mb-6">Editar Tienda/Caja</h2>
               
               <div className="space-y-4">
                 <div>
-                  <label className="block font-bold mb-2">Nombre de la Tienda *</label>
+                  <label className="block font-bold mb-2">Nombre de la Tienda/Caja *</label>
                   <input
                     type="text"
                     value={editForm.name}

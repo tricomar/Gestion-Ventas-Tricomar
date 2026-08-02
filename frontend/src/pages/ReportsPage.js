@@ -68,10 +68,10 @@ const ReportsPage = () => {
     
     // Summary
     doc.setFontSize(14);
-    doc.text('Resumen por Tienda', 14, 54);
+    doc.text('Resumen por Tienda/Caja', 14, 54);
     
     const summaryData = [
-      ['Tienda', 'Ventas', 'Total', 'Costo'],
+      ['Tienda/Caja', 'Ventas', 'Total', 'Costo'],
       [getStoreName('A'), reportData.store_a.sales_count, `$${reportData.store_a.total_sales.toLocaleString('es-CL')}`, `$${reportData.store_a.total_cost.toLocaleString('es-CL')}`],
       [getStoreName('B'), reportData.store_b.sales_count, `$${reportData.store_b.total_sales.toLocaleString('es-CL')}`, `$${reportData.store_b.total_cost.toLocaleString('es-CL')}`],
       ['Total Egresos', '', `$${reportData.total_expenses.toLocaleString('es-CL')}`, ''],
@@ -103,7 +103,7 @@ const ReportsPage = () => {
       
       doc.autoTable({
         startY: 26,
-        head: [['Fecha', 'Producto', 'Tienda', 'Cant.', 'Precio', 'Total', 'Pago', 'IVA']],
+        head: [['Fecha', 'Producto', 'Tienda/Caja', 'Cant.', 'Precio', 'Total', 'Pago', 'IVA']],
         body: salesData,
         styles: { fontSize: 8 }
       });
@@ -125,8 +125,8 @@ const ReportsPage = () => {
       ['Desde', new Date(reportData.start_date).toLocaleDateString('es-CL')],
       ['Hasta', new Date(reportData.end_date).toLocaleDateString('es-CL')],
       [],
-      ['RESUMEN POR TIENDA'],
-      ['Tienda', 'Cant. Ventas', 'Total Ventas', 'Total Costo'],
+      ['RESUMEN POR TIENDA/CAJA'],
+      ['Tienda/Caja', 'Cant. Ventas', 'Total Ventas', 'Total Costo'],
       [getStoreName('A'), reportData.store_a.sales_count, reportData.store_a.total_sales, reportData.store_a.total_cost],
       [getStoreName('B'), reportData.store_b.sales_count, reportData.store_b.total_sales, reportData.store_b.total_cost],
       [],
@@ -142,7 +142,7 @@ const ReportsPage = () => {
       const salesData = reportData.sales.map(sale => ({
         Fecha: new Date(sale.created_at).toLocaleDateString('es-CL'),
         Producto: sale.product_name || 'N/A',
-        Tienda: sale.store,
+        'Tienda/Caja': sale.store,
         Cantidad: sale.quantity,
         Precio: sale.price,
         Total: sale.total,

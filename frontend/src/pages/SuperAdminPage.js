@@ -170,7 +170,7 @@ const SuperAdminPage = () => {
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
       
-      toast.success('Tienda eliminada');
+      toast.success('Tienda/Caja eliminada');
       await selectAccount(selectedAccount.id); // Recargar
     } catch (error) {
       console.error('Error deleting store:', error);
@@ -201,7 +201,7 @@ const SuperAdminPage = () => {
         { headers: { 'Authorization': `Bearer ${token}` } }
       );
       
-      toast.success('Tienda actualizada exitosamente');
+      toast.success('Tienda/Caja actualizada exitosamente');
       setShowStoreEditModal(false);
       setEditingStoreData({ id: '', name: '', code: '' }); // Limpiar estado
       await selectAccount(selectedAccount.id); // Recargar datos
@@ -540,7 +540,7 @@ const SuperAdminPage = () => {
           {[
             { id: 'info', label: 'Info General', icon: Building2 },
             { id: 'limits', label: 'Límites', icon: Settings },
-            { id: 'stores', label: 'Tiendas', icon: Store },
+            { id: 'stores', label: 'Tiendas/Cajas', icon: Store },
             { id: 'modules', label: 'Módulos', icon: CheckSquare },
             { id: 'users', label: 'Usuarios', icon: Users }
           ].map(tab => (
@@ -607,7 +607,7 @@ const SuperAdminPage = () => {
           {activeTab === 'limits' && (
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">Máximo de Tiendas</label>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Máximo de Tiendas/Cajas</label>
                 <input
                   type="number"
                   min="1"
@@ -703,7 +703,7 @@ const SuperAdminPage = () => {
                       className="w-full px-6 py-3 bg-blue-500 text-white border-2 border-slate-900 rounded-lg font-bold hover:bg-blue-600 disabled:opacity-50 transition-all"
                       style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
                     >
-                      {saving ? 'Agregando...' : 'Agregar Tienda'}
+                      {saving ? 'Agregando...' : 'Agregar Tienda/Caja'}
                     </button>
                   </div>
                 </div>
@@ -801,11 +801,11 @@ const SuperAdminPage = () => {
               className="bg-white border-4 border-slate-900 rounded-2xl p-8 max-w-lg w-full"
               style={{ boxShadow: '12px 12px 0px 0px rgba(15,23,42,1)' }}
             >
-              <h2 className="text-2xl font-black mb-6">Editar Tienda</h2>
+              <h2 className="text-2xl font-black mb-6">Editar Tienda/Caja</h2>
               
               <div className="space-y-4">
                 <div>
-                  <label className="block font-bold mb-2">Nombre de la Tienda *</label>
+                  <label className="block font-bold mb-2">Nombre de la Tienda/Caja *</label>
                   <input
                     type="text"
                     value={editingStoreData.name}

@@ -199,7 +199,7 @@ const AnalyticsPage = () => {
                 onChange={(e) => setStoreFilter(e.target.value)}
                 className="font-bold text-slate-900 bg-transparent outline-none cursor-pointer"
               >
-                <option value="all">Todas las Tiendas</option>
+                <option value="all">Todas las Tiendas/Cajas</option>
                 {stores.map((store) => (
                   <option key={store.id} value={store.code}>
                     {store.name}

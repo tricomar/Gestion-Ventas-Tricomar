@@ -19,7 +19,7 @@ const StoresPaymentsCharts = ({ data, stores }) => {
       {/* Comparativa Tiendas */}
       {data.stores_comparison && data.stores_comparison.length > 1 && (
         <div className="bg-white border-2 border-slate-900 rounded-xl p-6" style={{ boxShadow: '6px 6px 0px 0px rgba(15,23,42,1)' }}>
-          <h3 className="text-lg font-bold text-slate-900 mb-4">Comparativa entre Tiendas</h3>
+          <h3 className="text-lg font-bold text-slate-900 mb-4">Comparativa entre Tiendas/Cajas</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={data.stores_comparison}>
               <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" />

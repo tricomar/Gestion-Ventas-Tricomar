@@ -110,14 +110,14 @@ const CustomerForm = ({ customer, initialName, onClose, onSuccess }) => {
           </div>
 
           <div className="mb-6">
-            <label className="block text-sm font-bold mb-2">TIENDA</label>
+            <label className="block text-sm font-bold mb-2">TIENDA/CAJA</label>
             <select
               value={formData.store}
               onChange={(e) => setFormData({ ...formData, store: e.target.value })}
               className="w-full px-3 py-2 border-2 border-slate-900 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900"
               required
             >
-              <option value="">Selecciona una tienda</option>
+              <option value="">Selecciona una tienda/caja</option>
               {stores && stores.map(store => (
                 <option key={store.id} value={store.id}>
                   {store.name}
