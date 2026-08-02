@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
-import { ChevronLeft, ChevronRight, ArrowLeft, Calendar as CalendarIcon, TrendingUp, DollarSign, Plus, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ArrowLeft, Calendar as CalendarIcon, TrendingUp, DollarSign, Plus, Trash2, Edit2 } from 'lucide-react';
 import { toast } from 'sonner';
 import PastIncomeForm from '../components/PastIncomeForm';
 
@@ -25,6 +25,7 @@ const IncomeRecordPage = () => {
   const [dayIncome, setDayIncome] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showPastIncomeForm, setShowPastIncomeForm] = useState(false);
+  const [editModal, setEditModal] = useState({ open: false, data: null });
 
   const currentYear = currentDate.getFullYear();
   const currentMonth = currentDate.getMonth() + 1;
@@ -97,6 +98,37 @@ const IncomeRecordPage = () => {
         toast.error('Error al eliminar ingreso');
       }
       console.error('Error deleting income:', error);
+    }
+  };
+
+  const handleEditIncome = (income) => {
+    setEditModal({ open: true, data: { ...income } });
+  };
+
+  const handleUpdateIncome = async (e) => {
+    e.preventDefault();
+    
+    try {
+      const payload = {
+        description: editModal.data.description,
+        amount: parseFloat(editModal.data.amount),
+        store: editModal.data.store
+      };
+
+      await axios.put(`${API}/other-income/${editModal.data.id}`, payload);
+      toast.success('Ingreso actualizado exitosamente');
+      setEditModal({ open: false, data: null });
+      fetchCalendarData();
+      if (selectedDay) {
+        fetchDayIncome(selectedDay);
+      }
+    } catch (error) {
+      if (error.response?.status === 403) {
+        toast.error('No tienes permisos para editar registros');
+      } else {
+        toast.error('Error al actualizar ingreso');
+      }
+      console.error('Error updating income:', error);
     }
   };
 
@@ -359,13 +391,22 @@ const IncomeRecordPage = () => {
                                 ${sale.amount.toLocaleString('es-CL')}
                               </div>
                               {canEdit && (
-                                <button
-                                  onClick={() => handleDeleteIncome(sale.id)}
-                                  className="p-1 hover:bg-red-100 rounded transition-colors"
-                                  title="Eliminar ingreso"
-                                >
-                                  <Trash2 className="w-4 h-4 text-red-600" />
-                                </button>
+                                <>
+                                  <button
+                                    onClick={() => handleEditIncome(sale)}
+                                    className="p-1 hover:bg-blue-100 rounded transition-colors"
+                                    title="Editar ingreso"
+                                  >
+                                    <Edit2 className="w-4 h-4 text-blue-600" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteIncome(sale.id)}
+                                    className="p-1 hover:bg-red-100 rounded transition-colors"
+                                    title="Eliminar ingreso"
+                                  >
+                                    <Trash2 className="w-4 h-4 text-red-600" />
+                                  </button>
+                                </>
                               )}
                             </div>
                           </div>
@@ -388,6 +429,64 @@ const IncomeRecordPage = () => {
           onSuccess={handlePastIncomeSuccess}
           initialDate={`${currentYear}-${currentMonth.toString().padStart(2, '0')}-${new Date().getDate().toString().padStart(2, '0')}`}
         />
+      )}
+
+      {/* Modal de Edición */}
+      {editModal.open && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div 
+            className="bg-white border-2 border-slate-900 rounded-xl p-6 max-w-md w-full"
+            style={{ boxShadow: '8px 8px 0px 0px rgba(15,23,42,1)' }}
+          >
+            <h3 className="text-xl font-bold mb-4">Editar Otro Ingreso</h3>
+            <form onSubmit={handleUpdateIncome} className="space-y-4">
+              <div>
+                <label className="block text-sm font-bold mb-2">Descripción</label>
+                <input
+                  type="text"
+                  value={editModal.data.description}
+                  onChange={(e) => setEditModal({
+                    ...editModal,
+                    data: { ...editModal.data, description: e.target.value }
+                  })}
+                  className="w-full px-3 py-2 border-2 border-slate-900 rounded-lg"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold mb-2">Monto</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={editModal.data.amount}
+                  onChange={(e) => setEditModal({
+                    ...editModal,
+                    data: { ...editModal.data, amount: e.target.value }
+                  })}
+                  className="w-full px-3 py-2 border-2 border-slate-900 rounded-lg"
+                  required
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 bg-slate-900 text-white rounded-lg font-bold hover:bg-slate-800"
+                >
+                  Guardar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditModal({ open: false, data: null })}
+                  className="flex-1 px-4 py-2 bg-slate-200 text-slate-900 rounded-lg font-bold hover:bg-slate-300"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );
