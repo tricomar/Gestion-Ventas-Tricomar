@@ -13,6 +13,7 @@ class SettingsUpdate(BaseModel):
         "Juguetes",
         "Otros"
     ])
+    session_duration_hours: int = Field(default=168, ge=1)  # Default: 1 semana (168 horas)
 
 class Settings(SettingsUpdate):
     model_config = ConfigDict(extra="ignore")

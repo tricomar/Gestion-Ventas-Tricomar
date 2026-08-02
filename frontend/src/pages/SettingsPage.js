@@ -74,6 +74,7 @@ const SettingsPage = () => {
   const [currentPassword, setCurrentPassword] = useState('');
   const [profileNewPassword, setProfileNewPassword] = useState('');
   const [profileConfirmPassword, setProfileConfirmPassword] = useState('');
+  const [sessionDuration, setSessionDuration] = useState(168); // Default: 1 semana en horas
   
   // User management
   const [users, setUsers] = useState([]);
@@ -162,6 +163,9 @@ const SettingsPage = () => {
   useEffect(() => {
     if (settings?.product_categories) {
       setCategories(settings.product_categories);
+    }
+    if (settings?.session_duration_hours) {
+      setSessionDuration(settings.session_duration_hours);
     }
   }, [settings]);
 
@@ -283,12 +287,21 @@ const SettingsPage = () => {
         updateData.new_password = profileNewPassword;
       }
 
+      // Actualizar perfil de usuario
       await axios.put(`${API}/auth/update-profile`, updateData);
+      
+      // Actualizar configuración de duración de sesión
+      await axios.put(`${API}/settings`, {
+        session_duration_hours: sessionDuration
+      });
 
       toast.success('Perfil actualizado exitosamente');
       setCurrentPassword('');
       setProfileNewPassword('');
       setProfileConfirmPassword('');
+      
+      // Recargar settings
+      refreshSettings();
     } catch (error) {
       const errorMsg = error.response?.data?.detail || 'Error al actualizar perfil';
       toast.error(errorMsg);
@@ -1022,6 +1035,34 @@ const SettingsPage = () => {
                 />
                 <p className="text-xs text-slate-500 mt-1">
                   El email no se puede modificar aquí
+                </p>
+              </div>
+
+              <div className="border-t-2 border-slate-200 my-6 pt-6">
+                <h3 className="text-lg font-bold text-slate-900 mb-4">
+                  ⏱️ Duración de Sesión
+                </h3>
+                <p className="text-sm text-slate-600 mb-4">
+                  Configura por cuánto tiempo deseas permanecer conectado sin tener que iniciar sesión nuevamente.
+                </p>
+                
+                <label className="block text-sm font-bold text-slate-700 mb-2">
+                  Tiempo de Sesión
+                </label>
+                <select
+                  value={sessionDuration}
+                  onChange={(e) => setSessionDuration(parseInt(e.target.value))}
+                  className="w-full px-4 py-3 border-2 border-slate-900 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-slate-900"
+                >
+                  <option value={8}>8 horas</option>
+                  <option value={12}>12 horas</option>
+                  <option value={24}>1 día (24 horas)</option>
+                  <option value={168}>1 semana (recomendado)</option>
+                  <option value={720}>1 mes (30 días)</option>
+                  <option value={8760}>1 año (365 días)</option>
+                </select>
+                <p className="text-xs text-slate-500 mt-2">
+                  💡 Por seguridad, recomendamos 1 semana. Los cambios se aplicarán en tu próximo inicio de sesión.
                 </p>
               </div>
 

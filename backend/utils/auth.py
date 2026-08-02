@@ -27,9 +27,12 @@ def verify_password(password: str, hashed: str) -> bool:
     """Verify a password against its hash"""
     return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
 
-def create_token(user_id: str, email: str) -> str:
-    """Create a JWT token for a user"""
-    expiration = datetime.now(timezone.utc) + timedelta(hours=JWT_EXPIRATION_HOURS)
+def create_token(user_id: str, email: str, expiration_hours: int = None) -> str:
+    """Create a JWT token for a user with optional custom expiration"""
+    if expiration_hours is None:
+        expiration_hours = JWT_EXPIRATION_HOURS
+    
+    expiration = datetime.now(timezone.utc) + timedelta(hours=expiration_hours)
     payload = {
         'user_id': user_id,
         'email': email,

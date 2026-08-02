@@ -84,8 +84,8 @@ async def register(user_input: UserCreate):
             created_at=datetime.now(timezone.utc)
         )
         
-        # Generar token
-        token = create_token(user.id, user.email)
+        # Generar token con duración por defecto (1 semana)
+        token = create_token(user.id, user.email, expiration_hours=168)
         
         return TokenResponse(token=token, user=user)
         
@@ -129,7 +129,15 @@ async def login(credentials: UserLogin):
         user_doc['created_at'] = datetime.fromisoformat(user_doc['created_at'])
     
     user = User(**{k: v for k, v in user_doc.items() if k != 'password_hash'})
-    token = create_token(user.id, user.email)
+    
+    # Obtener configuración de duración de sesión del usuario
+    settings = await db.settings.find_one(
+        {"account_id": user.account_id},
+        {"_id": 0, "session_duration_hours": 1}
+    )
+    session_duration = settings.get('session_duration_hours', 168) if settings else 168  # Default: 1 semana
+    
+    token = create_token(user.id, user.email, expiration_hours=session_duration)
     
     return TokenResponse(token=token, user=user)
 
