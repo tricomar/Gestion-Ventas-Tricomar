@@ -141,32 +141,32 @@ const RealtimeMetrics = ({ refreshTrigger }) => {
     );
   };
 
-  // Helper: Renderizar columna general
-  const renderGeneralColumn = (generalData) => {
-    return (
-      <div>
-        <div 
-          className="mb-3 px-4 py-2 border-2 border-slate-900 rounded-lg text-center font-black text-lg bg-white"
-        >
-          GENERAL
-        </div>
-        <div className="space-y-3">
-          <MetricCard
-            title="Otros Ingresos"
-            value={generalData?.otros_ingresos || 0}
-            icon={TrendingUp}
-            color="#E0E7FF"
-          />
-          <MetricCard
-            title="Egresos"
-            value={generalData?.egresos || 0}
-            icon={TrendingDown}
-            color="#FEE2E2"
-          />
-        </div>
-      </div>
-    );
-  };
+  // Helper: Renderizar columna general - ELIMINADO
+  // const renderGeneralColumn = (generalData) => {
+  //   return (
+  //     <div>
+  //       <div 
+  //         className="mb-3 px-4 py-2 border-2 border-slate-900 rounded-lg text-center font-black text-lg bg-white"
+  //       >
+  //         GENERAL
+  //       </div>
+  //       <div className="space-y-3">
+  //         <MetricCard
+  //           title="Otros Ingresos"
+  //           value={generalData?.otros_ingresos || 0}
+  //           icon={TrendingUp}
+  //           color="#E0E7FF"
+  //         />
+  //         <MetricCard
+  //           title="Egresos"
+  //           value={generalData?.egresos || 0}
+  //           icon={TrendingDown}
+  //           color="#FEE2E2"
+  //         />
+  //       </div>
+  //     </div>
+  //   );
+  // };
 
   if (loading && !metrics && !selectedHistoricMonth) {
     return <div className="text-center py-4 text-slate-500">Cargando métricas...</div>;
@@ -197,11 +197,7 @@ const RealtimeMetrics = ({ refreshTrigger }) => {
   };
 
   const getCurrentGeneral = () => {
-    if (showPeriod === 'month' && metrics) {
-      return metrics.general_month;
-    } else if (selectedHistoricMonth?.data) {
-      return selectedHistoricMonth.data.general;
-    }
+    // ELIMINADO - Ya no se usa la columna GENERAL
     return { otros_ingresos: 0, egresos: 0 };
   };
 
@@ -255,9 +251,6 @@ const RealtimeMetrics = ({ refreshTrigger }) => {
               index
             );
           })}
-
-          {/* Columna General */}
-          {renderGeneralColumn(currentGeneral)}
         </div>
 
         {/* Chart Section */}
@@ -455,9 +448,6 @@ const RealtimeMetrics = ({ refreshTrigger }) => {
               index
             );
           })}
-
-          {/* Columna General */}
-          {renderGeneralColumn(currentGeneral)}
         </div>
       ) : (
         /* Historic Grid - Last 2 years */
