@@ -125,13 +125,13 @@ const RealtimeMetrics = ({ refreshTrigger }) => {
             color="#FFF7ED"
           />
           <MetricCard
-            title="Ganancia"
+            title="Utilidades"
             value={storeData?.utilidades || 0}
             icon={TrendingUp}
             color="#D1FAE5"
           />
           <MetricCard
-            title="IVA a favor"
+            title="Excedente"
             value={storeData?.iva_a_favor || 0}
             icon={DollarSign}
             color="#DBEAFE"
@@ -365,7 +365,7 @@ const RealtimeMetrics = ({ refreshTrigger }) => {
                         {(chartType === 'bars' || chartType === 'both') && (
                           <Bar 
                             dataKey={`${storeInfo.id}.utilidades`}
-                            name={`${storeInfo.name} - Ganancia`}
+                            name={`${storeInfo.name} - Utilidades`}
                             fill={barFill}
                             stroke="#0f172a"
                             strokeWidth={2}
@@ -376,7 +376,7 @@ const RealtimeMetrics = ({ refreshTrigger }) => {
                           <Line 
                             type="monotone" 
                             dataKey={`${storeInfo.id}.utilidades`}
-                            name={chartType === 'lines' ? `${storeInfo.name} - Ganancia` : undefined}
+                            name={chartType === 'lines' ? `${storeInfo.name} - Utilidades` : undefined}
                             stroke={utilidadesStroke}
                             strokeWidth={3}
                             dot={{ fill: utilidadesStroke, r: 4 }}
