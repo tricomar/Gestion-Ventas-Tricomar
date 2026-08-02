@@ -13,6 +13,7 @@ from models.income import OtherIncome, OtherIncomeCreate, OtherIncomeCreateWithD
 from middleware.tenant import get_tenant_filter, add_account_id_to_document
 from utils import db, get_current_user, require_admin
 from models.users import User
+from utils.audit import create_audit_log
 
 # Zona horaria de Chile
 CHILE_TZ = ZoneInfo('America/Santiago')
@@ -65,9 +66,37 @@ async def update_other_income(income_id: str, income_input: OtherIncomeCreate, c
     if not existing:
         raise HTTPException(status_code=404, detail="Income not found")
     
+    # Guardar datos antiguos para auditoría
+    old_data = {
+        "description": existing.get('description'),
+        "amount": existing.get('amount'),
+        "category": existing.get('category'),
+        "payment_method": existing.get('payment_method')
+    }
+    
     # Update income data (sin modificar created_at ni date)
     update_data = income_input.model_dump()
     await db.other_income.update_one(get_tenant_filter(current_user.dict(), {'id': income_id}), {'$set': update_data})
+    
+    # Guardar datos nuevos para auditoría
+    new_data = {
+        "description": update_data.get('description'),
+        "amount": update_data.get('amount'),
+        "category": update_data.get('category'),
+        "payment_method": update_data.get('payment_method')
+    }
+    
+    # Crear log de auditoría
+    await create_audit_log(
+        account_id=current_user.account_id,
+        user_id=current_user.id,
+        user_name=current_user.name,
+        action="update",
+        record_type="income",
+        record_id=income_id,
+        old_data=old_data,
+        new_data=new_data
+    )
     
     # Fetch updated income
     updated = await db.other_income.find_one(get_tenant_filter(current_user.dict(), {'id': income_id}), {'_id': 0})
@@ -89,9 +118,35 @@ async def delete_other_income(income_id: str, current_user: User = Depends(get_c
             detail="No tienes permisos para eliminar registros de otros ingresos"
         )
     
+    # Obtener datos antes de eliminar para auditoría
+    existing = await db.other_income.find_one(get_tenant_filter(current_user.dict(), {'id': income_id}), {'_id': 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Income not found")
+    
+    old_data = {
+        "description": existing.get('description'),
+        "amount": existing.get('amount'),
+        "category": existing.get('category'),
+        "payment_method": existing.get('payment_method'),
+        "date": existing.get('date')
+    }
+    
     result = await db.other_income.delete_one(get_tenant_filter(current_user.dict(), {'id': income_id}))
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Income not found")
+    
+    # Crear log de auditoría
+    await create_audit_log(
+        account_id=current_user.account_id,
+        user_id=current_user.id,
+        user_name=current_user.name,
+        action="delete",
+        record_type="income",
+        record_id=income_id,
+        old_data=old_data,
+        new_data=None
+    )
+    
     return {"message": "Income deleted"}
 
 

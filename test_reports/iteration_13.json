@@ -1,0 +1,23 @@
+{
+  "summary": "Verified 3 requested features: (1) Category import via .xlsx/.csv button visible in Configuración > Inventario, (2) Audit logs backend for Expenses & Income (create_audit_log fired on PUT/DELETE), (3) Auditoría tab visible for account_admin with filters, table, and expandable details. Backend and frontend integration working end-to-end.",
+  "tested_scope": ["backend", "frontend", "auth", "integration"],
+  "passed": [
+    "Login as account_admin (hola@tricomar.cl) -> JWT returned",
+    "GET /api/audit returns logs with proper schema (id, user_name, action, record_type, old_data, new_data, timestamp)",
+    "Filter GET /api/audit?record_type=expense returns expense-only logs",
+    "POST /api/other-income + PUT /api/other-income/{id} creates 'update' audit log with old_data and new_data (verified via API)",
+    "DELETE /api/other-income/{id} creates 'delete' audit log with old_data (verified via API)",
+    "Existing sale + expense audit logs present in DB and returned by /api/audit",
+    "UI: Auditoría tab visible in Configuración for account_admin",
+    "UI: Auditoría table shows entries: Ingreso Eliminado, Ingreso Editado, Egreso Eliminado, Venta Editado (user Tricomar, correct timestamps)",
+    "UI: Filters (Tipo de Registro, Acción) and Actualizar button present, 'Ver cambios' accordion present",
+    "UI: Inventario tab shows 'Importar .xlsx/.csv' button next to 'Agregar Nueva Categoría'"
+  ],
+  "failed": [],
+  "action_items": [
+    "OPTIONAL: Not tested visibility restriction on supervisor role (main agent may want to verify Auditoría tab is hidden for non-admin roles). Backend audit.py currently allows both account_admin AND supervisor to view logs — confirm whether this matches the intended 'only account_admin' UI requirement."
+  ],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "retest_needed": false,
+  "full_testing_deferred": true
+}
