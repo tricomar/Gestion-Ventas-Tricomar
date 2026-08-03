@@ -9,6 +9,11 @@ import { useStores } from '../hooks/useStores';
 import ImportProducts from '../components/ImportProducts';
 import * as XLSX from 'xlsx';
 
+// Settings Tabs Components
+import ProfileTab from '../components/settings/ProfileTab';
+import StoresTab from '../components/settings/StoresTab';
+import ImportTab from '../components/settings/ImportTab';
+
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
@@ -36,7 +41,7 @@ const SettingsPage = () => {
   const [editingCategoryValue, setEditingCategoryValue] = useState('');
   const fileInputRef = useRef(null);
   
-  // Database reset
+  // Database reset (aún no refactorizado)
   const [showResetModal, setShowResetModal] = useState(false);
   const [showCredentialsModal, setShowCredentialsModal] = useState(false);
   const [resetCredentials, setResetCredentials] = useState(null);
@@ -45,7 +50,7 @@ const SettingsPage = () => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   
-  // Soft Reset
+  // Soft Reset (aún no refactorizado)
   const [showSoftResetModal, setShowSoftResetModal] = useState(false);
   const [softResetPassword, setSoftResetPassword] = useState('');
   const [softResetOptions, setSoftResetOptions] = useState({
@@ -56,25 +61,13 @@ const SettingsPage = () => {
     customers: false
   });
   
-  // Database validation
+  // Database validation (aún no refactorizado)
   const [showValidationModal, setShowValidationModal] = useState(false);
   const [validationReport, setValidationReport] = useState(null);
   const [validating, setValidating] = useState(false);
   
-  // Store settings - Dinámico basado en useStores
-  const [storeNames, setStoreNames] = useState({});
-  const [storeCodes, setStoreCodes] = useState({});
-  
   // Account info para validar límites
   const [accountInfo, setAccountInfo] = useState(null);
-  
-  // Profile settings
-  const [profileName, setProfileName] = useState('');
-  const [profileEmail, setProfileEmail] = useState('');
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [profileNewPassword, setProfileNewPassword] = useState('');
-  const [profileConfirmPassword, setProfileConfirmPassword] = useState('');
-  const [sessionDuration, setSessionDuration] = useState(168); // Default: 1 semana en horas
   
   // User management
   const [users, setUsers] = useState([]);
@@ -122,25 +115,8 @@ const SettingsPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
-  // Inicializar nombres y códigos de tiendas desde useStores
-  useEffect(() => {
-    if (stores && stores.length > 0) {
-      const names = {};
-      const codes = {};
-      stores.forEach(store => {
-        names[store.id] = store.name;
-        codes[store.id] = store.code || '';
-      });
-      setStoreNames(names);
-      setStoreCodes(codes);
-    }
-  }, [stores]);
-
   useEffect(() => {
     if (user) {
-      setProfileName(user.name);
-      setProfileEmail(user.email);
-      
       // Cargar cuentas si es super-admin
       if (user.role === 'super_admin') {
         fetchAccounts();
@@ -163,9 +139,6 @@ const SettingsPage = () => {
   useEffect(() => {
     if (settings?.product_categories) {
       setCategories(settings.product_categories);
-    }
-    if (settings?.session_duration_hours) {
-      setSessionDuration(settings.session_duration_hours);
     }
   }, [settings]);
 
@@ -231,82 +204,6 @@ const SettingsPage = () => {
       toast.error('Error al cargar registros de auditoría');
     } finally {
       setAuditLoading(false);
-    }
-  };
-
-  const handleSaveStoreNames = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-
-    try {
-      // Actualizar nombres y códigos de tiendas
-      await axios.put(`${API}/auth/account/stores`, {
-        stores: stores.map(store => ({
-          id: store.id,
-          name: storeNames[store.id] || store.name,
-          code: storeCodes[store.id] || store.code
-        }))
-      });
-
-      toast.success('Tiendas/Cajas actualizadas correctamente');
-      // Recargar stores
-      window.location.reload();
-    } catch (error) {
-      toast.error('Error al guardar cambios');
-      console.error('Error saving store names:', error);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleSaveProfile = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-
-    try {
-      const updateData = { name: profileName };
-      
-      if (profileNewPassword || profileConfirmPassword) {
-        if (profileNewPassword !== profileConfirmPassword) {
-          toast.error('Las contraseñas no coinciden');
-          setSaving(false);
-          return;
-        }
-        if (profileNewPassword.length < 6) {
-          toast.error('La contraseña debe tener al menos 6 caracteres');
-          setSaving(false);
-          return;
-        }
-        if (!currentPassword) {
-          toast.error('Ingresa tu contraseña actual');
-          setSaving(false);
-          return;
-        }
-        
-        updateData.current_password = currentPassword;
-        updateData.new_password = profileNewPassword;
-      }
-
-      // Actualizar perfil de usuario
-      await axios.put(`${API}/auth/update-profile`, updateData);
-      
-      // Actualizar configuración de duración de sesión
-      await axios.put(`${API}/settings`, {
-        session_duration_hours: sessionDuration
-      });
-
-      toast.success('Perfil actualizado exitosamente');
-      setCurrentPassword('');
-      setProfileNewPassword('');
-      setProfileConfirmPassword('');
-      
-      // Recargar settings
-      refreshSettings();
-    } catch (error) {
-      const errorMsg = error.response?.data?.detail || 'Error al actualizar perfil';
-      toast.error(errorMsg);
-    } finally {
-      setSaving(false);
     }
   };
 
@@ -920,209 +817,12 @@ const SettingsPage = () => {
 
         {/* Store Settings Tab - Editable para account_admin y supervisor */}
         {activeTab === 'stores' && isSupervisor && !isSuperAdmin && (
-          <div 
-            className="bg-white border-2 border-slate-900 rounded-xl p-8"
-            style={{ boxShadow: '8px 8px 0px 0px rgba(15,23,42,1)' }}
-          >
-            <div className="flex items-center gap-3 mb-6">
-              <Store className="w-6 h-6" />
-              <h2 className="text-2xl font-bold text-slate-900">Configuración de Tiendas/Cajas</h2>
-            </div>
-            
-            <p className="text-sm text-slate-600 mb-6">
-              Personaliza los nombres de tus tiendas. Para agregar nuevas tiendas, contacta al super-administrador.
-            </p>
-            
-            {stores && stores.length > 0 ? (
-              <form onSubmit={handleSaveStoreNames} className="space-y-6">
-                {stores.map((store, index) => (
-                  <div key={store.id} className="border-2 border-slate-900 rounded-xl p-4 bg-slate-50">
-                    <label className="block text-sm font-bold text-slate-700 mb-3">
-                      {index === 0 ? 'Tienda/Caja Principal' : `Tienda/Caja ${index + 1}`}
-                      {index === 0 && <span className="ml-2 text-xs text-blue-600">(Por defecto)</span>}
-                    </label>
-                    
-                    {/* Nombre de la tienda */}
-                    <div className="mb-3">
-                      <label className="block text-xs font-semibold text-slate-600 mb-1">
-                        Nombre de la Tienda/Caja
-                      </label>
-                      <input
-                        type="text"
-                        value={storeNames[store.id] || store.name}
-                        onChange={(e) => setStoreNames({...storeNames, [store.id]: e.target.value})}
-                        className="w-full px-4 py-3 border-2 border-slate-900 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-slate-900"
-                        required
-                        maxLength={50}
-                        placeholder={store.name}
-                      />
-                    </div>
-
-                    {/* Código de la tienda */}
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-600 mb-1">
-                        Código de la Tienda/Caja
-                      </label>
-                      <input
-                        type="text"
-                        value={storeCodes[store.id] || store.code}
-                        onChange={(e) => setStoreCodes({...storeCodes, [store.id]: e.target.value.toUpperCase()})}
-                        className="w-full px-4 py-3 border-2 border-slate-900 rounded-xl font-mono font-bold focus:outline-none focus:ring-2 focus:ring-slate-900"
-                        maxLength={3}
-                        placeholder={store.code}
-                      />
-                      <p className="text-xs text-slate-500 mt-1">
-                        Máximo 3 caracteres. Se usará en registros y reportes.
-                      </p>
-                    </div>
-                  </div>
-                ))}
-
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="flex items-center gap-2 px-6 py-3 bg-[#D4F0A5] border-2 border-slate-900 rounded-xl font-bold hover:bg-[#c5e196] disabled:opacity-50 transition-all"
-                  style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
-                >
-                  <Save className="w-5 h-5" />
-                  {saving ? 'Guardando...' : 'Guardar Cambios'}
-                </button>
-              </form>
-            ) : (
-              <div className="text-center py-8 text-slate-600">
-                <Store className="w-12 h-12 mx-auto mb-4 text-slate-400" />
-                <p>No hay tiendas configuradas para tu cuenta.</p>
-                <p className="text-sm mt-2">Contacta al super-administrador.</p>
-              </div>
-            )}
-          </div>
+          <StoresTab />
         )}
 
         {/* Profile Settings Tab */}
         {activeTab === 'profile' && (
-          <div 
-            className="bg-white border-2 border-slate-900 rounded-xl p-8"
-            style={{ boxShadow: '8px 8px 0px 0px rgba(15,23,42,1)' }}
-          >
-            <div className="flex items-center gap-3 mb-6">
-              <User className="w-6 h-6" />
-              <h2 className="text-2xl font-bold text-slate-900">Mi Perfil</h2>
-            </div>
-            
-            <form onSubmit={handleSaveProfile} className="space-y-6">
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">
-                  Nombre Completo
-                </label>
-                <input
-                  type="text"
-                  value={profileName}
-                  onChange={(e) => setProfileName(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-slate-900 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-slate-900"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  value={profileEmail}
-                  className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl font-medium bg-slate-50 cursor-not-allowed"
-                  disabled
-                />
-                <p className="text-xs text-slate-500 mt-1">
-                  El email no se puede modificar aquí
-                </p>
-              </div>
-
-              <div className="border-t-2 border-slate-200 my-6 pt-6">
-                <h3 className="text-lg font-bold text-slate-900 mb-4">
-                  ⏱️ Duración de Sesión
-                </h3>
-                <p className="text-sm text-slate-600 mb-4">
-                  Configura por cuánto tiempo deseas permanecer conectado sin tener que iniciar sesión nuevamente.
-                </p>
-                
-                <label className="block text-sm font-bold text-slate-700 mb-2">
-                  Tiempo de Sesión
-                </label>
-                <select
-                  value={sessionDuration}
-                  onChange={(e) => setSessionDuration(parseInt(e.target.value))}
-                  className="w-full px-4 py-3 border-2 border-slate-900 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-slate-900"
-                >
-                  <option value={8}>8 horas</option>
-                  <option value={12}>12 horas</option>
-                  <option value={24}>1 día (24 horas)</option>
-                  <option value={168}>1 semana (recomendado)</option>
-                  <option value={720}>1 mes (30 días)</option>
-                  <option value={8760}>1 año (365 días)</option>
-                </select>
-                <p className="text-xs text-slate-500 mt-2">
-                  💡 Por seguridad, recomendamos 1 semana. Los cambios se aplicarán en tu próximo inicio de sesión.
-                </p>
-              </div>
-
-              <div className="border-t-2 border-slate-200 my-6 pt-6">
-                <h3 className="text-lg font-bold text-slate-900 mb-4">
-                  Cambiar Contraseña (Opcional)
-                </h3>
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">
-                  Contraseña Actual
-                </label>
-                <input
-                  type="password"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-slate-900 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-slate-900"
-                  placeholder="Ingresa tu contraseña actual"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">
-                  Nueva Contraseña
-                </label>
-                <input
-                  type="password"
-                  value={profileNewPassword}
-                  onChange={(e) => setProfileNewPassword(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-slate-900 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-slate-900"
-                  placeholder="Mínimo 6 caracteres"
-                  minLength={6}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-2">
-                  Confirmar Nueva Contraseña
-                </label>
-                <input
-                  type="password"
-                  value={profileConfirmPassword}
-                  onChange={(e) => setProfileConfirmPassword(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-slate-900 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-slate-900"
-                  placeholder="Repite la nueva contraseña"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={saving}
-                className="flex items-center gap-2 px-6 py-3 bg-[#D4F0A5] border-2 border-slate-900 rounded-xl font-bold hover:bg-[#c5e196] disabled:opacity-50 transition-all"
-                style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
-              >
-                <Save className="w-5 h-5" />
-                {saving ? 'Guardando...' : 'Guardar Cambios'}
-              </button>
-            </form>
-          </div>
+          <ProfileTab />
         )}
 
         {/* Employee Management Tab (Supervisor Only) - Gestión de usuarios de su cuenta */}
@@ -1210,25 +910,9 @@ const SettingsPage = () => {
         )}
 
         {/* Importar Datos Tab - Solo para account_admin y supervisor */}
+        {/* Import Tab */}
         {activeTab === 'import' && isSupervisor && (
-          <div 
-            className="bg-white border-2 border-slate-900 rounded-xl p-8"
-            style={{ boxShadow: '8px 8px 0px 0px rgba(15,23,42,1)' }}
-          >
-            <div className="flex items-center gap-3 mb-6">
-              <Database className="w-6 h-6" />
-              <h2 className="text-2xl font-bold text-slate-900">Importar Datos</h2>
-            </div>
-            
-            <div className="bg-blue-50 border-2 border-blue-900 rounded-lg p-4 mb-6">
-              <p className="text-sm text-blue-900">
-                <strong>📥 Importa productos masivamente desde Excel</strong><br/>
-                Descarga la plantilla, complétala con tus productos y súbela para importarlos automáticamente.
-              </p>
-            </div>
-
-            <ImportProducts />
-          </div>
+          <ImportTab />
         )}
 
         {/* Inventory Management Tab - Gestión de Categorías */}
