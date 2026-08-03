@@ -59,9 +59,16 @@ export const useStores = () => {
     return stores.find(s => s.key === key);
   };
 
-  const getStoreName = (key) => {
-    const store = getStoreByKey(key);
-    return store ? store.name : `Tienda ${key}`;
+  const getStoreName = (keyOrId) => {
+    // Intentar buscar por key primero (códigos cortos: A, B, PS, TB, GR, etc.)
+    let store = getStoreByKey(keyOrId);
+    
+    // Si no se encuentra, intentar buscar por ID (store_xxx)
+    if (!store) {
+      store = getStoreById(keyOrId);
+    }
+    
+    return store ? store.name : `Tienda ${keyOrId}`;
   };
 
   return {
