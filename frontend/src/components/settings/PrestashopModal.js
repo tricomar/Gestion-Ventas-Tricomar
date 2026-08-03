@@ -53,7 +53,23 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
       toast.success('✓ Conexión exitosa con PrestaShop');
     } catch (error) {
       setConnectionStatus('error');
-      const errorMsg = error.response?.data?.detail || 'Error al conectar con PrestaShop';
+      
+      // Manejar diferentes tipos de errores
+      let errorMsg = 'Error al conectar con PrestaShop';
+      
+      if (error.response?.data) {
+        const data = error.response.data;
+        
+        // Si es un error de validación de Pydantic (422)
+        if (Array.isArray(data.detail)) {
+          errorMsg = data.detail.map(err => err.msg).join(', ');
+        } else if (typeof data.detail === 'string') {
+          errorMsg = data.detail;
+        } else if (data.message) {
+          errorMsg = data.message;
+        }
+      }
+      
       toast.error(errorMsg);
     } finally {
       setTesting(false);
@@ -81,7 +97,22 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
       toast.success('Integración configurada exitosamente');
       setStep(2); // Pasar a sincronización
     } catch (error) {
-      const errorMsg = error.response?.data?.detail || 'Error al configurar integración';
+      // Manejar diferentes tipos de errores
+      let errorMsg = 'Error al configurar integración';
+      
+      if (error.response?.data) {
+        const data = error.response.data;
+        
+        // Si es un error de validación de Pydantic (422)
+        if (Array.isArray(data.detail)) {
+          errorMsg = data.detail.map(err => err.msg).join(', ');
+        } else if (typeof data.detail === 'string') {
+          errorMsg = data.detail;
+        } else if (data.message) {
+          errorMsg = data.message;
+        }
+      }
+      
       toast.error(errorMsg);
     } finally {
       setLoading(false);
@@ -100,7 +131,21 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
       setCategoriesCount(response.data.synced_count);
       toast.success(`✓ ${response.data.synced_count} categorías sincronizadas`);
     } catch (error) {
-      const errorMsg = error.response?.data?.detail || 'Error al sincronizar categorías';
+      // Manejar diferentes tipos de errores
+      let errorMsg = 'Error al sincronizar categorías';
+      
+      if (error.response?.data) {
+        const data = error.response.data;
+        
+        if (Array.isArray(data.detail)) {
+          errorMsg = data.detail.map(err => err.msg).join(', ');
+        } else if (typeof data.detail === 'string') {
+          errorMsg = data.detail;
+        } else if (data.message) {
+          errorMsg = data.message;
+        }
+      }
+      
       toast.error(errorMsg);
     } finally {
       setSyncingCategories(false);
@@ -121,7 +166,21 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
         duration: 5000
       });
     } catch (error) {
-      const errorMsg = error.response?.data?.detail || 'Error al sincronizar productos';
+      // Manejar diferentes tipos de errores
+      let errorMsg = 'Error al sincronizar productos';
+      
+      if (error.response?.data) {
+        const data = error.response.data;
+        
+        if (Array.isArray(data.detail)) {
+          errorMsg = data.detail.map(err => err.msg).join(', ');
+        } else if (typeof data.detail === 'string') {
+          errorMsg = data.detail;
+        } else if (data.message) {
+          errorMsg = data.message;
+        }
+      }
+      
       toast.error(errorMsg);
     } finally {
       setSyncingProducts(false);

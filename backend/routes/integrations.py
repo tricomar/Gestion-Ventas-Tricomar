@@ -2,10 +2,11 @@
 Router para integraciones con plataformas ecommerce (PrestaShop, WooCommerce, etc.)
 """
 
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks, Body
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timezone, timedelta
 from uuid import uuid4
+from pydantic import BaseModel
 import asyncio
 
 from models.integrations import (
@@ -23,11 +24,15 @@ from models.users import User
 router = APIRouter(prefix="/integrations", tags=["integrations"])
 
 
+class PrestashopConnectRequest(BaseModel):
+    shop_url: str
+    api_key: str
+    store_id: str
+
+
 @router.post("/prestashop/connect")
 async def connect_prestashop(
-    shop_url: str,
-    api_key: str,
-    store_id: str,
+    request: PrestashopConnectRequest,
     current_user: User = Depends(get_current_user)
 ):
     """
@@ -40,33 +45,35 @@ async def connect_prestashop(
     
     # Buscar la tienda específica
     stores = store.get('stores', [])
-    selected_store = next((s for s in stores if s['id'] == store_id), None)
+    selected_store = next((s for s in stores if s['id'] == request.store_id), None)
     
     if not selected_store:
         raise HTTPException(status_code=404, detail="Tienda/Caja no encontrada")
     
     # Probar conexión con PrestaShop
     try:
-        ps_service = PrestashopAPIService(shop_url, api_key)
+        ps_service = PrestashopAPIService(request.shop_url, request.api_key)
         if not ps_service.test_connection():
             raise HTTPException(status_code=400, detail="No se pudo conectar con PrestaShop. Verifica la URL y API Key")
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error al conectar: {str(e)}")
     
     # Verificar si ya existe una integración para esta tienda
     existing = await db.prestashop_integrations.find_one(
-        get_tenant_filter(current_user.dict(), {'store_id': store_id}),
+        get_tenant_filter(current_user.dict(), {'store_id': request.store_id}),
         {'_id': 0}
     )
     
     if existing:
         # Actualizar existente
         await db.prestashop_integrations.update_one(
-            get_tenant_filter(current_user.dict(), {'store_id': store_id}),
+            get_tenant_filter(current_user.dict(), {'store_id': request.store_id}),
             {
                 '$set': {
-                    'shop_url': shop_url,
-                    'api_key': api_key,
+                    'shop_url': request.shop_url,
+                    'api_key': request.api_key,
                     'is_active': True,
                     'updated_at': datetime.now(timezone.utc).isoformat()
                 }
@@ -78,10 +85,10 @@ async def connect_prestashop(
         integration = {
             'id': str(uuid4()),
             'account_id': current_user.account_id,
-            'store_id': store_id,
+            'store_id': request.store_id,
             'store_name': selected_store['name'],
-            'shop_url': shop_url,
-            'api_key': api_key,
+            'shop_url': request.shop_url,
+            'api_key': request.api_key,
             'is_active': True,
             'last_sync_products': None,
             'last_sync_categories': None,
