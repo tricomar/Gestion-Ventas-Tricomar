@@ -219,6 +219,40 @@ class PrestashopAPIService:
             print(f"Error updating stock for product {product_id}: {str(e)}")
             return False
     
+    def update_product_reference(self, product_id: int, reference: str) -> bool:
+        """
+        Actualizar SKU/reference de un producto en PrestaShop
+        
+        Args:
+            product_id: ID del producto en PrestaShop
+            reference: Nuevo SKU/reference
+            
+        Returns:
+            True si la actualización fue exitosa
+        """
+        try:
+            # Construir XML para actualizar solo el reference
+            xml_data = f'''<?xml version="1.0" encoding="UTF-8"?>
+<prestashop xmlns:xlink="http://www.w3.org/1999/xlink">
+    <product>
+        <id>{product_id}</id>
+        <reference><![CDATA[{reference}]]></reference>
+    </product>
+</prestashop>'''
+            
+            # Actualizar producto
+            self._make_request(
+                f'products/{product_id}',
+                method='PUT',
+                data=xml_data
+            )
+            
+            return True
+            
+        except Exception as e:
+            print(f"Error updating reference for product {product_id}: {str(e)}")
+            return False
+    
     def get_all_stock(self, limit: int = 500) -> Dict[int, int]:
         """
         Obtener todo el stock disponible

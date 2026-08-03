@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { Home, Settings as SettingsIcon, Save, User, Store, Users, Plus, Edit2, Trash2, X, Database, AlertTriangle, Upload, Download, Package, Tag, FileUp, ClipboardList } from 'lucide-react';
+import { Home, Settings as SettingsIcon, Save, User, Store, Users, Plus, Edit2, Trash2, X, Database, AlertTriangle, Upload, Download, Package, Tag, FileUp, ClipboardList, ShoppingCart } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useSettings } from '../context/SettingsContext';
 import { useAuth } from '../context/AuthContext';
@@ -13,6 +13,7 @@ import * as XLSX from 'xlsx';
 import ProfileTab from '../components/settings/ProfileTab';
 import StoresTab from '../components/settings/StoresTab';
 import ImportTab from '../components/settings/ImportTab';
+import IntegrationsTab from '../components/settings/IntegrationsTab';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -797,6 +798,23 @@ const SettingsPage = () => {
             </button>
           )}
           
+          {/* Integraciones Ecommerce - Solo para account_admin y supervisor */}
+          {isSupervisor && (
+            <button
+              onClick={() => setActiveTab('integrations')}
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold border-2 border-slate-900 transition-all ${
+                activeTab === 'integrations' 
+                  ? 'bg-slate-900 text-white' 
+                  : 'bg-white text-slate-900 hover:bg-slate-50'
+              }`}
+              style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
+              data-testid="integrations-tab-btn"
+            >
+              <ShoppingCart className="w-5 h-5" />
+              Integraciones
+            </button>
+          )}
+          
           {/* Logs de Auditoría - Solo para account_admin */}
           {user?.role === 'account_admin' && (
             <button
@@ -913,6 +931,11 @@ const SettingsPage = () => {
         {/* Import Tab */}
         {activeTab === 'import' && isSupervisor && (
           <ImportTab />
+        )}
+
+        {/* Integrations Tab */}
+        {activeTab === 'integrations' && isSupervisor && (
+          <IntegrationsTab />
         )}
 
         {/* Inventory Management Tab - Gestión de Categorías */}

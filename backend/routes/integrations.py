@@ -272,9 +272,17 @@ async def sync_products(
             
             # Obtener SKU (reference en PrestaShop)
             sku = ps_prod.get('reference', '')
+            sku_generated = False
             if not sku:
                 # Generar SKU automático único
                 sku = f"PS-{prod_id}-{str(uuid4())[:8]}"
+                sku_generated = True
+                
+                # Actualizar SKU en PrestaShop también
+                try:
+                    ps_service.update_product_reference(prod_id, sku)
+                except Exception as e:
+                    print(f"Error actualizando SKU en PrestaShop para producto {prod_id}: {str(e)}")
             
             # Obtener precio
             price = float(ps_prod.get('price', 0))
