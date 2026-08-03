@@ -300,13 +300,20 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
                     <option value="">Selecciona una tienda...</option>
                     {stores && stores.map((store) => (
                       <option key={store.id} value={store.id}>
-                        {store.name}
+                        {store.name} ({store.code})
                       </option>
                     ))}
                   </select>
                   <p className="text-xs text-slate-500 mt-1">
                     Esta será el canal de ventas de PrestaShop
                   </p>
+                  {stores && stores.length === 0 && (
+                    <div className="mt-2 bg-yellow-50 border-2 border-yellow-600 rounded-lg p-3">
+                      <p className="text-xs text-yellow-900 font-semibold">
+                        ⚠️ No tienes tiendas configuradas. Ve a Configuración → Tiendas para crear una tienda primero.
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {connectionStatus === 'error' && (
