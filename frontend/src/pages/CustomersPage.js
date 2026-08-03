@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { Users, Plus, Edit2, Trash2, Eye, Phone, MapPin, TrendingUp, Home } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import CustomerForm from '../components/CustomerForm';
+import CustomerDetailPanel from '../components/CustomerDetailPanel';
 import { useSettings } from '../context/SettingsContext';
 import { useStores } from '../hooks/useStores';
 
@@ -19,6 +20,8 @@ const CustomersPage = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [filterStore, setFilterStore] = useState('Todas');
+  const [showDetailPanel, setShowDetailPanel] = useState(false);
+  const [selectedCustomerId, setSelectedCustomerId] = useState(null);
 
   useEffect(() => {
     fetchCustomers();
@@ -56,6 +59,11 @@ const CustomersPage = () => {
   const handleEdit = (customer) => {
     setEditingCustomer(customer);
     setShowForm(true);
+  };
+
+  const handleViewDetail = (customerId) => {
+    setSelectedCustomerId(customerId);
+    setShowDetailPanel(true);
   };
 
   return (
@@ -202,7 +210,7 @@ const CustomersPage = () => {
                           customer.store === 'B' ? 'bg-orange-200' :
                           'bg-blue-200'
                         }`}>
-                          {customer.store === 'Ambas' ? 'Ambas' : `Tienda ${customer.store}`}
+                          {getStoreName(customer.store)}
                         </span>
                       </td>
                       <td className="px-6 py-4">
@@ -222,7 +230,7 @@ const CustomersPage = () => {
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-center gap-2">
                           <button
-                            onClick={() => navigate(`/customers/${customer.id}`)}
+                            onClick={() => handleViewDetail(customer.id)}
                             className="p-2 bg-blue-100 border-2 border-slate-900 rounded-lg hover:bg-blue-200"
                             title="Ver detalle"
                           >
@@ -268,6 +276,16 @@ const CustomersPage = () => {
           }}
         />
       )}
+
+      {/* Customer Detail Panel */}
+      <CustomerDetailPanel
+        customerId={selectedCustomerId}
+        isOpen={showDetailPanel}
+        onClose={() => {
+          setShowDetailPanel(false);
+          setSelectedCustomerId(null);
+        }}
+      />
     </div>
   );
 };
