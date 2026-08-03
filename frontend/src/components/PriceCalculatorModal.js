@@ -100,14 +100,12 @@ const PriceCalculatorModal = ({ isOpen, onClose, onProductUpdated }) => {
 
     setIsSearching(true);
     try {
-      console.log('🔍 Buscando productos:', searchQuery);
       const response = await axios.get(`${API}/products/search`, {
         params: { q: searchQuery }
       });
-      console.log('✅ Resultados encontrados:', response.data);
       setSearchResults(response.data);
     } catch (error) {
-      console.error('❌ Error searching products:', error);
+      console.error('Error searching products:', error);
       toast.error('Error al buscar productos');
     } finally {
       setIsSearching(false);
