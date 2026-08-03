@@ -58,7 +58,18 @@ async def connect_prestashop(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Error al conectar: {str(e)}")
+        error_msg = str(e)
+        # Mensajes de error más específicos
+        if "SSL" in error_msg or "certificate" in error_msg.lower():
+            raise HTTPException(status_code=400, detail=f"Error de certificado SSL. La URL debe ser HTTPS válida.")
+        elif "Timeout" in error_msg or "timeout" in error_msg.lower():
+            raise HTTPException(status_code=400, detail=f"El servidor no responde. Verifica que la URL sea correcta.")
+        elif "401" in error_msg or "Autenticación" in error_msg:
+            raise HTTPException(status_code=400, detail=f"API Key incorrecta. Verifica tu clave de acceso.")
+        elif "404" in error_msg or "not found" in error_msg.lower():
+            raise HTTPException(status_code=400, detail=f"URL incorrecta. Debe ser algo como: https://tu-tienda.com")
+        else:
+            raise HTTPException(status_code=400, detail=f"Error al conectar: {error_msg}")
     
     # Verificar si ya existe una integración para esta tienda
     existing = await db.prestashop_integrations.find_one(

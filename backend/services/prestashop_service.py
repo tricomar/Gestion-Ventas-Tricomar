@@ -48,6 +48,7 @@ class PrestashopAPIService:
         headers = {'Content-Type': 'application/xml'} if data else {}
         
         try:
+            print(f"[PrestaShop] Request: {method} {url} with params: {params}")
             response = requests.request(
                 method=method,
                 url=url,
@@ -55,8 +56,10 @@ class PrestashopAPIService:
                 params=params,
                 data=data,
                 headers=headers,
-                timeout=30
+                timeout=30,
+                verify=True  # Verificar SSL
             )
+            print(f"[PrestaShop] Response status: {response.status_code}")
             response.raise_for_status()
             
             # Parse JSON response
@@ -64,8 +67,28 @@ class PrestashopAPIService:
                 return response.json()
             return {}
             
+        except requests.exceptions.SSLError as e:
+            print(f"[PrestaShop] SSL Error: {str(e)}")
+            raise Exception(f"Error SSL: Verifica el certificado del servidor")
+        except requests.exceptions.Timeout as e:
+            print(f"[PrestaShop] Timeout: {str(e)}")
+            raise Exception(f"Timeout: El servidor no responde")
+        except requests.exceptions.ConnectionError as e:
+            print(f"[PrestaShop] Connection Error: {str(e)}")
+            raise Exception(f"Error de conexión: No se puede alcanzar el servidor")
+        except requests.exceptions.HTTPError as e:
+            print(f"[PrestaShop] HTTP Error: {response.status_code} - {response.text[:200]}")
+            if response.status_code == 401:
+                raise Exception(f"Autenticación fallida: Verifica tu API Key")
+            elif response.status_code == 403:
+                raise Exception(f"Acceso denegado: La API Key no tiene permisos suficientes")
+            elif response.status_code == 404:
+                raise Exception(f"Recurso no encontrado: Verifica la URL de tu tienda")
+            else:
+                raise Exception(f"Error HTTP {response.status_code}")
         except requests.exceptions.RequestException as e:
-            raise Exception(f"Error en petición a PrestaShop: {str(e)}")
+            print(f"[PrestaShop] Request Exception: {str(e)}")
+            raise Exception(f"Error en petición: {str(e)}")
     
     def test_connection(self) -> bool:
         """
@@ -75,9 +98,26 @@ class PrestashopAPIService:
             True si la conexión es exitosa
         """
         try:
-            self._make_request('')
+            print(f"[PrestaShop] Testing connection to: {self.api_url}")
+            # Probar con endpoint específico en lugar de raíz
+            # Usar categories que es simple y rápido
+            params = {
+                'display': '[id]',
+                'limit': '1'
+            }
+            response = requests.get(
+                f"{self.api_url}/categories",
+                auth=self.auth,
+                params=params,
+                timeout=10,
+                verify=True
+            )
+            print(f"[PrestaShop] Connection test status: {response.status_code}")
+            response.raise_for_status()
+            print(f"[PrestaShop] Connection successful")
             return True
-        except Exception:
+        except Exception as e:
+            print(f"[PrestaShop] Connection failed: {str(e)}")
             return False
     
     def get_categories(self, limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
