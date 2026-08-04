@@ -208,10 +208,9 @@ const InventoryPage = () => {
     if (e.target.checked) {
       const allIds = filteredProducts.map(p => p.id);
       setSelectedProducts(allIds);
-      setShowDeleteModal(true); // Mostrar modal al seleccionar todos
+      // NO abrir modal automáticamente, solo mostrar barra
     } else {
       setSelectedProducts([]);
-      setShowDeleteModal(false);
     }
   };
 
@@ -221,15 +220,14 @@ const InventoryPage = () => {
         ? prev.filter(id => id !== productId)
         : [...prev, productId];
       
-      // Mostrar modal si hay productos seleccionados, ocultarlo si no hay
-      if (newSelection.length > 0 && !showDeleteModal) {
-        setShowDeleteModal(true);
-      } else if (newSelection.length === 0) {
-        setShowDeleteModal(false);
-      }
-      
+      // NO abrir modal automáticamente
       return newSelection;
     });
+  };
+
+  const handleOpenDeleteModal = () => {
+    // Modal solo se abre cuando el usuario hace click en "Eliminar"
+    setShowDeleteModal(true);
   };
 
   const handleBulkDelete = async () => {
@@ -267,8 +265,45 @@ const InventoryPage = () => {
   };
 
   const handleCancelDelete = () => {
+    setShowDeleteModal(false);
+  };
+
+  const handleCloseSelectionBar = () => {
     setSelectedProducts([]);
     setShowDeleteModal(false);
+  };
+
+  const handleExportSelected = () => {
+    if (selectedProducts.length === 0) return;
+    
+    // Filtrar solo productos seleccionados
+    const selectedProductsData = products.filter(p => selectedProducts.includes(p.id));
+    
+    const dataToExport = selectedProductsData.map(p => ({
+      'Tienda/Caja': getStoreName(p.store),
+      'Nombre': p.name,
+      'SKU': p.sku || '',
+      'Categoría': p.category || '',
+      'Costo': p.cost_price || 0,
+      'Precio Venta': p.sale_price || 0,
+      'Stock': p.stock || 0,
+      'Stock Mínimo': p.min_stock || 0
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(dataToExport);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Productos Seleccionados');
+    XLSX.writeFile(wb, `productos_seleccionados_${new Date().toISOString().split('T')[0]}.xlsx`);
+    
+    toast.success(`✓ ${selectedProducts.length} productos exportados`, {
+      duration: 3000,
+      style: {
+        background: '#D4F0A5',
+        color: '#0f172a',
+        border: '2px solid #0f172a',
+        fontWeight: 'bold',
+      }
+    });
   };
 
   return (
@@ -337,8 +372,68 @@ const InventoryPage = () => {
         </div>
       </div>
 
-      {/* Bulk Delete Modal */}
-      {showDeleteModal && selectedProducts.length > 0 && (
+      {/* Selection Action Bar - Appears from top when products are selected */}
+      {selectedProducts.length > 0 && (
+        <div 
+          className="fixed top-0 left-0 right-0 z-40 bg-slate-900 border-b-4 border-slate-900 shadow-2xl"
+          style={{ 
+            animation: 'slideDown 0.3s ease-out',
+            boxShadow: '0 8px 16px rgba(0,0,0,0.3)'
+          }}
+        >
+          <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+            {/* Left: Counter */}
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
+                <div 
+                  className="w-12 h-12 rounded-xl bg-blue-400 border-2 border-white flex items-center justify-center font-black text-xl"
+                  style={{ boxShadow: '2px 2px 0px 0px rgba(255,255,255,0.5)' }}
+                >
+                  {selectedProducts.length}
+                </div>
+                <div>
+                  <p className="text-white font-black text-lg">
+                    {selectedProducts.length} producto{selectedProducts.length > 1 ? 's' : ''} seleccionado{selectedProducts.length > 1 ? 's' : ''}
+                  </p>
+                  <p className="text-slate-300 text-sm font-medium">
+                    Elige una acción para continuar
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Right: Action Buttons */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleCloseSelectionBar}
+                className="px-6 py-3 bg-white border-2 border-white rounded-xl font-bold text-slate-900 hover:bg-slate-100 transition-all"
+                style={{ boxShadow: '4px 4px 0px 0px rgba(255,255,255,0.3)' }}
+              >
+                Cerrar
+              </button>
+              <button
+                onClick={handleExportSelected}
+                className="flex items-center gap-2 px-6 py-3 bg-blue-400 border-2 border-white rounded-xl font-bold text-slate-900 hover:bg-blue-500 transition-all"
+                style={{ boxShadow: '4px 4px 0px 0px rgba(255,255,255,0.3)' }}
+              >
+                <Download className="w-5 h-5" />
+                Exportar ({selectedProducts.length})
+              </button>
+              <button
+                onClick={handleOpenDeleteModal}
+                className="flex items-center gap-2 px-6 py-3 bg-red-500 border-2 border-white rounded-xl font-bold text-white hover:bg-red-600 transition-all"
+                style={{ boxShadow: '4px 4px 0px 0px rgba(255,255,255,0.3)' }}
+              >
+                <Trash2 className="w-5 h-5" />
+                Eliminar ({selectedProducts.length})
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Delete Modal - Only appears when clicking "Eliminar" button */}
+      {showDeleteModal && (
         <BulkDeleteConfirmModal
           selectedCount={selectedProducts.length}
           onConfirm={handleBulkDelete}
@@ -346,6 +441,19 @@ const InventoryPage = () => {
           isDeleting={isDeleting}
         />
       )}
+
+      <style>{`
+        @keyframes slideDown {
+          from {
+            transform: translateY(-100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+      `}</style>
 
       {/* Search and Filter Bar */}
       <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
