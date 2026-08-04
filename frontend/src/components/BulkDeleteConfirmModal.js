@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { X, AlertTriangle, Trash2 } from 'lucide-react';
 
 const BulkDeleteConfirmModal = ({ 
@@ -10,10 +10,8 @@ const BulkDeleteConfirmModal = ({
   const [confirmText, setConfirmText] = useState('');
   const isConfirmValid = confirmText.toLowerCase() === 'eliminar';
 
-  // Reset confirm text when count changes
-  useEffect(() => {
-    setConfirmText('');
-  }, [selectedCount]);
+  // NO limpiar el texto cuando cambia el contador
+  // El usuario puede agregar/quitar productos sin perder lo que escribió
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4">
