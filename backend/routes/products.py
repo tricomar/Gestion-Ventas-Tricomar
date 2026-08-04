@@ -44,6 +44,10 @@ async def get_products(current_user: User = Depends(get_current_user)):
             prod['sale_price'] = prod.get('last_price', 0)
         if 'usage_count' not in prod:
             prod['usage_count'] = 0
+        
+        # Fix brand field if it's not a string (could be False from old data)
+        if 'brand' in prod and not isinstance(prod['brand'], str):
+            prod['brand'] = None
             
         # Update legacy product in DB
         if 'last_price' in prod and ('store' not in prod or 'cost_price' not in prod):
@@ -56,7 +60,12 @@ async def get_products(current_user: User = Depends(get_current_user)):
                 }}
             )
         
-        result.append(Product(**prod))
+        try:
+            result.append(Product(**prod))
+        except Exception as e:
+            print(f"Error parsing product {prod.get('id', 'unknown')}: {str(e)}")
+            # Skip malformed products but continue
+            continue
     
     return result
 

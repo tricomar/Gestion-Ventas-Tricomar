@@ -821,7 +821,7 @@ const SettingsPage = () => {
             </button>
           )}
           
-          {/* Gestión de Inventario - Solo para account_admin y supervisor */}
+          {/* Gestión de Categorías - Solo para account_admin y supervisor */}
           {isSupervisor && (
             <button
               onClick={() => setActiveTab('inventory')}
@@ -834,7 +834,7 @@ const SettingsPage = () => {
               data-testid="inventory-tab-btn"
             >
               <Package className="w-5 h-5" />
-              Inventario
+              Categorías
             </button>
           )}
           
