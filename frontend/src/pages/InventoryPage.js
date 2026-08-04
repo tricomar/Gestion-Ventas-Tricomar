@@ -7,6 +7,7 @@ import { useSettings } from '../context/SettingsContext';
 import { useStores } from '../hooks/useStores';
 import ProductForm from '../components/ProductForm';
 import PriceCalculatorModal from '../components/PriceCalculatorModal';
+import BulkDeleteConfirmModal from '../components/BulkDeleteConfirmModal';
 import * as XLSX from 'xlsx';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -26,6 +27,11 @@ const InventoryPage = () => {
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  
+  // Multi-select for bulk delete
+  const [selectedProducts, setSelectedProducts] = useState([]);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     fetchProducts();
@@ -197,6 +203,74 @@ const InventoryPage = () => {
     fetchProducts(); // Refrescar lista de productos después de aplicar precio
   };
 
+  // Multi-select handlers
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      const allIds = filteredProducts.map(p => p.id);
+      setSelectedProducts(allIds);
+      setShowDeleteModal(true); // Mostrar modal al seleccionar todos
+    } else {
+      setSelectedProducts([]);
+      setShowDeleteModal(false);
+    }
+  };
+
+  const handleSelectProduct = (productId) => {
+    setSelectedProducts(prev => {
+      const newSelection = prev.includes(productId)
+        ? prev.filter(id => id !== productId)
+        : [...prev, productId];
+      
+      // Mostrar modal si hay productos seleccionados, ocultarlo si no hay
+      if (newSelection.length > 0 && !showDeleteModal) {
+        setShowDeleteModal(true);
+      } else if (newSelection.length === 0) {
+        setShowDeleteModal(false);
+      }
+      
+      return newSelection;
+    });
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedProducts.length === 0) return;
+
+    setIsDeleting(true);
+    
+    try {
+      // Eliminar productos en paralelo
+      await Promise.all(
+        selectedProducts.map(productId => 
+          axios.delete(`${API}/products/${productId}`)
+        )
+      );
+      
+      toast.success(`✓ ${selectedProducts.length} producto${selectedProducts.length > 1 ? 's eliminados' : ' eliminado'} exitosamente`, {
+        duration: 4000,
+        style: {
+          background: '#D4F0A5',
+          color: '#0f172a',
+          border: '2px solid #0f172a',
+          fontWeight: 'bold',
+        }
+      });
+      
+      setSelectedProducts([]);
+      setShowDeleteModal(false);
+      fetchProducts();
+    } catch (error) {
+      toast.error('Error al eliminar productos');
+      console.error('Error deleting products:', error);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setSelectedProducts([]);
+    setShowDeleteModal(false);
+  };
+
   return (
     <div className="p-6 md:p-8" style={{ backgroundColor: '#F4F4F0', minHeight: '100vh' }}>
       {/* Header */}
@@ -258,10 +332,20 @@ const InventoryPage = () => {
             data-testid="add-product-btn"
           >
             <Plus className="w-5 h-5" />
-            Nuevo Producto
+            <span className="hidden sm:inline">Nuevo Producto</span>
           </button>
         </div>
       </div>
+
+      {/* Bulk Delete Modal */}
+      {showDeleteModal && selectedProducts.length > 0 && (
+        <BulkDeleteConfirmModal
+          selectedCount={selectedProducts.length}
+          onConfirm={handleBulkDelete}
+          onCancel={handleCancelDelete}
+          isDeleting={isDeleting}
+        />
+      )}
 
       {/* Search and Filter Bar */}
       <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -341,6 +425,15 @@ const InventoryPage = () => {
             <table className="w-full">
               <thead>
                 <tr className="bg-slate-900 text-white">
+                  <th className="px-4 py-4 text-center" style={{ width: '50px' }}>
+                    <input
+                      type="checkbox"
+                      checked={selectedProducts.length === filteredProducts.length && filteredProducts.length > 0}
+                      onChange={handleSelectAll}
+                      className="w-5 h-5 rounded border-2 border-white cursor-pointer"
+                      title="Seleccionar todos"
+                    />
+                  </th>
                   <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider">
                     Tienda/Caja
                   </th>
@@ -368,6 +461,14 @@ const InventoryPage = () => {
                     className={index % 2 === 0 ? 'bg-white' : 'bg-slate-50'}
                     data-testid={`product-row-${product.id}`}
                   >
+                    <td className="px-4 py-4 text-center">
+                      <input
+                        type="checkbox"
+                        checked={selectedProducts.includes(product.id)}
+                        onChange={() => handleSelectProduct(product.id)}
+                        className="w-5 h-5 rounded border-2 border-slate-900 cursor-pointer"
+                      />
+                    </td>
                     <td className="px-6 py-4">
                       <span 
                         className="px-3 py-1 rounded-full text-xs font-bold uppercase border-2 border-slate-900"
