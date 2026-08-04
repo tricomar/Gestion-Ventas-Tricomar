@@ -40,6 +40,7 @@ const SettingsPage = () => {
   const [newCategory, setNewCategory] = useState('');
   const [editingCategoryIndex, setEditingCategoryIndex] = useState(null);
   const [editingCategoryValue, setEditingCategoryValue] = useState('');
+  const [categoriesLoaded, setCategoriesLoaded] = useState(false);
   const fileInputRef = useRef(null);
   
   // Database reset (aún no refactorizado)

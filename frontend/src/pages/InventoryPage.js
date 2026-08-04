@@ -143,6 +143,7 @@ const InventoryPage = () => {
       'Tienda/Caja': getStoreName(product.store),
       'Código Tienda/Caja': product.store,
       'Nombre Producto': product.name,
+      'Marca': product.brand || '',
       'SKU': product.sku || '',
       'Categoría': product.category || '',
       'Precio Costo': product.cost_price,
@@ -285,6 +286,7 @@ const InventoryPage = () => {
     const dataToExport = selectedProductsData.map(p => ({
       'Tienda/Caja': getStoreName(p.store),
       'Nombre': p.name,
+      'Marca': p.brand || '',
       'SKU': p.sku || '',
       'Categoría': p.category || '',
       'Costo': p.cost_price || 0,
@@ -552,6 +554,9 @@ const InventoryPage = () => {
                     Nombre Producto
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider">
+                    Marca
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider">
                     SKU
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider">
@@ -590,6 +595,11 @@ const InventoryPage = () => {
                     </td>
                     <td className="px-6 py-4 font-bold text-slate-900">
                       {product.name}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-slate-600 font-medium">
+                        {product.brand || '-'}
+                      </span>
                     </td>
                     <td className="px-6 py-4 text-slate-600 font-mono text-sm">
                       {product.sku || '-'}

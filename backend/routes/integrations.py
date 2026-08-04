@@ -448,6 +448,9 @@ async def sync_products_background(job_id: str, integration_id: str, integration
             cost_price = price_with_tax
             sale_price = price_with_tax  # Precio de venta con IVA
             
+            # Obtener marca/fabricante
+            brand_name = ps_prod.get('manufacturer_name', '')
+            
             # Obtener stock
             stock = ps_service.get_product_stock(prod_id)
             if stock is None:
@@ -520,6 +523,7 @@ async def sync_products_background(job_id: str, integration_id: str, integration
                 'account_id': account_id,
                 'name': name,
                 'sku': sku,
+                'brand': brand_name,  # Marca desde PrestaShop
                 'cost_price': cost_price,  # COSTO = Precio CON IVA de PrestaShop
                 'sale_price': sale_price,  # Precio de venta CON IVA
                 'stock': stock,
