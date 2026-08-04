@@ -372,8 +372,17 @@ async def sync_products_background(job_id: str, integration_id: str, integration
                 except Exception as e:
                     print(f"Error actualizando SKU en PrestaShop para producto {prod_id}: {str(e)}")
             
-            # Obtener precio
-            price = float(ps_prod.get('price', 0))
+            # Obtener precios de PrestaShop
+            price_without_tax = float(ps_prod.get('price', 0))  # Precio sin IVA
+            wholesale_price = float(ps_prod.get('wholesale_price', 0))  # Precio de compra/coste
+            tax_rate = float(ps_prod.get('tax_rate', 0)) / 100  # Tasa de impuesto (viene como porcentaje)
+            
+            # Calcular precio con IVA
+            price_with_tax = price_without_tax * (1 + tax_rate)
+            
+            # Según requerimiento del usuario: el costo local debe basarse en el precio CON IVA
+            cost_price = price_with_tax
+            sale_price = price_with_tax  # Precio de venta con IVA
             
             # Obtener stock
             stock = ps_service.get_product_stock(prod_id)
@@ -392,7 +401,12 @@ async def sync_products_background(job_id: str, integration_id: str, integration
                 'prestashop_id': prod_id,
                 'name': name,
                 'sku': sku,
-                'price': price,
+                'price_without_tax': price_without_tax,
+                'price_with_tax': price_with_tax,
+                'wholesale_price': wholesale_price,
+                'cost_price': cost_price,  # Precio con IVA como costo (según requerimiento)
+                'sale_price': sale_price,  # Precio de venta con IVA
+                'tax_rate': tax_rate * 100,  # Guardar como porcentaje
                 'stock_quantity': stock,
                 'category_id': int(ps_prod.get('id_category_default', 0)),
                 'active': ps_prod.get('active', '1') == '1',
@@ -408,6 +422,41 @@ async def sync_products_background(job_id: str, integration_id: str, integration
                 product_doc['id'] = str(uuid4())
                 product_doc['created_at'] = datetime.now(timezone.utc).isoformat()
                 await db.prestashop_products.insert_one(product_doc)
+            
+            # IMPORTAR AUTOMÁTICAMENTE A LA COLECCIÓN LOCAL DE PRODUCTOS
+            # Buscar si ya existe en la colección local (buscar por SKU)
+            local_product = await db.products.find_one(
+                {'account_id': account_id, 'sku': sku},
+                {'_id': 0}
+            )
+            
+            # Preparar documento para colección local
+            local_product_doc = {
+                'account_id': account_id,
+                'name': name,
+                'sku': sku,
+                'cost_price': cost_price,  # COSTO = Precio CON IVA de PrestaShop
+                'sale_price': sale_price,  # Precio de venta CON IVA
+                'stock': stock,
+                'category': 'Importado PrestaShop',  # Categoría por defecto
+                'store_code': integration.get('store_id', 'A'),  # Código de tienda de la integración
+                'min_stock': 5,  # Valor por defecto
+                'prestashop_id': prod_id,  # Referencia al producto de PrestaShop
+                'prestashop_integration_id': integration_id,  # Referencia a la integración
+                'updated_at': datetime.now(timezone.utc).isoformat()
+            }
+            
+            if local_product:
+                # Actualizar producto existente
+                await db.products.update_one(
+                    {'account_id': account_id, 'sku': sku},
+                    {'$set': local_product_doc}
+                )
+            else:
+                # Crear nuevo producto en colección local
+                local_product_doc['id'] = str(uuid4())
+                local_product_doc['created_at'] = datetime.now(timezone.utc).isoformat()
+                await db.products.insert_one(local_product_doc)
             
             synced_count += 1
             
