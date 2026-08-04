@@ -13,6 +13,7 @@ import AnalyticsPage from './pages/AnalyticsPage';
 import SettingsPage from './pages/SettingsPage';
 import CustomersPage from './pages/CustomersPage';
 import POSPage from './pages/POSPage';
+import EcommercePage from './pages/EcommercePage';
 import SalesRecordPage from './pages/SalesRecordPage';
 import ExpensesRecordPage from './pages/ExpensesRecordPage';
 import IncomeRecordPage from './pages/IncomeRecordPage';
@@ -122,6 +123,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <POSPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/ecommerce"
+          element={
+            <ProtectedRoute>
+              <EcommercePage />
             </ProtectedRoute>
           }
         />

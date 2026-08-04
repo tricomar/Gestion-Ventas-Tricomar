@@ -38,6 +38,10 @@ const InventoryPage = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(30);
+  
   // Available categories (from settings + unique from products)
   const [availableCategories, setAvailableCategories] = useState([]);
 
@@ -566,16 +570,34 @@ const InventoryPage = () => {
 
       </div>
       
-      {/* Results count */}
-      {(searchQuery || selectedCategory !== 'all') && (
-        <div className="mb-4">
+      {/* Results count and Pagination controls */}
+      <div className="mb-4 flex items-center justify-between">
+        <div>
           <p className="text-sm text-slate-600">
-            Mostrando <strong>{filteredProducts.length}</strong> de <strong>{products.length}</strong> productos
+            Mostrando <strong>{Math.min((currentPage - 1) * itemsPerPage + 1, filteredProducts.length)}</strong> - <strong>{Math.min(currentPage * itemsPerPage, filteredProducts.length)}</strong> de <strong>{filteredProducts.length}</strong> productos
             {searchQuery && ` con "${searchQuery}"`}
             {selectedCategory !== 'all' && ` en categoría "${selectedCategory}"`}
           </p>
         </div>
-      )}
+        
+        {/* Items per page selector */}
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-slate-600 font-medium">Mostrar:</span>
+          <select
+            value={itemsPerPage}
+            onChange={(e) => {
+              setItemsPerPage(Number(e.target.value));
+              setCurrentPage(1); // Reset to first page
+            }}
+            className="px-3 py-2 bg-white border-2 border-slate-900 rounded-lg font-medium text-slate-900 cursor-pointer"
+          >
+            <option value={30}>30</option>
+            <option value={50}>50</option>
+            <option value={100}>100</option>
+          </select>
+          <span className="text-sm text-slate-600 font-medium">por página</span>
+        </div>
+      </div>
 
       {/* Products Table */}
       {loading ? (
@@ -661,12 +683,18 @@ const InventoryPage = () => {
                 </tr>
               </thead>
               <tbody className="divide-y-2 divide-slate-900">
-                {filteredProducts.map((product, index) => (
-                  <tr 
-                    key={product.id}
-                    className={index % 2 === 0 ? 'bg-white' : 'bg-slate-50'}
-                    data-testid={`product-row-${product.id}`}
-                  >
+                {(() => {
+                  // Calculate pagination
+                  const startIndex = (currentPage - 1) * itemsPerPage;
+                  const endIndex = startIndex + itemsPerPage;
+                  const paginatedProducts = filteredProducts.slice(startIndex, endIndex);
+                  
+                  return paginatedProducts.map((product, index) => (
+                    <tr 
+                      key={product.id}
+                      className={index % 2 === 0 ? 'bg-white' : 'bg-slate-50'}
+                      data-testid={`product-row-${product.id}`}
+                    >
                     <td className="px-4 py-4 text-center">
                       <input
                         type="checkbox"
@@ -725,10 +753,107 @@ const InventoryPage = () => {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  ));
+                })()}
               </tbody>
             </table>
           </div>
+          
+          {/* Pagination Controls */}
+          {filteredProducts.length > 0 && (
+            <div className="mt-6 flex items-center justify-between px-6">
+              <div className="text-sm text-slate-600">
+                Página <strong>{currentPage}</strong> de <strong>{Math.ceil(filteredProducts.length / itemsPerPage)}</strong>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                  className={`px-4 py-2 border-2 border-slate-900 rounded-xl font-bold transition-all ${
+                    currentPage === 1
+                      ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                      : 'bg-white text-slate-900 hover:bg-slate-50'
+                  }`}
+                  style={{ boxShadow: currentPage === 1 ? 'none' : '2px 2px 0px 0px rgba(15,23,42,1)' }}
+                >
+                  ← Anterior
+                </button>
+                
+                <div className="flex items-center gap-1">
+                  {(() => {
+                    const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
+                    const pages = [];
+                    
+                    // Show first page
+                    if (currentPage > 3) {
+                      pages.push(
+                        <button
+                          key={1}
+                          onClick={() => setCurrentPage(1)}
+                          className="w-10 h-10 border-2 border-slate-900 rounded-lg font-bold bg-white text-slate-900 hover:bg-slate-50"
+                        >
+                          1
+                        </button>
+                      );
+                      if (currentPage > 4) {
+                        pages.push(<span key="dots1" className="px-2">...</span>);
+                      }
+                    }
+                    
+                    // Show pages around current
+                    for (let i = Math.max(1, currentPage - 2); i <= Math.min(totalPages, currentPage + 2); i++) {
+                      pages.push(
+                        <button
+                          key={i}
+                          onClick={() => setCurrentPage(i)}
+                          className={`w-10 h-10 border-2 border-slate-900 rounded-lg font-bold transition-all ${
+                            i === currentPage
+                              ? 'bg-slate-900 text-white'
+                              : 'bg-white text-slate-900 hover:bg-slate-50'
+                          }`}
+                          style={{ boxShadow: i === currentPage ? '2px 2px 0px 0px rgba(15,23,42,1)' : 'none' }}
+                        >
+                          {i}
+                        </button>
+                      );
+                    }
+                    
+                    // Show last page
+                    if (currentPage < totalPages - 2) {
+                      if (currentPage < totalPages - 3) {
+                        pages.push(<span key="dots2" className="px-2">...</span>);
+                      }
+                      pages.push(
+                        <button
+                          key={totalPages}
+                          onClick={() => setCurrentPage(totalPages)}
+                          className="w-10 h-10 border-2 border-slate-900 rounded-lg font-bold bg-white text-slate-900 hover:bg-slate-50"
+                        >
+                          {totalPages}
+                        </button>
+                      );
+                    }
+                    
+                    return pages;
+                  })()}
+                </div>
+                
+                <button
+                  onClick={() => setCurrentPage(Math.min(Math.ceil(filteredProducts.length / itemsPerPage), currentPage + 1))}
+                  disabled={currentPage >= Math.ceil(filteredProducts.length / itemsPerPage)}
+                  className={`px-4 py-2 border-2 border-slate-900 rounded-xl font-bold transition-all ${
+                    currentPage >= Math.ceil(filteredProducts.length / itemsPerPage)
+                      ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                      : 'bg-white text-slate-900 hover:bg-slate-50'
+                  }`}
+                  style={{ boxShadow: currentPage >= Math.ceil(filteredProducts.length / itemsPerPage) ? 'none' : '2px 2px 0px 0px rgba(15,23,42,1)' }}
+                >
+                  Siguiente →
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
