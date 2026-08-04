@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { Package, Plus, Edit, Trash2, Home, Download, Search, Filter, Calculator } from 'lucide-react';
+import { Package, Plus, Edit, Trash2, Home, Download, Search, Filter, Calculator, ChevronUp, ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useSettings } from '../context/SettingsContext';
 import { useStores } from '../hooks/useStores';
@@ -27,6 +27,11 @@ const InventoryPage = () => {
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedStore, setSelectedStore] = useState('all');
+  
+  // Sorting
+  const [sortBy, setSortBy] = useState(null); // 'name', 'price'
+  const [sortOrder, setSortOrder] = useState('asc'); // 'asc', 'desc'
   
   // Multi-select for bulk delete
   const [selectedProducts, setSelectedProducts] = useState([]);
@@ -42,7 +47,7 @@ const InventoryPage = () => {
   
   useEffect(() => {
     filterProducts();
-  }, [products, searchQuery, selectedCategory]);
+  }, [products, searchQuery, selectedCategory, selectedStore, sortBy, sortOrder]);
 
   const fetchProducts = async () => {
     try {
@@ -494,6 +499,27 @@ const InventoryPage = () => {
             </select>
           </div>
         </div>
+        
+        {/* Filter by Store */}
+        <div>
+          <div className="relative">
+            <Package className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+            <select
+              value={selectedStore}
+              onChange={(e) => setSelectedStore(e.target.value)}
+              className="w-full pl-12 pr-4 py-3 bg-white border-2 border-slate-900 rounded-xl font-medium text-slate-900 cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-900"
+              data-testid="filter-store-select"
+            >
+              <option value="all">Todas las tiendas</option>
+              {stores.map((store) => (
+                <option key={store.code} value={store.code}>
+                  {store.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
       </div>
       
       {/* Results count */}
@@ -550,8 +576,18 @@ const InventoryPage = () => {
                   <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider">
                     Tienda/Caja
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider">
-                    Nombre Producto
+                  <th 
+                    className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider cursor-pointer hover:bg-slate-800 transition-colors"
+                    onClick={() => handleSort('name')}
+                  >
+                    <div className="flex items-center gap-2">
+                      Nombre Producto
+                      {sortBy === 'name' && (
+                        sortOrder === 'asc' ? 
+                          <ChevronUp className="w-4 h-4" /> : 
+                          <ChevronDown className="w-4 h-4" />
+                      )}
+                    </div>
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider">
                     Marca
@@ -562,8 +598,18 @@ const InventoryPage = () => {
                   <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider">
                     Categoría
                   </th>
-                  <th className="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider">
-                    Precio Venta
+                  <th 
+                    className="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider cursor-pointer hover:bg-slate-800 transition-colors"
+                    onClick={() => handleSort('price')}
+                  >
+                    <div className="flex items-center justify-end gap-2">
+                      Precio Venta
+                      {sortBy === 'price' && (
+                        sortOrder === 'asc' ? 
+                          <ChevronUp className="w-4 h-4" /> : 
+                          <ChevronDown className="w-4 h-4" />
+                      )}
+                    </div>
                   </th>
                   <th className="px-6 py-4 text-center text-xs font-bold uppercase tracking-wider">
                     Acciones
