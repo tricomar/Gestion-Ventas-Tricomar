@@ -23,6 +23,7 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
   const [syncingProducts, setSyncingProducts] = useState(false);
   const [categoriesCount, setCategoriesCount] = useState(0);
   const [productsCount, setProductsCount] = useState(0);
+  const [syncProgress, setSyncProgress] = useState(0); // Porcentaje 0-100
 
   useEffect(() => {
     if (integration) {
@@ -156,6 +157,9 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
     if (!integrationId) return;
 
     setSyncingProducts(true);
+    setSyncProgress(0);
+    setProductsCount(0);
+    
     try {
       // Iniciar sincronización
       const response = await axios.post(
@@ -170,7 +174,8 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
           const jobResponse = await axios.get(`${API}/integrations/jobs/${jobId}`);
           const job = jobResponse.data;
           
-          // Actualizar contador con progreso
+          // Actualizar progreso y contador
+          setSyncProgress(job.progress || 0);
           if (job.total > 0) {
             const current = Math.floor((job.progress / 100) * job.total);
             setProductsCount(current);
@@ -178,6 +183,7 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
           
           if (job.status === 'completed') {
             clearInterval(pollInterval);
+            setSyncProgress(100);
             setProductsCount(job.total || 0);
             setSyncingProducts(false);
             toast.success(`✓ ${job.total} productos sincronizados`, {
@@ -477,19 +483,18 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
                     <div className="mb-4">
                       <div className="flex justify-between text-sm mb-2">
                         <span className="text-slate-700 font-semibold">Sincronizando productos...</span>
-                        <span className="text-slate-600">{productsCount} productos</span>
+                        <span className="text-slate-600 font-bold">{Math.round(syncProgress)}%</span>
                       </div>
                       <div className="w-full bg-slate-200 rounded-full h-3 border-2 border-slate-900 overflow-hidden">
                         <div 
                           className="bg-gradient-to-r from-green-500 to-green-600 h-full transition-all duration-500 ease-out"
                           style={{ 
-                            width: productsCount > 0 ? '100%' : '0%',
-                            animation: 'pulse 2s infinite'
+                            width: `${syncProgress}%`
                           }}
                         />
                       </div>
                       <p className="text-xs text-slate-500 mt-2">
-                        ⏱️ Esto puede tardar varios minutos dependiendo de la cantidad de productos...
+                        ⏱️ {productsCount} productos sincronizados... Esto puede tardar varios minutos.
                       </p>
                     </div>
                   )}

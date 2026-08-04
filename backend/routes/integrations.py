@@ -42,36 +42,72 @@ async def connect_prestashop(
     # Primero intentar buscar en account
     account = await db.accounts.find_one({'id': current_user.account_id}, {'_id': 0})
     
-    print(f"[DEBUG] account_id: {current_user.account_id}")
-    print(f"[DEBUG] account found: {account is not None}")
-    
     stores = []
     selected_store = None
     
     if account and 'stores' in account and account['stores']:
         # Buscar en account.stores (nuevo sistema)
         stores = account['stores']
-        print(f"[DEBUG] Using account stores: {len(stores)} stores")
         selected_store = next((s for s in stores if s['id'] == request.store_id), None)
     
     if not selected_store:
         # Fallback: buscar en settings (sistema legacy)
         settings = await db.settings.find_one(get_tenant_filter(current_user.dict(), {}), {'_id': 0})
-        print(f"[DEBUG] settings found: {settings is not None}")
         if settings:
             # Generar stores legacy
             stores = [
                 {'id': 'store_a', 'name': settings.get('store_a_name', 'Tienda A'), 'code': 'A'},
                 {'id': 'store_b', 'name': settings.get('store_b_name', 'Tienda B'), 'code': 'B'}
             ]
-            print(f"[DEBUG] Using legacy stores: {stores}")
-            print(f"[DEBUG] Looking for store_id: {request.store_id}")
             selected_store = next((s for s in stores if s['id'] == request.store_id), None)
-            print(f"[DEBUG] selected_store: {selected_store}")
     
+    # Si aún no existe, CREAR LA TIENDA AUTOMÁTICAMENTE
     if not selected_store:
-        print(f"[DEBUG] No store found for store_id: {request.store_id}")
-        raise HTTPException(status_code=404, detail="Tienda/Caja no encontrada")
+        # Extraer nombre de tienda de la URL de PrestaShop
+        store_name = request.shop_url.replace('https://', '').replace('http://', '').split('/')[0]
+        store_name = store_name.replace('.com', '').replace('.cl', '').replace('.', ' ').title()
+        
+        # Generar código único
+        existing_codes = []
+        if account and 'stores' in account:
+            existing_codes = [s.get('code', '') for s in account['stores']]
+        
+        base_code = store_name[0].upper() if store_name else 'S'
+        code = base_code
+        counter = 1
+        while code in existing_codes:
+            code = f"{base_code}{counter}"
+            counter += 1
+        
+        # Crear nueva tienda
+        new_store = {
+            'id': request.store_id,
+            'name': store_name,
+            'code': code,
+            'created_at': datetime.now(timezone.utc).isoformat(),
+            'source': 'prestashop'
+        }
+        
+        # Agregar a la cuenta
+        if account:
+            if 'stores' not in account:
+                account['stores'] = []
+            
+            await db.accounts.update_one(
+                {'id': current_user.account_id},
+                {'$push': {'stores': new_store}}
+            )
+        else:
+            # Crear account si no existe
+            new_account = {
+                'id': current_user.account_id,
+                'stores': [new_store],
+                'created_at': datetime.now(timezone.utc).isoformat()
+            }
+            await db.accounts.insert_one(new_account)
+        
+        selected_store = new_store
+        print(f"✓ Auto-created store: {new_store['name']} (code: {new_store['code']})")
     
     # Probar conexión con PrestaShop
     try:

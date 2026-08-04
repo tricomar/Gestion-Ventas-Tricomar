@@ -32,6 +32,9 @@ const InventoryPage = () => {
   const [selectedProducts, setSelectedProducts] = useState([]);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  
+  // Available categories (from settings + unique from products)
+  const [availableCategories, setAvailableCategories] = useState([]);
 
   useEffect(() => {
     fetchProducts();
@@ -483,7 +486,7 @@ const InventoryPage = () => {
               data-testid="filter-category-select"
             >
               <option value="all">Todas las categorías</option>
-              {settings?.product_categories?.map((cat, idx) => (
+              {availableCategories.map((cat, idx) => (
                 <option key={idx} value={cat}>{cat}</option>
               ))}
             </select>
