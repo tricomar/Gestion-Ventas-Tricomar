@@ -40,7 +40,7 @@ async def connect_prestashop(
     """
     # Verificar que la tienda pertenece al usuario
     # Primero intentar buscar en account
-    account = await db.accounts.find_one({'_id': current_user.account_id}, {'_id': 0})
+    account = await db.accounts.find_one({'id': current_user.account_id}, {'_id': 0})
     
     print(f"[DEBUG] account_id: {current_user.account_id}")
     print(f"[DEBUG] account found: {account is not None}")
