@@ -138,10 +138,15 @@ const SettingsPage = () => {
 
   // Cargar categorías cuando settings esté disponible
   useEffect(() => {
-    if (settings?.product_categories) {
-      setCategories(settings.product_categories);
+    if (settings && !categoriesLoaded) {
+      if (settings?.product_categories && Array.isArray(settings.product_categories)) {
+        setCategories(settings.product_categories);
+      } else {
+        setCategories([]);
+      }
+      setCategoriesLoaded(true);
     }
-  }, [settings]);
+  }, [settings, categoriesLoaded]);
 
   // Cargar audit logs cuando se accede al tab
   useEffect(() => {
@@ -246,13 +251,29 @@ const SettingsPage = () => {
   };
 
   const handleSaveCategories = async () => {
+    if (categories.length === 0) {
+      toast.error('Debes agregar al menos una categoría');
+      return;
+    }
+    
     setSaving(true);
     try {
       await axios.put(`${API}/settings`, {
         product_categories: categories
       });
-      toast.success('Categorías guardadas exitosamente');
-      window.location.reload(); // Recargar para actualizar el context
+      
+      // Actualizar el contexto de settings sin recargar la página
+      await refreshSettings();
+      
+      toast.success('✓ Categorías guardadas exitosamente', {
+        duration: 3000,
+        style: {
+          background: '#D4F0A5',
+          color: '#0f172a',
+          border: '2px solid #0f172a',
+          fontWeight: 'bold',
+        }
+      });
     } catch (error) {
       toast.error('Error al guardar categorías');
       console.error('Error saving categories:', error);
