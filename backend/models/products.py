@@ -9,6 +9,7 @@ class ProductBase(BaseModel):
     cost_price: float = 0
     sale_price: float = 0
     sku: Optional[str] = None
+    brand: Optional[str] = None  # Marca del producto
     category: Optional[str] = None
     
     @field_validator('sku')
