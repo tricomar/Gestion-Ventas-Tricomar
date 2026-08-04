@@ -420,3 +420,80 @@ async def get_historic_daily_data(
         daily_data.append(day_entry)
     
     return daily_data
+
+@router.get("/sales-by-store")
+async def get_sales_by_store(
+    days: int = 30,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Obtener ventas por tienda para gráfico de líneas
+    Retorna datos agregados por día y tienda para los últimos N días
+    """
+    try:
+        # Obtener tiendas de la cuenta
+        account = await db.accounts.find_one({"id": current_user.account_id}, {"_id": 0})
+        
+        if not account or not account.get("stores"):
+            return []
+        
+        stores = account.get("stores", [])
+        
+        # Calcular rango de fechas
+        now_chile = datetime.now(CHILE_TZ)
+        start_date = (now_chile - timedelta(days=days)).replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        # Obtener ventas en el rango de fechas
+        tenant_filter = get_tenant_filter(current_user.dict(), {})
+        sales_cursor = db.sales.find({
+            **tenant_filter,
+            "created_at": {"$gte": start_date.isoformat()}
+        }, {"_id": 0})
+        
+        sales = await sales_cursor.to_list(10000)
+        
+        # Agrupar ventas por fecha y tienda
+        sales_by_date = defaultdict(lambda: defaultdict(float))
+        
+        for sale in sales:
+            # Extraer fecha (solo YYYY-MM-DD)
+            sale_date = sale.get("date", sale.get("created_at", "")[:10])
+            
+            # Determinar tienda
+            if "store" in sale:
+                store_code = sale["store"]
+            elif "product_store" in sale:
+                store_code = sale["product_store"]
+            else:
+                # Si no hay tienda, intentar extraer del producto
+                store_code = "general"
+            
+            # Sumar total
+            total = sale.get("total", 0)
+            sales_by_date[sale_date][store_code] += total
+        
+        # Formatear datos para el gráfico
+        chart_data = []
+        current_date = start_date
+        
+        for i in range(days):
+            date_str = current_date.strftime('%Y-%m-%d')
+            date_label = current_date.strftime('%d/%m')
+            
+            row = {"date": date_label}
+            
+            # Agregar ventas de cada tienda
+            for store in stores:
+                store_code = store.get("code", store.get("id", ""))
+                row[store_code] = round(sales_by_date[date_str].get(store_code, 0), 0)
+            
+            chart_data.append(row)
+            current_date += timedelta(days=1)
+        
+        return chart_data
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al obtener ventas por tienda: {str(e)}"
+        )

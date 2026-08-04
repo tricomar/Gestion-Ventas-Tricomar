@@ -14,6 +14,7 @@ import ProfileTab from '../components/settings/ProfileTab';
 import StoresTab from '../components/settings/StoresTab';
 import ImportTab from '../components/settings/ImportTab';
 import IntegrationsTab from '../components/settings/IntegrationsTab';
+import PersonalizationTab from '../components/settings/PersonalizationTab';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -803,6 +804,23 @@ const SettingsPage = () => {
             </button>
           )}
           
+          {/* Personalización - Solo para account_admin y supervisor */}
+          {isSupervisor && (
+            <button
+              onClick={() => setActiveTab('personalization')}
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold border-2 border-slate-900 transition-all ${
+                activeTab === 'personalization' 
+                  ? 'bg-slate-900 text-white' 
+                  : 'bg-white text-slate-900 hover:bg-slate-50'
+              }`}
+              style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
+              data-testid="personalization-tab-btn"
+            >
+              <Package className="w-5 h-5" />
+              Personalización
+            </button>
+          )}
+          
           {/* Gestión de Inventario - Solo para account_admin y supervisor */}
           {isSupervisor && (
             <button
@@ -958,6 +976,11 @@ const SettingsPage = () => {
         {/* Integrations Tab */}
         {activeTab === 'integrations' && isSupervisor && (
           <IntegrationsTab />
+        )}
+
+        {/* Personalization Tab */}
+        {activeTab === 'personalization' && isSupervisor && (
+          <PersonalizationTab />
         )}
 
         {/* Inventory Management Tab - Gestión de Categorías */}

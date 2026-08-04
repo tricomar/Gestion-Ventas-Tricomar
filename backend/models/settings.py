@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime, timezone
-from typing import List
+from typing import List, Optional
 
 class SettingsUpdate(BaseModel):
     store_a_name: str = "Tienda A"
@@ -14,6 +14,8 @@ class SettingsUpdate(BaseModel):
         "Otros"
     ])
     session_duration_hours: int = Field(default=168, ge=1)  # Default: 1 semana (168 horas)
+    company_logo: Optional[str] = None  # Base64 o URL del logo
+    company_name: Optional[str] = "Negocio Feliz"  # Nombre de la empresa
 
 class Settings(SettingsUpdate):
     model_config = ConfigDict(extra="ignore")

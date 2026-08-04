@@ -65,3 +65,38 @@ async def update_settings(settings_input: SettingsUpdate, current_user: User = D
         updated_doc['updated_at'] = datetime.fromisoformat(updated_doc['updated_at'])
     
     return Settings(**updated_doc)
+
+@router.patch("/personalization")
+async def update_personalization(
+    update_data: dict,
+    current_user: User = Depends(get_current_user)
+):
+    """Update personalization settings (logo and company name)"""
+    try:
+        # Validar campos permitidos
+        allowed_fields = ['company_logo', 'company_name']
+        filtered_data = {k: v for k, v in update_data.items() if k in allowed_fields}
+        
+        if not filtered_data:
+            raise HTTPException(status_code=400, detail="No valid fields to update")
+        
+        filtered_data['updated_at'] = datetime.now(timezone.utc).isoformat()
+        
+        # Actualizar en settings globales
+        result = await db.settings.update_one(
+            {'id': 'settings'},
+            {'$set': filtered_data},
+            upsert=True
+        )
+        
+        return {
+            "success": True,
+            "message": "Personalización actualizada exitosamente",
+            "updated_fields": list(filtered_data.keys())
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al actualizar personalización: {str(e)}"
+        )

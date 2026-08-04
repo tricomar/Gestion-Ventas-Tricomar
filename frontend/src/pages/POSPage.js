@@ -1,0 +1,341 @@
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { toast } from 'sonner';
+import { Search, Plus, ShoppingCart, X } from 'lucide-react';
+import { useStores } from '../hooks/useStores';
+import CartSidebar from '../components/pos/CartSidebar';
+import SaleDocument from '../components/pos/SaleDocument';
+import { v4 as uuidv4 } from 'uuid';
+
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const API = `${BACKEND_URL}/api`;
+
+const POSPage = () => {
+  const { stores } = useStores();
+  const [products, setProducts] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [cartItems, setCartItems] = useState([]);
+  const [cartId] = useState(() => uuidv4());
+  const [showDocument, setShowDocument] = useState(false);
+  const [completedSale, setCompletedSale] = useState(null);
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [customerResults, setCustomerResults] = useState([]);
+
+  useEffect(() => {
+    fetchFrequentProducts();
+  }, []);
+
+  useEffect(() => {
+    if (searchQuery.length >= 2) {
+      searchProducts();
+    } else {
+      setSearchResults([]);
+    }
+  }, [searchQuery]);
+
+  useEffect(() => {
+    if (customerSearch.length >= 2) {
+      searchCustomers();
+    } else {
+      setCustomerResults([]);
+    }
+  }, [customerSearch]);
+
+  const fetchFrequentProducts = async () => {
+    try {
+      const response = await axios.get(`${API}/products?limit=20`);
+      setProducts(response.data);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+    }
+  };
+
+  const searchProducts = async () => {
+    try {
+      const response = await axios.get(`${API}/products/search?q=${searchQuery}`);
+      setSearchResults(response.data);
+    } catch (error) {
+      console.error('Error searching products:', error);
+    }
+  };
+
+  const searchCustomers = async () => {
+    try {
+      const response = await axios.get(`${API}/customers/search?q=${customerSearch}`);
+      setCustomerResults(response.data);
+    } catch (error) {
+      console.error('Error searching customers:', error);
+    }
+  };
+
+  const addToCart = (product) => {
+    const existingItem = cartItems.find(item => item.product.id === product.id);
+    
+    if (existingItem) {
+      setCartItems(cartItems.map(item => 
+        item.product.id === product.id 
+          ? { ...item, quantity: item.quantity + 1 }
+          : item
+      ));
+      toast.success(`Cantidad actualizada: ${product.name}`);
+    } else {
+      setCartItems([...cartItems, { product, quantity: 1, id: uuidv4() }]);
+      toast.success(`Agregado al carrito: ${product.name}`);
+    }
+    
+    setSearchQuery('');
+    setSearchResults([]);
+  };
+
+  const updateQuantity = (itemId, newQuantity) => {
+    if (newQuantity <= 0) {
+      removeFromCart(itemId);
+      return;
+    }
+    
+    setCartItems(cartItems.map(item => 
+      item.id === itemId 
+        ? { ...item, quantity: newQuantity }
+        : item
+    ));
+  };
+
+  const removeFromCart = (itemId) => {
+    setCartItems(cartItems.filter(item => item.id !== itemId));
+    toast.info('Producto eliminado del carrito');
+  };
+
+  const clearCart = () => {
+    setCartItems([]);
+    setSelectedCustomer(null);
+    toast.info('Carrito limpiado');
+  };
+
+  const handlePayment = async (paymentMethod) => {
+    if (cartItems.length === 0) {
+      toast.error('El carrito está vacío');
+      return;
+    }
+
+    try {
+      // Calcular totales
+      const subtotal = cartItems.reduce((sum, item) => 
+        sum + (item.product.sale_price * item.quantity), 0
+      );
+      const iva = subtotal - (subtotal / 1.19);
+      const total = subtotal;
+
+      // Preparar datos de venta
+      const saleData = {
+        cart_id: cartId,
+        items: cartItems.map(item => ({
+          product_id: item.product.id,
+          product_name: item.product.name,
+          quantity: item.quantity,
+          unit_price: item.product.sale_price,
+          subtotal: item.product.sale_price * item.quantity
+        })),
+        customer_id: selectedCustomer?.id || null,
+        customer_name: selectedCustomer?.name || 'Cliente General',
+        payment_method: paymentMethod,
+        subtotal: subtotal / 1.19,
+        iva: iva,
+        total: total,
+        date: new Date().toISOString().split('T')[0],
+        created_at: new Date().toISOString()
+      };
+
+      // Guardar venta
+      const response = await axios.post(`${API}/sales/cart`, saleData);
+      
+      setCompletedSale({
+        ...saleData,
+        id: response.data.id,
+        sale_number: response.data.sale_number || `VENTA-${Date.now()}`
+      });
+      
+      setShowDocument(true);
+      
+      toast.success('¡Venta registrada exitosamente!', {
+        duration: 3000,
+        style: {
+          background: '#D4F0A5',
+          color: '#0f172a',
+          border: '2px solid #0f172a',
+          fontWeight: 'bold',
+        }
+      });
+      
+      // Limpiar carrito
+      clearCart();
+    } catch (error) {
+      console.error('Error processing payment:', error);
+      toast.error('Error al procesar el pago');
+    }
+  };
+
+  const ProductCard = ({ product }) => (
+    <div 
+      className="bg-white border-2 border-slate-900 rounded-xl p-4 hover:scale-105 transition-all cursor-pointer"
+      style={{ boxShadow: '3px 3px 0px 0px rgba(15,23,42,1)' }}
+      onClick={() => addToCart(product)}
+    >
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex-1">
+          <h3 className="font-bold text-slate-900 mb-1 line-clamp-2">{product.name}</h3>
+          <p className="text-xs text-slate-600">{product.sku || 'Sin SKU'}</p>
+        </div>
+        <div className="p-2 bg-gradient-to-br from-purple-400 to-pink-400 border border-slate-900 rounded-lg">
+          <Plus className="w-4 h-4 text-white" />
+        </div>
+      </div>
+      <div className="flex items-center justify-between">
+        <p className="text-2xl font-black text-slate-900">${product.sale_price?.toLocaleString('es-CL')}</p>
+        <span className="px-2 py-1 bg-yellow-100 border border-slate-900 rounded text-xs font-bold">
+          Stock: {product.stock || 0}
+        </span>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="h-screen flex" style={{ backgroundColor: '#F4F4F0' }}>
+      {/* Main Content - Product Selection */}
+      <div className="flex-1 overflow-y-auto p-8">
+        {/* Header */}
+        <div className="mb-6">
+          <h1 
+            className="text-4xl font-black text-slate-900 mb-2"
+            style={{ fontFamily: 'Cabinet Grotesk, sans-serif' }}
+          >
+            🛒 Punto de Venta
+          </h1>
+          <p className="text-slate-600 font-medium">Selecciona productos para agregar al carrito</p>
+        </div>
+
+        {/* Search Bar */}
+        <div className="mb-6">
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Buscar productos por nombre o SKU..."
+              className="w-full pl-12 pr-4 py-4 bg-white border-2 border-slate-900 rounded-xl font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              style={{ boxShadow: '3px 3px 0px 0px rgba(15,23,42,1)' }}
+            />
+          </div>
+          
+          {/* Search Results Dropdown */}
+          {searchResults.length > 0 && (
+            <div 
+              className="mt-2 bg-white border-2 border-slate-900 rounded-xl overflow-hidden"
+              style={{ boxShadow: '3px 3px 0px 0px rgba(15,23,42,1)' }}
+            >
+              {searchResults.slice(0, 5).map((product) => (
+                <div
+                  key={product.id}
+                  onClick={() => addToCart(product)}
+                  className="p-4 hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 cursor-pointer border-b-2 border-slate-900 last:border-b-0"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-bold text-slate-900">{product.name}</p>
+                      <p className="text-xs text-slate-600">{product.sku} - Stock: {product.stock}</p>
+                    </div>
+                    <p className="text-xl font-black text-slate-900">${product.sale_price?.toLocaleString('es-CL')}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Customer Selection */}
+        <div className="mb-6">
+          <div className="relative">
+            <input
+              type="text"
+              value={selectedCustomer ? selectedCustomer.name : customerSearch}
+              onChange={(e) => {
+                setSelectedCustomer(null);
+                setCustomerSearch(e.target.value);
+              }}
+              placeholder="Cliente (opcional) - Buscar por nombre..."
+              className="w-full px-4 py-3 bg-white border-2 border-slate-900 rounded-xl font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            />
+            {selectedCustomer && (
+              <button
+                onClick={() => {
+                  setSelectedCustomer(null);
+                  setCustomerSearch('');
+                }}
+                className="absolute right-4 top-1/2 transform -translate-y-1/2"
+              >
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            )}
+          </div>
+          
+          {customerResults.length > 0 && !selectedCustomer && (
+            <div 
+              className="mt-2 bg-white border-2 border-slate-900 rounded-xl overflow-hidden"
+              style={{ boxShadow: '3px 3px 0px 0px rgba(15,23,42,1)' }}
+            >
+              {customerResults.slice(0, 5).map((customer) => (
+                <div
+                  key={customer.id}
+                  onClick={() => {
+                    setSelectedCustomer(customer);
+                    setCustomerResults([]);
+                  }}
+                  className="p-3 hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 cursor-pointer border-b-2 border-slate-900 last:border-b-0"
+                >
+                  <p className="font-bold text-slate-900">{customer.name}</p>
+                  <p className="text-xs text-slate-600">{customer.email || customer.phone || 'Sin contacto'}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Product Grid */}
+        <div>
+          <h2 className="text-xl font-black text-slate-900 mb-4">Productos Frecuentes</h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {products.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Cart Sidebar */}
+      <CartSidebar 
+        cartItems={cartItems}
+        cartId={cartId}
+        onUpdateQuantity={updateQuantity}
+        onRemove={removeFromCart}
+        onClear={clearCart}
+        onPayment={handlePayment}
+        customer={selectedCustomer}
+      />
+
+      {/* Sale Document Modal */}
+      {showDocument && completedSale && (
+        <SaleDocument 
+          sale={completedSale}
+          onClose={() => {
+            setShowDocument(false);
+            setCompletedSale(null);
+          }}
+        />
+      )}
+    </div>
+  );
+};
+
+export default POSPage;

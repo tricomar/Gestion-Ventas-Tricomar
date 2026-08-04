@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { Toaster } from './components/ui/sonner';
 import LoginPage from './pages/LoginPage';
+import DashboardHomePage from './pages/DashboardHomePage';
 import DashboardPage from './pages/DashboardPage';
 import AdminDashboard from './pages/AdminDashboard';
 import DatabaseManagementPage from './pages/DatabaseManagementPage';
@@ -11,11 +12,13 @@ import ReportsPage from './pages/ReportsPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import SettingsPage from './pages/SettingsPage';
 import CustomersPage from './pages/CustomersPage';
+import POSPage from './pages/POSPage';
 import SalesRecordPage from './pages/SalesRecordPage';
 import ExpensesRecordPage from './pages/ExpensesRecordPage';
 import IncomeRecordPage from './pages/IncomeRecordPage';
 import SuperAdminPage from './pages/SuperAdminPage';
 import SessionExpiredModal from './components/SessionExpiredModal';
+import AppLayout from './components/layout/AppLayout';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AccountProvider } from './context/AccountContext';
 import { SettingsProvider } from './context/SettingsContext';
@@ -42,7 +45,13 @@ const RoleBasedRedirect = () => {
 
 const ProtectedRoute = ({ children }) => {
   const { user } = useAuth();
-  return user ? children : <Navigate to="/login" replace />;
+  
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  // Envolver páginas protegidas con AppLayout
+  return <AppLayout>{children}</AppLayout>;
 };
 
 const SuperAdminRoute = ({ children }) => {
@@ -104,7 +113,15 @@ function AppRoutes() {
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <DashboardPage />
+              <DashboardHomePage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/pos"
+          element={
+            <ProtectedRoute>
+              <POSPage />
             </ProtectedRoute>
           }
         />

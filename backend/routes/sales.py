@@ -14,11 +14,90 @@ from utils import db, get_current_user, require_admin
 from models.users import User
 from middleware.tenant import get_tenant_filter, add_account_id_to_document
 from utils.audit import create_audit_log
+from pydantic import BaseModel
 
 # Zona horaria de Chile
 CHILE_TZ = ZoneInfo('America/Santiago')
 
 router = APIRouter(prefix="/sales", tags=["sales"])
+
+# Modelos para carrito POS
+class CartItem(BaseModel):
+    product_id: str
+    product_name: str
+    quantity: int
+    unit_price: float
+    subtotal: float
+
+class CartSale(BaseModel):
+    cart_id: str
+    items: List[CartItem]
+    customer_id: Optional[str] = None
+    customer_name: str = "Cliente General"
+    payment_method: str
+    subtotal: float
+    iva: float
+    total: float
+    date: str
+    created_at: str
+
+@router.post("/cart")
+async def create_cart_sale(sale_data: CartSale, current_user: User = Depends(get_current_user)):
+    """Crear venta desde carrito POS"""
+    try:
+        # Generar número de venta único
+        sale_number = f"VENTA-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        
+        # Preparar documento de venta
+        sale_doc = {
+            "id": str(uuid.uuid4()),
+            "sale_number": sale_number,
+            "cart_id": sale_data.cart_id,
+            "items": [item.model_dump() for item in sale_data.items],
+            "customer_id": sale_data.customer_id,
+            "customer_name": sale_data.customer_name,
+            "payment_method": sale_data.payment_method,
+            "subtotal": sale_data.subtotal,
+            "iva": sale_data.iva,
+            "total": sale_data.total,
+            "date": sale_data.date,
+            "created_at": sale_data.created_at,
+            "user_id": current_user.id,
+            "user_name": current_user.name
+        }
+        
+        # Agregar account_id para tenant isolation
+        sale_doc = add_account_id_to_document(current_user.dict(), sale_doc)
+        
+        # Guardar en base de datos
+        await db.sales.insert_one(sale_doc)
+        
+        # Actualizar stock de productos (opcional, si quieres descontar automáticamente)
+        for item in sale_data.items:
+            tenant_filter = get_tenant_filter(current_user.dict(), {'id': item.product_id})
+            await db.products.update_one(
+                tenant_filter,
+                {
+                    '$inc': {
+                        'stock': -item.quantity,
+                        'usage_count': 1
+                    }
+                },
+                upsert=False
+            )
+        
+        return {
+            "success": True,
+            "id": sale_doc["id"],
+            "sale_number": sale_number,
+            "message": "Venta registrada exitosamente"
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al crear venta: {str(e)}"
+        )
 
 @router.post("", response_model=Sale)
 async def create_sale(sale_input: SaleCreate, current_user: User = Depends(get_current_user)):
