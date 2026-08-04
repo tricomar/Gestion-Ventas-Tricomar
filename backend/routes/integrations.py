@@ -39,15 +39,38 @@ async def connect_prestashop(
     Conectar una nueva integración con PrestaShop
     """
     # Verificar que la tienda pertenece al usuario
-    store = await db.settings.find_one(get_tenant_filter(current_user.dict(), {}))
-    if not store:
-        raise HTTPException(status_code=404, detail="Configuración no encontrada")
+    # Primero intentar buscar en account
+    account = await db.accounts.find_one({'_id': current_user.account_id}, {'_id': 0})
     
-    # Buscar la tienda específica
-    stores = store.get('stores', [])
-    selected_store = next((s for s in stores if s['id'] == request.store_id), None)
+    print(f"[DEBUG] account_id: {current_user.account_id}")
+    print(f"[DEBUG] account found: {account is not None}")
+    
+    stores = []
+    selected_store = None
+    
+    if account and 'stores' in account and account['stores']:
+        # Buscar en account.stores (nuevo sistema)
+        stores = account['stores']
+        print(f"[DEBUG] Using account stores: {len(stores)} stores")
+        selected_store = next((s for s in stores if s['id'] == request.store_id), None)
     
     if not selected_store:
+        # Fallback: buscar en settings (sistema legacy)
+        settings = await db.settings.find_one(get_tenant_filter(current_user.dict(), {}), {'_id': 0})
+        print(f"[DEBUG] settings found: {settings is not None}")
+        if settings:
+            # Generar stores legacy
+            stores = [
+                {'id': 'store_a', 'name': settings.get('store_a_name', 'Tienda A'), 'code': 'A'},
+                {'id': 'store_b', 'name': settings.get('store_b_name', 'Tienda B'), 'code': 'B'}
+            ]
+            print(f"[DEBUG] Using legacy stores: {stores}")
+            print(f"[DEBUG] Looking for store_id: {request.store_id}")
+            selected_store = next((s for s in stores if s['id'] == request.store_id), None)
+            print(f"[DEBUG] selected_store: {selected_store}")
+    
+    if not selected_store:
+        print(f"[DEBUG] No store found for store_id: {request.store_id}")
         raise HTTPException(status_code=404, detail="Tienda/Caja no encontrada")
     
     # Probar conexión con PrestaShop
