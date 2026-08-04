@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import { useSettings } from '../../context/SettingsContext';
-import { Home, ShoppingCart, Package, Users, BarChart3, TrendingUp, Settings, LogOut, User, Store, Bell } from 'lucide-react';
+import { Home, ShoppingCart, Package, Users, BarChart3, TrendingUp, Settings, LogOut, User, Store, Bell, StickyNote } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -47,6 +47,7 @@ const TopBar = () => {
     { path: '/ecommerce', icon: Store, label: 'Ecommerce', color: 'from-green-400 to-teal-400', show: hasEcommerceIntegrations, badge: pendingOrders },
     { path: '/inventory', icon: Package, label: 'Inventario', color: 'from-yellow-400 to-orange-400', show: true },
     { path: '/customers', icon: Users, label: 'Clientes', color: 'from-pink-400 to-purple-400', show: true },
+    { path: '/notes', icon: StickyNote, label: 'Notas', color: 'from-blue-400 to-cyan-400', show: true },
     { path: '/reports', icon: BarChart3, label: 'Reportes', color: 'from-blue-400 to-purple-400', show: true },
     { path: '/analytics', icon: TrendingUp, label: 'Analítica', color: 'from-purple-500 to-pink-500', show: true },
     { path: '/settings', icon: Settings, label: 'Configuración', color: 'from-slate-400 to-slate-600', show: true },

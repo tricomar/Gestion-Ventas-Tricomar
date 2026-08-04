@@ -15,6 +15,12 @@ const DashboardHomePage = () => {
     daily_sales: 0,
     total_products: 0
   });
+  const [realtimeMetrics, setRealtimeMetrics] = useState({
+    today_total: 0,
+    today_sales_count: 0,
+    today_expenses_total: 0,
+    today_income_total: 0
+  });
   const [recentSales, setRecentSales] = useState([]);
   const [chartData, setChartData] = useState([]);
   const [integrations, setIntegrations] = useState([]);
@@ -22,6 +28,11 @@ const DashboardHomePage = () => {
 
   useEffect(() => {
     fetchDashboardData();
+    fetchRealtimeMetrics();
+    
+    // Actualizar métricas en tiempo real cada 30 segundos
+    const interval = setInterval(fetchRealtimeMetrics, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   const fetchDashboardData = async () => {
@@ -56,7 +67,16 @@ const DashboardHomePage = () => {
     }
   };
 
-  const MetricCard = ({ title, value, icon: Icon, gradient, trend }) => (
+  const fetchRealtimeMetrics = async () => {
+    try {
+      const response = await axios.get(`${API}/dashboard/realtime-metrics`);
+      setRealtimeMetrics(response.data);
+    } catch (error) {
+      console.error('Error fetching realtime metrics:', error);
+    }
+  };
+
+  const MetricCard = ({ title, value, icon: Icon, gradient, trend, realtime }) => (
     <div 
       className={`bg-gradient-to-br ${gradient} border-2 border-slate-900 rounded-xl p-6`}
       style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
@@ -73,7 +93,13 @@ const DashboardHomePage = () => {
         )}
       </div>
       <h3 className="text-sm font-bold text-slate-900 mb-2">{title}</h3>
-      <p className="text-3xl font-black text-slate-900">${value.toLocaleString('es-CL')}</p>
+      <p className="text-3xl font-black text-slate-900">{typeof value === 'number' ? `$${value.toLocaleString('es-CL')}` : value}</p>
+      {realtime && (
+        <div className="mt-2 flex items-center gap-2">
+          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+          <span className="text-xs text-slate-600">En tiempo real</span>
+        </div>
+      )}
     </div>
   );
 
@@ -106,28 +132,30 @@ const DashboardHomePage = () => {
       {/* Metrics Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <MetricCard 
-          title="Ventas Anuales"
-          value={metrics.yearly_sales}
-          icon={TrendingUp}
-          gradient="from-purple-400 to-pink-400"
+          title="Ventas Hoy"
+          value={realtimeMetrics.today_total}
+          icon={DollarSign}
+          gradient="from-green-400 to-emerald-400"
+          realtime={true}
+        />
+        <MetricCard 
+          title="Transacciones Hoy"
+          value={`${realtimeMetrics.today_sales_count || 0} ventas`}
+          icon={ShoppingBag}
+          gradient="from-blue-400 to-cyan-400"
+          realtime={true}
         />
         <MetricCard 
           title="Ventas Mensuales"
           value={metrics.monthly_sales}
-          icon={DollarSign}
-          gradient="from-orange-400 to-red-400"
-        />
-        <MetricCard 
-          title="Ventas Hoy"
-          value={metrics.daily_sales}
-          icon={ShoppingBag}
-          gradient="from-yellow-400 to-orange-400"
+          icon={TrendingUp}
+          gradient="from-purple-400 to-pink-400"
         />
         <MetricCard 
           title="Total Productos"
-          value={metrics.total_products}
+          value={`${metrics.total_products || 0} items`}
           icon={Package}
-          gradient="from-pink-400 to-purple-400"
+          gradient="from-orange-400 to-red-400"
         />
       </div>
 

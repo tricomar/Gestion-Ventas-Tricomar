@@ -14,6 +14,7 @@ import SettingsPage from './pages/SettingsPage';
 import CustomersPage from './pages/CustomersPage';
 import POSPage from './pages/POSPage';
 import EcommercePage from './pages/EcommercePage';
+import NotesPage from './pages/NotesPage';
 import SalesRecordPage from './pages/SalesRecordPage';
 import ExpensesRecordPage from './pages/ExpensesRecordPage';
 import IncomeRecordPage from './pages/IncomeRecordPage';
@@ -179,6 +180,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <CustomersPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/notes"
+          element={
+            <ProtectedRoute>
+              <NotesPage />
             </ProtectedRoute>
           }
         />

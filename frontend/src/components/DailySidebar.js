@@ -11,7 +11,7 @@ import { getChileDate, getChileDateTime } from '../utils/dateUtils';
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
-const DailySidebar = ({ refreshTrigger, onDelete }) => {
+const DailySidebar = ({ refreshTrigger, onDelete, onClose }) => {
   const { user } = useAuth();
   const { settings } = useSettings();
   const { getStoreName } = useStores();
