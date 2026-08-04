@@ -157,14 +157,51 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
 
     setSyncingProducts(true);
     try {
+      // Iniciar sincronización
       const response = await axios.post(
         `${API}/integrations/prestashop/${integrationId}/sync-products`
       );
       
-      setProductsCount(response.data.synced_count);
-      toast.success(`✓ ${response.data.synced_count} productos sincronizados`, {
-        duration: 5000
-      });
+      const jobId = response.data.job_id;
+      
+      // Polling para verificar progreso
+      const pollInterval = setInterval(async () => {
+        try {
+          const jobResponse = await axios.get(`${API}/integrations/jobs/${jobId}`);
+          const job = jobResponse.data;
+          
+          // Actualizar contador con progreso
+          if (job.total > 0) {
+            const current = Math.floor((job.progress / 100) * job.total);
+            setProductsCount(current);
+          }
+          
+          if (job.status === 'completed') {
+            clearInterval(pollInterval);
+            setProductsCount(job.total || 0);
+            setSyncingProducts(false);
+            toast.success(`✓ ${job.total} productos sincronizados`, {
+              duration: 5000
+            });
+          } else if (job.status === 'failed') {
+            clearInterval(pollInterval);
+            setSyncingProducts(false);
+            toast.error(`Error: ${job.message}`);
+          }
+        } catch (error) {
+          console.error('Error polling job:', error);
+        }
+      }, 2000); // Verificar cada 2 segundos
+      
+      // Timeout de seguridad (5 minutos)
+      setTimeout(() => {
+        clearInterval(pollInterval);
+        if (syncingProducts) {
+          setSyncingProducts(false);
+          toast.error('Sincronización tomó demasiado tiempo. Verifica el estado más tarde.');
+        }
+      }, 300000);
+      
     } catch (error) {
       // Manejar diferentes tipos de errores
       let errorMsg = 'Error al sincronizar productos';
@@ -182,7 +219,6 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
       }
       
       toast.error(errorMsg);
-    } finally {
       setSyncingProducts(false);
     }
   };
@@ -429,12 +465,34 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
                         <p className="text-sm text-slate-600">Importar productos con precios y stock</p>
                       </div>
                     </div>
-                    {productsCount > 0 && (
+                    {productsCount > 0 && !syncingProducts && (
                       <span className="px-3 py-1 bg-green-100 border-2 border-green-600 rounded-full text-sm font-bold text-green-800">
                         {productsCount} sincronizados
                       </span>
                     )}
                   </div>
+                  
+                  {/* Barra de progreso */}
+                  {syncingProducts && (
+                    <div className="mb-4">
+                      <div className="flex justify-between text-sm mb-2">
+                        <span className="text-slate-700 font-semibold">Sincronizando productos...</span>
+                        <span className="text-slate-600">{productsCount} productos</span>
+                      </div>
+                      <div className="w-full bg-slate-200 rounded-full h-3 border-2 border-slate-900 overflow-hidden">
+                        <div 
+                          className="bg-gradient-to-r from-green-500 to-green-600 h-full transition-all duration-500 ease-out"
+                          style={{ 
+                            width: productsCount > 0 ? '100%' : '0%',
+                            animation: 'pulse 2s infinite'
+                          }}
+                        />
+                      </div>
+                      <p className="text-xs text-slate-500 mt-2">
+                        ⏱️ Esto puede tardar varios minutos dependiendo de la cantidad de productos...
+                      </p>
+                    </div>
+                  )}
                   
                   <button
                     onClick={handleSyncProducts}

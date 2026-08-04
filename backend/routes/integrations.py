@@ -280,7 +280,7 @@ async def sync_products(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Sincronizar productos desde PrestaShop
+    Iniciar sincronización de productos en background
     """
     # Obtener integración
     integration = await db.prestashop_integrations.find_one(
@@ -291,15 +291,62 @@ async def sync_products(
     if not integration:
         raise HTTPException(status_code=404, detail="Integración no encontrada")
     
-    # Crear servicio de PrestaShop
-    ps_service = PrestashopAPIService(integration['shop_url'], integration['api_key'])
+    # Crear job de sincronización
+    job_id = str(uuid4())
+    job = {
+        'id': job_id,
+        'account_id': current_user.account_id,
+        'integration_id': integration_id,
+        'type': 'sync_products',
+        'status': 'running',
+        'progress': 0,
+        'total': 0,
+        'message': 'Iniciando sincronización...',
+        'created_at': datetime.now(timezone.utc).isoformat()
+    }
+    await db.sync_jobs.insert_one(job)
     
+    # Ejecutar sincronización en background
+    background_tasks.add_task(
+        sync_products_background,
+        job_id,
+        integration_id,
+        integration,
+        current_user.account_id
+    )
+    
+    return {
+        'success': True,
+        'job_id': job_id,
+        'message': 'Sincronización iniciada'
+    }
+
+
+async def sync_products_background(job_id: str, integration_id: str, integration: dict, account_id: str):
+    """
+    Sincronizar productos en background
+    """
     try:
+        # Crear servicio de PrestaShop
+        ps_service = PrestashopAPIService(integration['shop_url'], integration['api_key'])
+        
+        # Actualizar job
+        await db.sync_jobs.update_one(
+            {'id': job_id},
+            {'$set': {'status': 'running', 'message': 'Obteniendo productos de PrestaShop...'}}
+        )
+        
         # Obtener productos de PrestaShop
         ps_products = ps_service.get_products(limit=500)
+        total = len(ps_products)
+        
+        await db.sync_jobs.update_one(
+            {'id': job_id},
+            {'$set': {'total': total, 'message': f'Sincronizando {total} productos...'}}
+        )
         
         synced_count = 0
-        for ps_prod in ps_products:
+        for idx, ps_prod in enumerate(ps_products, 1):
             prod_id = int(ps_prod.get('id', 0))
             if prod_id <= 0:
                 continue
@@ -335,15 +382,12 @@ async def sync_products(
             
             # Buscar si ya existe
             existing = await db.prestashop_products.find_one(
-                get_tenant_filter(current_user.dict(), {
-                    'integration_id': integration_id,
-                    'prestashop_id': prod_id
-                }),
+                {'account_id': account_id, 'integration_id': integration_id, 'prestashop_id': prod_id},
                 {'_id': 0}
             )
             
             product_doc = {
-                'account_id': current_user.account_id,
+                'account_id': account_id,
                 'integration_id': integration_id,
                 'prestashop_id': prod_id,
                 'name': name,
@@ -356,32 +400,49 @@ async def sync_products(
             }
             
             if existing:
-                # Actualizar
                 await db.prestashop_products.update_one(
-                    get_tenant_filter(current_user.dict(), {
-                        'integration_id': integration_id,
-                        'prestashop_id': prod_id
-                    }),
+                    {'account_id': account_id, 'integration_id': integration_id, 'prestashop_id': prod_id},
                     {'$set': product_doc}
                 )
             else:
-                # Crear
                 product_doc['id'] = str(uuid4())
                 product_doc['created_at'] = datetime.now(timezone.utc).isoformat()
                 await db.prestashop_products.insert_one(product_doc)
             
             synced_count += 1
+            
+            # Actualizar progreso cada 10 productos
+            if idx % 10 == 0 or idx == total:
+                progress = int((idx / total) * 100)
+                await db.sync_jobs.update_one(
+                    {'id': job_id},
+                    {'$set': {
+                        'progress': progress,
+                        'message': f'Sincronizados {idx}/{total} productos...'
+                    }}
+                )
         
         # Actualizar última sincronización
         await db.prestashop_integrations.update_one(
-            get_tenant_filter(current_user.dict(), {'id': integration_id}),
+            {'id': integration_id},
             {'$set': {'last_sync_products': datetime.now(timezone.utc).isoformat()}}
+        )
+        
+        # Marcar job como completado
+        await db.sync_jobs.update_one(
+            {'id': job_id},
+            {'$set': {
+                'status': 'completed',
+                'progress': 100,
+                'message': f'{synced_count} productos sincronizados exitosamente',
+                'completed_at': datetime.now(timezone.utc).isoformat()
+            }}
         )
         
         # Log
         log = {
             'id': str(uuid4()),
-            'account_id': current_user.account_id,
+            'account_id': account_id,
             'integration_id': integration_id,
             'sync_type': 'products',
             'status': 'success',
@@ -391,17 +452,21 @@ async def sync_products(
         }
         await db.sync_logs.insert_one(log)
         
-        return {
-            'success': True,
-            'synced_count': synced_count,
-            'message': f'{synced_count} productos sincronizados exitosamente'
-        }
-        
     except Exception as e:
+        # Marcar job como fallido
+        await db.sync_jobs.update_one(
+            {'id': job_id},
+            {'$set': {
+                'status': 'failed',
+                'message': f'Error: {str(e)}',
+                'completed_at': datetime.now(timezone.utc).isoformat()
+            }}
+        )
+        
         # Log error
         log = {
             'id': str(uuid4()),
-            'account_id': current_user.account_id,
+            'account_id': account_id,
             'integration_id': integration_id,
             'sync_type': 'products',
             'status': 'error',
@@ -409,8 +474,6 @@ async def sync_products(
             'created_at': datetime.now(timezone.utc).isoformat()
         }
         await db.sync_logs.insert_one(log)
-        
-        raise HTTPException(status_code=500, detail=f"Error al sincronizar productos: {str(e)}")
 
 
 @router.get("/prestashop/{integration_id}/products")
@@ -427,6 +490,25 @@ async def get_prestashop_products(
     ).to_list(1000)
     
     return products
+
+
+@router.get("/jobs/{job_id}")
+async def get_job_status(
+    job_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Obtener estado de un job de sincronización
+    """
+    job = await db.sync_jobs.find_one(
+        get_tenant_filter(current_user.dict(), {'id': job_id}),
+        {'_id': 0}
+    )
+    
+    if not job:
+        raise HTTPException(status_code=404, detail="Job no encontrado")
+    
+    return job
 
 
 @router.delete("/prestashop/{integration_id}")
