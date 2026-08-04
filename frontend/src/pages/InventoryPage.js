@@ -16,7 +16,7 @@ const API = `${BACKEND_URL}/api`;
 const InventoryPage = () => {
   const navigate = useNavigate();
   const { settings } = useSettings();
-  const { getStoreName } = useStores();
+  const { stores, getStoreName } = useStores();
   const [products, setProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -49,6 +49,14 @@ const InventoryPage = () => {
     filterProducts();
   }, [products, searchQuery, selectedCategory, selectedStore, sortBy, sortOrder]);
 
+  useEffect(() => {
+    // Extraer categorías únicas de productos + categorías de settings
+    const productCategories = [...new Set(products.map(p => p.category).filter(Boolean))];
+    const settingsCategories = settings?.product_categories || [];
+    const allCategories = [...new Set([...productCategories, ...settingsCategories])];
+    setAvailableCategories(allCategories.sort());
+  }, [products, settings]);
+
   const fetchProducts = async () => {
     try {
       const response = await axios.get(`${API}/products`);
@@ -76,6 +84,30 @@ const InventoryPage = () => {
     // Filter by category
     if (selectedCategory !== 'all') {
       filtered = filtered.filter(product => product.category === selectedCategory);
+    }
+    
+    // Filter by store
+    if (selectedStore !== 'all') {
+      filtered = filtered.filter(product => product.store === selectedStore);
+    }
+    
+    // Apply sorting
+    if (sortBy === 'name') {
+      filtered.sort((a, b) => {
+        const nameA = a.name.toLowerCase();
+        const nameB = b.name.toLowerCase();
+        return sortOrder === 'asc' 
+          ? nameA.localeCompare(nameB) 
+          : nameB.localeCompare(nameA);
+      });
+    } else if (sortBy === 'price') {
+      filtered.sort((a, b) => {
+        const priceA = a.sale_price || 0;
+        const priceB = b.sale_price || 0;
+        return sortOrder === 'asc' 
+          ? priceA - priceB 
+          : priceB - priceA;
+      });
     }
     
     setFilteredProducts(filtered);
@@ -168,6 +200,7 @@ const InventoryPage = () => {
       { wch: 15 }, // Tienda/Caja
       { wch: 12 }, // Código Tienda/Caja
       { wch: 30 }, // Nombre Producto
+      { wch: 15 }, // Marca
       { wch: 15 }, // SKU
       { wch: 15 }, // Categoría
       { wch: 12 }, // Precio Costo
@@ -280,6 +313,17 @@ const InventoryPage = () => {
   const handleCloseSelectionBar = () => {
     setSelectedProducts([]);
     setShowDeleteModal(false);
+  };
+
+  const handleSortToggle = (field) => {
+    if (sortBy === field) {
+      // Ya estamos ordenando por este campo, alternar dirección
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Nuevo campo, empezar con orden ascendente
+      setSortBy(field);
+      setSortOrder('asc');
+    }
   };
 
   const handleExportSelected = () => {
@@ -578,7 +622,7 @@ const InventoryPage = () => {
                   </th>
                   <th 
                     className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider cursor-pointer hover:bg-slate-800 transition-colors"
-                    onClick={() => handleSort('name')}
+                    onClick={() => handleSortToggle('name')}
                   >
                     <div className="flex items-center gap-2">
                       Nombre Producto
@@ -600,7 +644,7 @@ const InventoryPage = () => {
                   </th>
                   <th 
                     className="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider cursor-pointer hover:bg-slate-800 transition-colors"
-                    onClick={() => handleSort('price')}
+                    onClick={() => handleSortToggle('price')}
                   >
                     <div className="flex items-center justify-end gap-2">
                       Precio Venta
