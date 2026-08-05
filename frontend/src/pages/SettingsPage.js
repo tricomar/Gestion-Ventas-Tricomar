@@ -169,6 +169,23 @@ const SettingsPage = () => {
     }
   }, [activeTab, isSupervisor]);
 
+  // Mostrar toast con resumen al cargar categorías
+  useEffect(() => {
+    if (hierarchicalCategories.length > 0 && activeTab === 'inventory') {
+      const byStore = {};
+      hierarchicalCategories.forEach(cat => {
+        const key = cat.store || cat.source || 'manual';
+        byStore[key] = (byStore[key] || 0) + 1;
+      });
+      
+      const summary = Object.entries(byStore)
+        .map(([store, count]) => `${store}: ${count}`)
+        .join(', ');
+      
+      console.log(`Categorías cargadas: ${hierarchicalCategories.length} total (${summary})`);
+    }
+  }, [hierarchicalCategories, activeTab]);
+
   // Cargar audit logs cuando se accede al tab
   useEffect(() => {
     if (activeTab === 'audit' && user?.role === 'account_admin') {

@@ -37,12 +37,20 @@ class CategorySyncService:
             ID local de la categoría sincronizada o None si falla
         """
         try:
+            # Validar que la categoría existe primero
+            category_exists = self.ps.get_category(category_id)
+            if not category_exists:
+                print(f"[CategorySync] Categoría {category_id} no existe en PrestaShop, saltando...")
+                return None
+            
             # Obtener jerarquía completa desde PrestaShop
             hierarchy = self.ps.get_category_hierarchy(category_id)
             
-            if not hierarchy:
+            if not hierarchy or len(hierarchy) == 0:
                 print(f"[CategorySync] No se pudo obtener jerarquía para categoría {category_id}")
                 return None
+            
+            print(f"[CategorySync] Sincronizando jerarquía de {len(hierarchy)} niveles para categoría {category_id}")
             
             # Sincronizar cada nivel de la jerarquía
             parent_local_id = None
@@ -61,7 +69,7 @@ class CategorySyncService:
                     # Ya existe, usar su ID como padre para el siguiente nivel
                     local_category_id = existing['id']
                     parent_local_id = local_category_id
-                    print(f"[CategorySync] Categoría '{ps_category['name']}' ya existe localmente")
+                    print(f"[CategorySync] Categoría '{ps_category['name']}' ya existe localmente (ID: {local_category_id})")
                 else:
                     # Crear nueva categoría local
                     local_category_id = str(uuid.uuid4())
@@ -80,14 +88,16 @@ class CategorySyncService:
                     }
                     
                     await db.categories.insert_one(category_doc)
-                    print(f"[CategorySync] Creada categoría '{ps_category['name']}' (nivel {level_idx})")
+                    print(f"[CategorySync] ✅ Creada categoría '{ps_category['name']}' (nivel {level_idx}, ID local: {local_category_id})")
                     
                     parent_local_id = local_category_id
             
             return local_category_id
             
         except Exception as e:
-            print(f"[CategorySync] Error sincronizando categoría {category_id}: {str(e)}")
+            print(f"[CategorySync] ❌ Error sincronizando categoría {category_id}: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return None
     
     async def get_local_category_by_external_id(self, external_id: str) -> Optional[Dict]:

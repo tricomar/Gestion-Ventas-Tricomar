@@ -158,11 +158,22 @@ class PrestashopAPIService:
             Datos de la categoría o None
         """
         try:
-            params = {'display': 'full'}
+            params = {'display': 'full', 'output_format': 'JSON'}
             response = self._make_request(f'categories/{category_id}', params=params)
             
-            if 'category' in response:
+            print(f"[PrestaShop] get_category({category_id}) response keys: {response.keys() if response else 'None'}")
+            
+            if response and 'category' in response:
                 return response['category']
+            elif response and 'categories' in response:
+                # A veces viene envuelto en 'categories'
+                cats = response['categories']
+                if isinstance(cats, dict):
+                    return cats
+                elif isinstance(cats, list) and len(cats) > 0:
+                    return cats[0]
+            
+            print(f"[PrestaShop] get_category({category_id}) - estructura inesperada: {str(response)[:200]}")
             return None
         except Exception as e:
             print(f"[PrestaShop] Error getting category {category_id}: {str(e)}")
