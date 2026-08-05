@@ -302,8 +302,8 @@ async def update_cart_sale(
     if not existing:
         raise HTTPException(status_code=404, detail="Venta no encontrada")
     
-    # Solo permitir actualizar campos específicos de carrito
-    allowed_fields = {'customer_name', 'payment_method', 'total'}
+    # Permitir actualizar: customer_name, payment_method, items, subtotal, iva, total
+    allowed_fields = {'customer_name', 'payment_method', 'items', 'subtotal', 'iva', 'total'}
     filtered_update = {k: v for k, v in update_data.items() if k in allowed_fields}
     
     if not filtered_update:
@@ -316,7 +316,8 @@ async def update_cart_sale(
     old_data = {
         "customer_name": existing.get('customer_name'),
         "payment_method": existing.get('payment_method'),
-        "total": existing.get('total')
+        "total": existing.get('total'),
+        "items_count": len(existing.get('items', []))
     }
     
     # Actualizar en base de datos
@@ -331,7 +332,12 @@ async def update_cart_sale(
         record_type="cart_sale",
         record_id=sale_id,
         old_data=old_data,
-        new_data=filtered_update
+        new_data={
+            "customer_name": filtered_update.get('customer_name'),
+            "payment_method": filtered_update.get('payment_method'),
+            "total": filtered_update.get('total'),
+            "items_count": len(filtered_update.get('items', []))
+        }
     )
     
     return {"success": True, "message": "Venta de carrito actualizada exitosamente"}

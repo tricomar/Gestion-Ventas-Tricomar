@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import { ChevronLeft, ChevronRight, Home, Calendar as CalendarIcon, TrendingUp, DollarSign, Plus, Edit2, Trash2, Eye, ShoppingCart, User } from 'lucide-react';
 import { toast } from 'sonner';
-import PastSaleForm from '../components/PastSaleForm';
+import PastCartSaleForm from '../components/PastCartSaleForm';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -105,9 +105,16 @@ const SalesRecordPage = () => {
   const handleEditSale = (sale) => {
     // Determinar si es venta de carrito o venta individual
     const isCartSale = sale.cart_id || sale.items;
+    
+    // Para ventas de carrito, copiar los items para poder editarlos
+    const editableData = { ...sale };
+    if (isCartSale && sale.items) {
+      editableData.items = sale.items.map(item => ({ ...item }));
+    }
+    
     setEditModal({ 
       open: true, 
-      data: { ...sale },
+      data: editableData,
       isCartSale: isCartSale
     });
   };
@@ -116,13 +123,23 @@ const SalesRecordPage = () => {
     e.preventDefault();
     
     try {
-      // Si es venta de carrito, solo permitimos editar campos limitados
+      // Si es venta de carrito
       if (editModal.isCartSale) {
-        // Para ventas de carrito, solo actualizamos via patch directo a MongoDB
+        // Recalcular totales basados en items editados
+        const itemsTotal = editModal.data.items.reduce((sum, item) => 
+          sum + (item.quantity * item.unit_price), 0
+        );
+        const subtotalSinIVA = itemsTotal / 1.19;
+        const ivaCalculado = itemsTotal - subtotalSinIVA;
+        
+        // Actualizar venta de carrito con items y totales recalculados
         await axios.patch(`${API}/sales/${editModal.data.id}/cart-sale`, {
           customer_name: editModal.data.customer_name || 'Cliente General',
           payment_method: editModal.data.payment_method,
-          total: parseFloat(editModal.data.total)
+          items: editModal.data.items,
+          subtotal: subtotalSinIVA,
+          iva: ivaCalculado,
+          total: itemsTotal
         });
       } else {
         // Para ventas individuales, usar el payload completo
@@ -157,6 +174,32 @@ const SalesRecordPage = () => {
       }
       console.error('Error updating sale:', error);
     }
+  };
+
+  const handleItemChange = (index, field, value) => {
+    const updatedItems = [...editModal.data.items];
+    updatedItems[index] = {
+      ...updatedItems[index],
+      [field]: parseFloat(value) || 0
+    };
+    
+    // Recalcular subtotal del item
+    if (field === 'quantity' || field === 'unit_price') {
+      updatedItems[index].subtotal = updatedItems[index].quantity * updatedItems[index].unit_price;
+    }
+    
+    setEditModal({
+      ...editModal,
+      data: {
+        ...editModal.data,
+        items: updatedItems
+      }
+    });
+  };
+
+  const getTotalFromItems = () => {
+    if (!editModal.data.items) return 0;
+    return editModal.data.items.reduce((sum, item) => sum + (item.subtotal || 0), 0);
   };
 
   const getDaysInMonth = () => {
@@ -235,12 +278,12 @@ const SalesRecordPage = () => {
           
           <div className="flex gap-3">
             <button
-              onClick={() => navigate('/')}
+              onClick={() => navigate('/pos')}
               className="flex items-center gap-2 px-6 py-3 bg-white border-2 border-slate-900 rounded-xl font-bold hover:bg-slate-50 transition-all"
               style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
             >
               <Home className="w-5 h-5" />
-              Volver al Dashboard
+              Volver al POS
             </button>
             
             {canEdit && (
@@ -497,10 +540,9 @@ const SalesRecordPage = () => {
 
       {/* Modal de Registrar Venta Pasada */}
       {showPastSaleForm && (
-        <PastSaleForm
+        <PastCartSaleForm
           onClose={() => setShowPastSaleForm(false)}
           onSuccess={handlePastSaleSuccess}
-          initialDate={`${currentYear}-${currentMonth.toString().padStart(2, '0')}-${new Date().getDate().toString().padStart(2, '0')}`}
         />
       )}
 
@@ -508,21 +550,12 @@ const SalesRecordPage = () => {
       {editModal.open && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div 
-            className="bg-white border-2 border-slate-900 rounded-xl p-6 max-w-md w-full"
+            className="bg-white border-2 border-slate-900 rounded-xl p-6 max-w-3xl w-full max-h-[90vh] overflow-y-auto"
             style={{ boxShadow: '8px 8px 0px 0px rgba(15,23,42,1)' }}
           >
             <h3 className="text-xl font-bold mb-4">
               {editModal.isCartSale ? 'Editar Venta de Carrito' : 'Editar Venta'}
             </h3>
-            
-            {editModal.isCartSale && (
-              <div className="mb-4 p-3 bg-blue-50 border-2 border-blue-900 rounded-lg">
-                <p className="text-xs font-bold text-blue-900">ℹ️ Venta de Carrito</p>
-                <p className="text-xs text-slate-600 mt-1">
-                  Solo puedes editar cliente, método de pago y total. Los productos no son editables.
-                </p>
-              </div>
-            )}
             
             <form onSubmit={handleUpdateSale} className="space-y-4">
               {/* Mostrar campos según tipo de venta */}
@@ -552,6 +585,65 @@ const SalesRecordPage = () => {
                     />
                   </div>
 
+                  {/* Lista de productos editables */}
+                  <div className="border-2 border-slate-900 rounded-lg p-4 bg-slate-50">
+                    <h4 className="text-lg font-bold mb-3">Productos ({editModal.data.items?.length || 0})</h4>
+                    <div className="space-y-3 max-h-60 overflow-y-auto">
+                      {editModal.data.items && editModal.data.items.map((item, idx) => (
+                        <div 
+                          key={idx}
+                          className="p-3 border-2 border-slate-900 rounded-lg bg-white"
+                          style={{ boxShadow: '2px 2px 0px 0px rgba(15,23,42,1)' }}
+                        >
+                          <div className="font-bold text-sm mb-2">{item.product_name}</div>
+                          <div className="grid grid-cols-3 gap-2">
+                            <div>
+                              <label className="block text-xs font-bold mb-1">Cantidad</label>
+                              <input
+                                type="number"
+                                step="1"
+                                min="1"
+                                value={item.quantity}
+                                onChange={(e) => handleItemChange(idx, 'quantity', e.target.value)}
+                                className="w-full px-2 py-1 border-2 border-slate-900 rounded text-sm"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-bold mb-1">Precio Unit.</label>
+                              <input
+                                type="number"
+                                step="1"
+                                min="0"
+                                value={Math.round(item.unit_price)}
+                                onChange={(e) => handleItemChange(idx, 'unit_price', e.target.value)}
+                                className="w-full px-2 py-1 border-2 border-slate-900 rounded text-sm"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-bold mb-1">Subtotal</label>
+                              <input
+                                type="text"
+                                value={`$${Math.round(item.subtotal || 0).toLocaleString('es-CL')}`}
+                                className="w-full px-2 py-1 border-2 border-slate-900 rounded text-sm bg-slate-100 font-mono"
+                                disabled
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    {/* Total calculado */}
+                    <div className="mt-3 pt-3 border-t-2 border-slate-900">
+                      <div className="flex justify-between items-center">
+                        <span className="font-black text-lg">TOTAL:</span>
+                        <span className="font-black text-2xl font-mono">
+                          ${Math.round(getTotalFromItems()).toLocaleString('es-CL')}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
                   <div>
                     <label className="block text-sm font-bold mb-2">Método de Pago</label>
                     <select
@@ -566,25 +658,6 @@ const SalesRecordPage = () => {
                       <option value="Tarjeta">Tarjeta</option>
                       <option value="Transferencia">Transferencia</option>
                     </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-bold mb-2">Total</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0.01"
-                      value={editModal.data.total}
-                      onChange={(e) => setEditModal({
-                        ...editModal,
-                        data: { ...editModal.data, total: e.target.value }
-                      })}
-                      className="w-full px-3 py-2 border-2 border-slate-900 rounded-lg"
-                      required
-                    />
-                    <p className="text-xs text-slate-500 mt-1">
-                      {editModal.data.items?.length || 0} productos en el carrito
-                    </p>
                   </div>
                 </>
               ) : (
@@ -674,7 +747,7 @@ const SalesRecordPage = () => {
                   type="submit"
                   className="flex-1 px-4 py-2 bg-slate-900 text-white rounded-lg font-bold hover:bg-slate-800"
                 >
-                  Guardar
+                  Guardar Cambios
                 </button>
                 <button
                   type="button"
