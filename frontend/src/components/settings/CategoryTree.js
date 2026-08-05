@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronRight, ChevronDown, Plus, Edit2, Trash2, Folder, FolderOpen } from 'lucide-react';
 
-const CategoryTree = ({ categories, onAdd, onEdit, onDelete }) => {
+const CategoryTree = ({ categories = [], onAdd, onEdit, onDelete }) => {
   const [expandedNodes, setExpandedNodes] = useState(new Set());
   const [editingNode, setEditingNode] = useState(null);
   const [editValue, setEditValue] = useState('');
@@ -48,7 +48,7 @@ const CategoryTree = ({ categories, onAdd, onEdit, onDelete }) => {
   };
 
   const handleSaveEdit = () => {
-    if (editValue.trim()) {
+    if (editValue.trim() && editingNode) {
       onEdit(editingNode, editValue.trim());
       setEditingNode(null);
       setEditValue('');
@@ -68,22 +68,18 @@ const CategoryTree = ({ categories, onAdd, onEdit, onDelete }) => {
     }
   };
 
-  const getLevel = (node, parentLevel = 0) => {
-    return parentLevel;
-  };
-
   const canAddChild = (level) => {
     return level < 3; // Max 4 niveles (0, 1, 2, 3)
   };
 
-  const TreeNode = ({ node, level = 0 }) => {
+  const renderNode = (node, level = 0) => {
     const isExpanded = expandedNodes.has(node.id);
     const hasChildren = node.children && node.children.length > 0;
     const isEditing = editingNode === node.id;
     const isAdding = addingTo === node.id;
 
     return (
-      <div className="select-none">
+      <div key={node.id} className="select-none">
         <div 
           className={`flex items-center gap-2 p-2 rounded-lg hover:bg-slate-50 group ${
             level === 0 ? 'font-bold' : ''
@@ -144,11 +140,6 @@ const CategoryTree = ({ categories, onAdd, onEdit, onDelete }) => {
             <>
               <span className="flex-1 text-sm text-slate-900">
                 {node.name}
-                {node.source && (
-                  <span className="ml-2 text-xs text-slate-500">
-                    ({node.source})
-                  </span>
-                )}
               </span>
 
               {/* Action Buttons */}
@@ -224,9 +215,7 @@ const CategoryTree = ({ categories, onAdd, onEdit, onDelete }) => {
         {/* Children */}
         {isExpanded && hasChildren && (
           <div className="mt-1">
-            {node.children.map(child => (
-              <TreeNode key={child.id} node={child} level={level + 1} />
-            ))}
+            {node.children.map(child => renderNode(child, level + 1))}
           </div>
         )}
       </div>
@@ -238,9 +227,7 @@ const CategoryTree = ({ categories, onAdd, onEdit, onDelete }) => {
   return (
     <div className="space-y-2">
       {tree.length > 0 ? (
-        tree.map(node => (
-          <TreeNode key={node.id} node={node} level={0} />
-        ))
+        tree.map(node => renderNode(node, 0))
       ) : (
         <div className="text-center py-8 text-slate-500">
           <Folder className="w-12 h-12 mx-auto mb-2 text-slate-300" />

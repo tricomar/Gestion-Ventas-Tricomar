@@ -1062,9 +1062,9 @@ const SettingsPage = () => {
             
             <CategoryTree
               categories={hierarchicalCategories}
-              onAddCategory={handleAddHierarchicalCategory}
-              onEditCategory={handleEditHierarchicalCategory}
-              onDeleteCategory={handleDeleteHierarchicalCategory}
+              onAdd={handleAddHierarchicalCategory}
+              onEdit={handleEditHierarchicalCategory}
+              onDelete={handleDeleteHierarchicalCategory}
               loading={loadingCategories}
             />
           </div>
