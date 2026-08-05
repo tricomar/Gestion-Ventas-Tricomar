@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronRight, ChevronDown, Plus, Edit2, Trash2, Folder, FolderOpen } from 'lucide-react';
+import { ChevronRight, ChevronDown, Plus, Edit2, Trash2, Folder, FolderOpen, Store } from 'lucide-react';
 
 const CategoryTree = ({ categories = [], onAdd, onEdit, onDelete }) => {
   const [expandedNodes, setExpandedNodes] = useState(new Set());
@@ -7,6 +7,21 @@ const CategoryTree = ({ categories = [], onAdd, onEdit, onDelete }) => {
   const [editValue, setEditValue] = useState('');
   const [addingTo, setAddingTo] = useState(null);
   const [newCategoryName, setNewCategoryName] = useState('');
+
+  // Agrupar categorías por tienda/fuente
+  const groupByStore = (items) => {
+    const groups = {};
+    
+    items.forEach(item => {
+      const key = item.store || item.source || 'manual';
+      if (!groups[key]) {
+        groups[key] = [];
+      }
+      groups[key].push(item);
+    });
+    
+    return groups;
+  };
 
   // Construir árbol jerárquico desde categorías planas
   const buildTree = (items) => {
