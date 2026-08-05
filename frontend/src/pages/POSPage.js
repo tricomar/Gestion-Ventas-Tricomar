@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { Search, Plus, ShoppingCart, X } from 'lucide-react';
+import { Search, Plus, ShoppingCart, X, ChevronDown, FileText, TrendingDown, DollarSign } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useStores } from '../hooks/useStores';
 import CartSidebar from '../components/pos/CartSidebar';
 import SaleDocument from '../components/pos/SaleDocument';
@@ -11,6 +12,7 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const POSPage = () => {
+  const navigate = useNavigate();
   const { stores } = useStores();
   const [products, setProducts] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -22,9 +24,23 @@ const POSPage = () => {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [customerSearch, setCustomerSearch] = useState('');
   const [customerResults, setCustomerResults] = useState([]);
+  const [showRecordsMenu, setShowRecordsMenu] = useState(false);
+  const recordsMenuRef = useRef(null);
 
   useEffect(() => {
     fetchFrequentProducts();
+  }, []);
+
+  // Click outside to close records menu
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (recordsMenuRef.current && !recordsMenuRef.current.contains(event.target)) {
+        setShowRecordsMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   useEffect(() => {
@@ -69,6 +85,12 @@ const POSPage = () => {
       console.error('Error searching customers:', error);
     }
   };
+
+  const recordsMenuItems = [
+    { path: '/sales-records', icon: FileText, label: 'Registro de Ventas', color: 'from-green-400 to-emerald-400' },
+    { path: '/expenses-records', icon: TrendingDown, label: 'Registro de Egresos', color: 'from-red-400 to-pink-400' },
+    { path: '/income-records', icon: DollarSign, label: 'Registro de Otros Ingresos', color: 'from-yellow-400 to-orange-400' },
+  ];
 
   const addToCart = (product) => {
     const existingItem = cartItems.find(item => item.product.id === product.id);
@@ -205,14 +227,64 @@ const POSPage = () => {
       {/* Main Content - Product Selection */}
       <div className="flex-1 overflow-y-auto p-8">
         {/* Header */}
-        <div className="mb-6">
-          <h1 
-            className="text-4xl font-black text-slate-900 mb-2"
-            style={{ fontFamily: 'Cabinet Grotesk, sans-serif' }}
-          >
-            🛒 Punto de Venta
-          </h1>
-          <p className="text-slate-600 font-medium">Selecciona productos para agregar al carrito</p>
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h1 
+              className="text-4xl font-black text-slate-900 mb-2"
+              style={{ fontFamily: 'Cabinet Grotesk, sans-serif' }}
+            >
+              🛒 Punto de Venta
+            </h1>
+            <p className="text-slate-600 font-medium">Selecciona productos para agregar al carrito</p>
+          </div>
+
+          {/* Registros Históricos Dropdown */}
+          <div className="relative" ref={recordsMenuRef}>
+            <button
+              onClick={() => setShowRecordsMenu(!showRecordsMenu)}
+              className={`flex items-center gap-2 px-4 py-3 rounded-xl border-2 border-slate-900 font-bold transition-all ${
+                showRecordsMenu
+                  ? 'bg-slate-900 text-white' 
+                  : 'bg-white text-slate-900 hover:bg-slate-50'
+              }`}
+              style={{ 
+                boxShadow: showRecordsMenu ? '4px 4px 0px 0px rgba(15,23,42,1)' : '3px 3px 0px 0px rgba(15,23,42,1)'
+              }}
+              data-testid="pos-records-dropdown"
+            >
+              <FileText className="w-5 h-5" />
+              <span className="text-sm">Registros Históricos</span>
+              <ChevronDown className={`w-4 h-4 transition-transform ${showRecordsMenu ? 'rotate-180' : ''}`} />
+            </button>
+
+            {/* Dropdown Menu */}
+            {showRecordsMenu && (
+              <div 
+                className="absolute top-full mt-2 right-0 w-64 bg-white border-2 border-slate-900 rounded-xl shadow-lg z-50 overflow-hidden"
+                style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
+              >
+                {recordsMenuItems.map((record) => {
+                  const RecordIcon = record.icon;
+                  return (
+                    <button
+                      key={record.path}
+                      onClick={() => {
+                        navigate(record.path);
+                        setShowRecordsMenu(false);
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gradient-to-r hover:from-slate-50 hover:to-slate-100 transition-colors border-b-2 border-slate-900 last:border-b-0"
+                      data-testid={`record-${record.path}`}
+                    >
+                      <div className={`p-2 rounded-lg bg-gradient-to-br ${record.color}`}>
+                        <RecordIcon className="w-4 h-4 text-white" />
+                      </div>
+                      <span className="text-sm font-bold text-slate-900">{record.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Search Bar */}

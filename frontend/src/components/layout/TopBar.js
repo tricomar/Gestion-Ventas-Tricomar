@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import { useSettings } from '../../context/SettingsContext';
-import { Home, ShoppingCart, Package, Users, BarChart3, TrendingUp, Settings, LogOut, User, Store, Bell, StickyNote, ChevronDown, FileText, TrendingDown, DollarSign } from 'lucide-react';
+import { Home, ShoppingCart, Package, Users, BarChart3, TrendingUp, Settings, LogOut, User, Store, Bell, StickyNote } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -15,20 +15,6 @@ const TopBar = () => {
   const { settings } = useSettings();
   const [hasEcommerceIntegrations, setHasEcommerceIntegrations] = useState(false);
   const [pendingOrders, setPendingOrders] = useState(0);
-  const [showRecordsMenu, setShowRecordsMenu] = useState(false);
-  const recordsMenuRef = useRef(null);
-
-  // Click outside to close records menu
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (recordsMenuRef.current && !recordsMenuRef.current.contains(event.target)) {
-        setShowRecordsMenu(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   // Verificar integraciones y pedidos pendientes
   useEffect(() => {
@@ -57,7 +43,7 @@ const TopBar = () => {
 
   const menuItems = [
     { path: '/dashboard', icon: Home, label: 'Dashboard', color: 'from-purple-400 to-pink-400', show: true },
-    { path: '/pos', icon: ShoppingCart, label: 'Punto de Venta', color: 'from-orange-400 to-red-400', show: true, hasDropdown: true },
+    { path: '/pos', icon: ShoppingCart, label: 'Punto de Venta', color: 'from-orange-400 to-red-400', show: true },
     { path: '/ecommerce', icon: Store, label: 'Ecommerce', color: 'from-green-400 to-teal-400', show: hasEcommerceIntegrations, badge: pendingOrders },
     { path: '/inventory', icon: Package, label: 'Inventario', color: 'from-yellow-400 to-orange-400', show: true },
     { path: '/customers', icon: Users, label: 'Clientes', color: 'from-pink-400 to-purple-400', show: true },
@@ -65,12 +51,6 @@ const TopBar = () => {
     { path: '/reports', icon: BarChart3, label: 'Reportes', color: 'from-blue-400 to-purple-400', show: true },
     { path: '/analytics', icon: TrendingUp, label: 'Analítica', color: 'from-purple-500 to-pink-500', show: true },
     { path: '/settings', icon: Settings, label: 'Configuración', color: 'from-slate-400 to-slate-600', show: true },
-  ];
-
-  const recordsMenuItems = [
-    { path: '/sales-records', icon: FileText, label: 'Registro de Ventas', color: 'from-green-400 to-emerald-400' },
-    { path: '/expenses-records', icon: TrendingDown, label: 'Registro de Egresos', color: 'from-red-400 to-pink-400' },
-    { path: '/income-records', icon: DollarSign, label: 'Registro de Otros Ingresos', color: 'from-yellow-400 to-orange-400' },
   ];
 
   const isActive = (path) => location.pathname === path;
@@ -121,80 +101,6 @@ const TopBar = () => {
               const Icon = item.icon;
               const active = isActive(item.path);
               
-              // Special handling for POS with dropdown
-              if (item.hasDropdown && item.path === '/pos') {
-                return (
-                  <div key={item.path} className="relative" ref={recordsMenuRef}>
-                    <div className="flex items-center gap-1">
-                      {/* Main POS button */}
-                      <button
-                        onClick={() => navigate(item.path)}
-                        className={`group flex flex-col items-center gap-1 px-4 py-2 rounded-l-xl border-2 border-r-0 border-slate-900 font-bold transition-all ${
-                          active 
-                            ? 'bg-slate-900 text-white scale-105' 
-                            : 'bg-white text-slate-900 hover:scale-105'
-                        }`}
-                        style={{ 
-                          boxShadow: active ? '3px 3px 0px 0px rgba(15,23,42,1)' : '2px 2px 0px 0px rgba(15,23,42,1)',
-                          minWidth: '80px'
-                        }}
-                        data-testid={`topbar-${item.label.toLowerCase().replace(' ', '-')}`}
-                      >
-                        <div className={`p-1.5 rounded-lg bg-gradient-to-br ${item.color} ${active ? 'opacity-100' : 'opacity-80 group-hover:opacity-100'} relative`}>
-                          <Icon className="w-5 h-5 text-white" />
-                        </div>
-                        <span className="text-xs font-bold">{item.label}</span>
-                      </button>
-
-                      {/* Dropdown toggle */}
-                      <button
-                        onClick={() => setShowRecordsMenu(!showRecordsMenu)}
-                        className={`flex items-center justify-center px-2 py-2 rounded-r-xl border-2 border-slate-900 font-bold transition-all ${
-                          showRecordsMenu
-                            ? 'bg-slate-900 text-white' 
-                            : 'bg-white text-slate-900 hover:bg-slate-50'
-                        }`}
-                        style={{ 
-                          boxShadow: showRecordsMenu ? '3px 3px 0px 0px rgba(15,23,42,1)' : '2px 2px 0px 0px rgba(15,23,42,1)',
-                          height: '100%'
-                        }}
-                        title="Registros Históricos"
-                      >
-                        <ChevronDown className={`w-4 h-4 transition-transform ${showRecordsMenu ? 'rotate-180' : ''}`} />
-                      </button>
-                    </div>
-
-                    {/* Dropdown Menu */}
-                    {showRecordsMenu && (
-                      <div 
-                        className="absolute top-full mt-2 left-0 w-64 bg-white border-2 border-slate-900 rounded-xl shadow-lg z-50 overflow-hidden"
-                        style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
-                      >
-                        {recordsMenuItems.map((record) => {
-                          const RecordIcon = record.icon;
-                          return (
-                            <button
-                              key={record.path}
-                              onClick={() => {
-                                navigate(record.path);
-                                setShowRecordsMenu(false);
-                              }}
-                              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gradient-to-r hover:from-slate-50 hover:to-slate-100 transition-colors border-b-2 border-slate-900 last:border-b-0"
-                            >
-                              <div className={`p-2 rounded-lg bg-gradient-to-br ${record.color}`}>
-                                <RecordIcon className="w-4 h-4 text-white" />
-                              </div>
-                              <span className="text-sm font-bold text-slate-900">{record.label}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              }
-
-              // Regular menu items
               return (
                 <button
                   key={item.path}
