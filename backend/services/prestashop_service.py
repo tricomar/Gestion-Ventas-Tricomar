@@ -147,6 +147,95 @@ class PrestashopAPIService:
         
         return categories
     
+    def get_category(self, category_id: int) -> Optional[Dict[str, Any]]:
+        """
+        Obtener una categoría específica de PrestaShop
+        
+        Args:
+            category_id: ID de la categoría
+            
+        Returns:
+            Datos de la categoría o None
+        """
+        try:
+            params = {'display': 'full'}
+            response = self._make_request(f'categories/{category_id}', params=params)
+            
+            if 'category' in response:
+                return response['category']
+            return None
+        except Exception as e:
+            print(f"[PrestaShop] Error getting category {category_id}: {str(e)}")
+            return None
+    
+    def get_category_hierarchy(self, category_id: int) -> List[Dict[str, Any]]:
+        """
+        Obtener jerarquía completa de una categoría (desde raíz hasta categoría actual)
+        
+        Args:
+            category_id: ID de la categoría
+            
+        Returns:
+            Lista de categorías desde raíz hasta la categoría actual
+        """
+        hierarchy = []
+        current_id = category_id
+        
+        # Evitar loops infinitos
+        max_depth = 10
+        depth = 0
+        
+        while current_id and current_id != 1 and current_id != 2 and depth < max_depth:
+            category = self.get_category(current_id)
+            
+            if not category:
+                break
+            
+            # Extraer datos importantes
+            cat_data = {
+                'id': int(category.get('id', 0)),
+                'name': self._extract_multilang_field(category.get('name', '')),
+                'id_parent': int(category.get('id_parent', 0)),
+                'level_depth': int(category.get('level_depth', 0)),
+                'active': int(category.get('active', 0))
+            }
+            
+            hierarchy.insert(0, cat_data)  # Insertar al inicio para mantener orden raíz->hoja
+            
+            # Ir al padre
+            current_id = cat_data['id_parent']
+            depth += 1
+        
+        return hierarchy
+    
+    def _extract_multilang_field(self, field_data) -> str:
+        """
+        Extraer texto de campo multiidioma de PrestaShop
+        
+        Args:
+            field_data: Dato que puede ser string, dict o list de dicts
+            
+        Returns:
+            Texto extraído
+        """
+        if isinstance(field_data, str):
+            return field_data
+        elif isinstance(field_data, dict):
+            # Si es dict con 'language', extraer el value
+            if 'language' in field_data:
+                lang = field_data['language']
+                if isinstance(lang, list) and len(lang) > 0:
+                    return lang[0].get('value', '')
+                elif isinstance(lang, dict):
+                    return lang.get('value', '')
+            # Si tiene 'value' directo
+            return field_data.get('value', '')
+        elif isinstance(field_data, list) and len(field_data) > 0:
+            # Tomar el primer elemento
+            return self._extract_multilang_field(field_data[0])
+        
+        return ''
+    
     def get_products(self, limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
         """
         Obtener productos de PrestaShop

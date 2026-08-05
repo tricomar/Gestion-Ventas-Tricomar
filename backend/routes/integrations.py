@@ -17,6 +17,7 @@ from models.integrations import (
     SyncLog
 )
 from services.prestashop_service import PrestashopAPIService
+from services.category_sync_service import CategorySyncService
 from middleware.tenant import get_tenant_filter, add_account_id_to_document
 from utils import db, get_current_user
 from models.users import User
@@ -394,6 +395,20 @@ async def sync_products_background(job_id: str, integration_id: str, integration
         # Crear servicio de PrestaShop
         ps_service = PrestashopAPIService(integration['shop_url'], integration['api_key'])
         
+        # Obtener nombre de tienda
+        account = await db.accounts.find_one({'id': account_id}, {'_id': 0})
+        store_name = 'PrestaShop'
+        store_code = 'A'
+        if account and 'stores' in account:
+            store_id = integration.get('store_id')
+            matching_store = next((s for s in account['stores'] if s.get('id') == store_id), None)
+            if matching_store:
+                store_name = matching_store.get('name', 'PrestaShop')
+                store_code = matching_store.get('code', 'A')
+        
+        # Crear servicio de sincronización de categorías
+        category_sync = CategorySyncService(ps_service, account_id, store_name)
+        
         # Actualizar job
         await db.sync_jobs.update_one(
             {'id': job_id},
@@ -497,26 +512,20 @@ async def sync_products_background(job_id: str, integration_id: str, integration
                 {'_id': 0}
             )
             
-            # Obtener el código correcto de la tienda desde la cuenta
-            account = await db.accounts.find_one({'id': account_id}, {'_id': 0})
-            store_code = 'A'  # Valor por defecto
-            if account and 'stores' in account:
-                # Buscar la tienda asociada a esta integración
-                store_id = integration.get('store_id')
-                matching_store = next((s for s in account['stores'] if s.get('id') == store_id), None)
-                if matching_store:
-                    store_code = matching_store.get('code', 'A')
-            
-            # Obtener nombre de categoría de PrestaShop
+            # Sincronizar categoría jerárquica de PrestaShop
             category_id = int(ps_prod.get('id_category_default', 0))
+            category_local_id = None
             category_name = 'Sin categoría'
+            
             if category_id > 0:
-                ps_category = await db.prestashop_categories.find_one(
-                    {'account_id': account_id, 'integration_id': integration_id, 'prestashop_id': category_id},
-                    {'_id': 0}
-                )
-                if ps_category:
-                    category_name = ps_category.get('name', 'Sin categoría')
+                # Sincronizar jerarquía completa de la categoría
+                category_local_id = await category_sync.sync_category_hierarchy(category_id)
+                
+                if category_local_id:
+                    # Obtener nombre de la categoría sincronizada
+                    local_cat = await db.categories.find_one({'id': category_local_id}, {'_id': 0})
+                    if local_cat:
+                        category_name = local_cat.get('name', 'Sin categoría')
             
             # Preparar documento para colección local
             local_product_doc = {
@@ -527,7 +536,8 @@ async def sync_products_background(job_id: str, integration_id: str, integration
                 'cost_price': cost_price,  # COSTO = Precio CON IVA de PrestaShop
                 'sale_price': sale_price,  # Precio de venta CON IVA
                 'stock': stock,
-                'category': category_name,  # Categoría desde PrestaShop
+                'category': category_name,  # Nombre de categoría (temporal, para compatibilidad)
+                'category_id': category_local_id,  # ID de categoría jerárquica
                 'store': store_code,  # Código correcto de la tienda
                 'min_stock': 5,  # Valor por defecto
                 'prestashop_id': prod_id,  # Referencia al producto de PrestaShop
