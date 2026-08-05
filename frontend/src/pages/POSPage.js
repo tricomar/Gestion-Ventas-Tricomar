@@ -6,8 +6,8 @@ import { useNavigate } from 'react-router-dom';
 import { useStores } from '../hooks/useStores';
 import CartSidebar from '../components/pos/CartSidebar';
 import SaleDocument from '../components/pos/SaleDocument';
-import PastExpenseForm from '../components/PastExpenseForm';
-import PastIncomeForm from '../components/PastIncomeForm';
+import ExpenseForm from '../components/ExpenseForm';
+import OtherIncomeForm from '../components/OtherIncomeForm';
 import { v4 as uuidv4 } from 'uuid';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -65,7 +65,7 @@ const POSPage = () => {
 
   const fetchFrequentProducts = async () => {
     try {
-      const response = await axios.get(`${API}/products`);
+      const response = await axios.get(`${API}/products/top-selling?limit=20`);
       setProducts(response.data);
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -218,7 +218,7 @@ const POSPage = () => {
         </div>
       </div>
       <div className="flex items-center justify-between">
-        <p className="text-2xl font-black text-slate-900">${product.sale_price?.toLocaleString('es-CL')}</p>
+        <p className="text-2xl font-black text-slate-900">${Math.round(product.sale_price || 0).toLocaleString('es-CL')}</p>
         <span className="px-2 py-1 bg-yellow-100 border border-slate-900 rounded text-xs font-bold">
           Stock: {product.stock || 0}
         </span>
@@ -349,7 +349,7 @@ const POSPage = () => {
                       <p className="font-bold text-slate-900">{product.name}</p>
                       <p className="text-xs text-slate-600">{product.sku} - Stock: {product.stock}</p>
                     </div>
-                    <p className="text-xl font-black text-slate-900">${product.sale_price?.toLocaleString('es-CL')}</p>
+                    <p className="text-xl font-black text-slate-900">${Math.round(product.sale_price || 0).toLocaleString('es-CL')}</p>
                   </div>
                 </div>
               ))}
@@ -408,7 +408,7 @@ const POSPage = () => {
         {/* Product Grid */}
         <div>
           <h2 className="text-xl font-black text-slate-900 mb-4">
-            Productos Disponibles ({products.length})
+            Productos Más Vendidos
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {products.map((product) => (
@@ -440,28 +440,44 @@ const POSPage = () => {
         />
       )}
 
-      {/* Expense Form Modal */}
+      {/* Expense Form */}
       {showExpenseForm && (
-        <PastExpenseForm
-          onClose={() => setShowExpenseForm(false)}
-          onSuccess={() => {
-            toast.success('Egreso registrado exitosamente');
-            setShowExpenseForm(false);
-          }}
-          initialDate={new Date().toISOString().split('T')[0]}
-        />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="relative max-w-2xl w-full">
+            <button
+              onClick={() => setShowExpenseForm(false)}
+              className="absolute -top-4 -right-4 z-10 p-2 bg-white border-2 border-slate-900 rounded-full hover:bg-slate-100 transition-all"
+              style={{ boxShadow: '2px 2px 0px 0px rgba(15,23,42,1)' }}
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <ExpenseForm
+              onSuccess={() => {
+                setShowExpenseForm(false);
+              }}
+            />
+          </div>
+        </div>
       )}
 
-      {/* Income Form Modal */}
+      {/* Income Form */}
       {showIncomeForm && (
-        <PastIncomeForm
-          onClose={() => setShowIncomeForm(false)}
-          onSuccess={() => {
-            toast.success('Ingreso registrado exitosamente');
-            setShowIncomeForm(false);
-          }}
-          initialDate={new Date().toISOString().split('T')[0]}
-        />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="relative max-w-2xl w-full">
+            <button
+              onClick={() => setShowIncomeForm(false)}
+              className="absolute -top-4 -right-4 z-10 p-2 bg-white border-2 border-slate-900 rounded-full hover:bg-slate-100 transition-all"
+              style={{ boxShadow: '2px 2px 0px 0px rgba(15,23,42,1)' }}
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <OtherIncomeForm
+              onSuccess={() => {
+                setShowIncomeForm(false);
+              }}
+            />
+          </div>
+        </div>
       )}
     </div>
   );

@@ -84,6 +84,38 @@ async def search_products(q: str, current_user: User = Depends(get_current_user)
         tenant_filter,
         {'_id': 0}
     ).sort('usage_count', -1).limit(10).to_list(10)
+    
+    # Redondear precios
+    for product in products:
+        if 'sale_price' in product:
+            product['sale_price'] = round(product['sale_price'])
+        if 'cost_price' in product:
+            product['cost_price'] = round(product['cost_price'])
+    
+    return products
+
+@router.get("/top-selling")
+async def get_top_selling_products(limit: int = 20, current_user: User = Depends(get_current_user)):
+    """Obtener productos más vendidos (basado en usage_count)"""
+    tenant_filter = get_tenant_filter(current_user.dict())
+    
+    products = await db.products.find(
+        tenant_filter,
+        {'_id': 0}
+    ).sort('usage_count', -1).limit(limit).to_list(limit)
+    
+    # Redondear precios y asegurar campos
+    for product in products:
+        if 'sale_price' in product:
+            product['sale_price'] = round(product['sale_price'])
+        if 'cost_price' in product:
+            product['cost_price'] = round(product['cost_price'])
+        if 'usage_count' not in product:
+            product['usage_count'] = 0
+        # Fix brand field if it's not a string
+        if 'brand' in product and not isinstance(product['brand'], str):
+            product['brand'] = None
+    
     return products
 
 @router.post("", response_model=Product)
