@@ -103,6 +103,13 @@ const SettingsPage = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  // Roles - Deben estar antes de los useEffect que los usan
+  const isSuperAdmin = user?.role === 'super_admin';
+  const isSupervisor = user?.role === 'account_admin'; // Supervisor
+  const canManageEmployees = isSupervisor; // Solo Supervisor puede gestionar empleados
+  const canAccessDatabase = isSuperAdmin; // Solo Super-Admin ve Base de Datos
+  const canAccessAllUsers = isSuperAdmin; // Solo Super-Admin ve todos los usuarios
+
   // Establecer pestaña por defecto según el rol y parámetros URL
   useEffect(() => {
     // Verificar si hay parámetro de tab en la URL
@@ -772,13 +779,6 @@ const SettingsPage = () => {
   if (loading) {
     return <div className="p-8">Cargando...</div>;
   }
-
-  // Determinar permisos según rol
-  const isSuperAdmin = user?.role === 'super_admin';
-  const isSupervisor = user?.role === 'account_admin'; // Supervisor
-  const canManageEmployees = isSupervisor; // Solo Supervisor puede gestionar empleados
-  const canAccessDatabase = isSuperAdmin; // Solo Super-Admin ve Base de Datos
-  const canAccessAllUsers = isSuperAdmin; // Solo Super-Admin ve todos los usuarios
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
