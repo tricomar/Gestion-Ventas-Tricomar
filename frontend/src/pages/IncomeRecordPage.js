@@ -200,7 +200,7 @@ const IncomeRecordPage = () => {
                 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900"
                 style={{ fontFamily: 'Cabinet Grotesk, sans-serif' }}
               >
-                Registro de Otros Ingresos
+                Registro de Ingresos Extras
               </h1>
               <p className="text-sm font-medium text-slate-600">Historial completo de otros ingresos</p>
             </div>
@@ -223,7 +223,7 @@ const IncomeRecordPage = () => {
                 style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
               >
                 <Plus className="w-5 h-5" />
-                Registrar Ingreso Pasado
+                Registrar Ingreso Extra
               </button>
             )}
           </div>
