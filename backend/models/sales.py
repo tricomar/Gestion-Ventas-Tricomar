@@ -1,7 +1,15 @@
 from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, List
 import uuid
+
+# Modelo para items de carrito
+class CartItemModel(BaseModel):
+    product_id: str
+    product_name: str
+    quantity: int
+    unit_price: float
+    subtotal: float
 
 class SaleCreate(BaseModel):
     product_id: str
@@ -42,3 +50,9 @@ class Sale(BaseModel):
     # Legacy field support
     product: Optional[str] = None
     customer: Optional[str] = None  # Legacy field
+    # Cart sale fields (optional, only for POS cart sales)
+    sale_number: Optional[str] = None
+    cart_id: Optional[str] = None
+    items: Optional[List[CartItemModel]] = None
+    iva: Optional[float] = None
+    subtotal: Optional[float] = None
