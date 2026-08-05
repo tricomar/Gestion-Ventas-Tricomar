@@ -90,7 +90,8 @@ async def get_income_calendar(
             'month': month,
             'daily_totals': dict(daily_totals),
             'monthly_total': monthly_total,
-            'yearly_total': yearly_total
+            'yearly_total': yearly_total,
+            'total_income_count': len(incomes)
         }
         
     except Exception as e:

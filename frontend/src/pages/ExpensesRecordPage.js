@@ -209,12 +209,12 @@ const ExpensesRecordPage = () => {
           
           <div className="flex gap-3">
             <button
-              onClick={() => navigate('/')}
+              onClick={() => navigate('/pos')}
               className="flex items-center gap-2 px-6 py-3 bg-white border-2 border-slate-900 rounded-xl font-bold hover:bg-slate-50 transition-all"
               style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
             >
               <Home className="w-5 h-5" />
-              Volver al Dashboard
+              Volver al POS
             </button>
             
             {canEdit && (
@@ -326,7 +326,7 @@ const ExpensesRecordPage = () => {
                 <div className="p-4 bg-slate-100 border-2 border-slate-900 rounded-lg">
                   <p className="text-xs font-bold uppercase text-slate-600 mb-1">Egresos del Mes</p>
                   <p className="text-xl font-bold text-slate-900">
-                    {calendarData?.total_sales_count || 0} registros
+                    {calendarData?.total_expenses_count || 0} registros
                   </p>
                 </div>
               </div>

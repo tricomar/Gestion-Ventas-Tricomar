@@ -90,7 +90,8 @@ async def get_expenses_calendar(
             'month': month,
             'daily_totals': dict(daily_totals),
             'monthly_total': monthly_total,
-            'yearly_total': yearly_total
+            'yearly_total': yearly_total,
+            'total_expenses_count': len(expenses)
         }
         
     except Exception as e:
