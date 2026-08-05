@@ -147,6 +147,12 @@ const POSPage = () => {
     toast.info('Producto eliminado del carrito');
   };
 
+  const updateItemDiscount = (itemId, discountPercent) => {
+    setCartItems(cartItems.map(item =>
+      item.id === itemId ? { ...item, discount: discountPercent } : item
+    ));
+  };
+
   const clearCart = () => {
     setCartItems([]);
     setSelectedCustomer(null);
@@ -441,6 +447,9 @@ const POSPage = () => {
         onClear={clearCart}
         onPayment={handlePayment}
         customer={selectedCustomer}
+        todayStats={todayStats}
+        onUpdateItemDiscount={updateItemDiscount}
+        discountPercentages={discountPercentages}
       />
 
       {/* Sale Document Modal */}
