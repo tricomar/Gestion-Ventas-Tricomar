@@ -197,6 +197,24 @@ const SalesRecordPage = () => {
     });
   };
 
+  const handleRemoveItem = (index) => {
+    const updatedItems = editModal.data.items.filter((_, i) => i !== index);
+    
+    if (updatedItems.length === 0) {
+      toast.error('Debe haber al menos un producto en la venta');
+      return;
+    }
+    
+    setEditModal({
+      ...editModal,
+      data: {
+        ...editModal.data,
+        items: updatedItems
+      }
+    });
+    toast.success('Producto eliminado');
+  };
+
   const getTotalFromItems = () => {
     if (!editModal.data.items) return 0;
     return editModal.data.items.reduce((sum, item) => sum + (item.subtotal || 0), 0);
@@ -592,10 +610,20 @@ const SalesRecordPage = () => {
                       {editModal.data.items && editModal.data.items.map((item, idx) => (
                         <div 
                           key={idx}
-                          className="p-3 border-2 border-slate-900 rounded-lg bg-white"
+                          className="p-3 border-2 border-slate-900 rounded-lg bg-white relative"
                           style={{ boxShadow: '2px 2px 0px 0px rgba(15,23,42,1)' }}
                         >
-                          <div className="font-bold text-sm mb-2">{item.product_name}</div>
+                          <div className="flex justify-between items-start mb-2">
+                            <div className="font-bold text-sm">{item.product_name}</div>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveItem(idx)}
+                              className="p-1 hover:bg-red-100 rounded transition-colors"
+                              title="Eliminar producto"
+                            >
+                              <Trash2 className="w-4 h-4 text-red-600" />
+                            </button>
+                          </div>
                           <div className="grid grid-cols-3 gap-2">
                             <div>
                               <label className="block text-xs font-bold mb-1">Cantidad</label>
