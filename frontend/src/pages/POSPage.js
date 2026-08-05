@@ -93,7 +93,7 @@ const POSPage = () => {
   const recordsMenuItems = [
     { path: '/sales-records', icon: FileText, label: 'Registro de Ventas', color: 'from-green-400 to-emerald-400' },
     { path: '/expenses-records', icon: TrendingDown, label: 'Registro de Egresos', color: 'from-red-400 to-pink-400' },
-    { path: '/income-records', icon: DollarSign, label: 'Registro de Otros Ingresos', color: 'from-yellow-400 to-orange-400' },
+    { path: '/income-records', icon: DollarSign, label: 'Registro de Ingresos Extras', color: 'from-yellow-400 to-orange-400' },
   ];
 
   const addToCart = (product) => {
