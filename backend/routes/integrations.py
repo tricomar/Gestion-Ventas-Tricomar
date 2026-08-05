@@ -538,6 +538,7 @@ async def sync_products_background(job_id: str, integration_id: str, integration
                 'stock': stock,
                 'category': category_name,  # Nombre de categoría (temporal, para compatibilidad)
                 'category_id': category_local_id,  # ID de categoría jerárquica
+                'id_category_default': category_id,  # ⭐ NUEVO: Guardar ID original de PrestaShop
                 'store': store_code,  # Código correcto de la tienda
                 'min_stock': 5,  # Valor por defecto
                 'prestashop_id': prod_id,  # Referencia al producto de PrestaShop
