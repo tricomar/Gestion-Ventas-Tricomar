@@ -3,7 +3,7 @@ import { X, Download, Printer } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
 import { useSettings } from '../../context/SettingsContext';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 const SaleDocument = ({ sale, onClose }) => {
   const { settings } = useSettings();
