@@ -15,6 +15,7 @@ import StoresTab from '../components/settings/StoresTab';
 import ImportTab from '../components/settings/ImportTab';
 import IntegrationsTab from '../components/settings/IntegrationsTab';
 import PersonalizationTab from '../components/settings/PersonalizationTab';
+import CategoryTree from '../components/settings/CategoryTree';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -36,7 +37,11 @@ const SettingsPage = () => {
   const { stores, loading: storesLoading } = useStores(); // Hook para obtener tiendas dinámicas
   const [activeTab, setActiveTab] = useState('profile'); // 'stores', 'profile', 'users', 'inventory', 'database', or 'audit' - Inicia en Mi Perfil
   
-  // Categories management
+  // Categories management (jerárquico)
+  const [hierarchicalCategories, setHierarchicalCategories] = useState([]);
+  const [loadingCategories, setLoadingCategories] = useState(false);
+  
+  // Categories management (legacy - lista plana)
   const [categories, setCategories] = useState([]);
   const [newCategory, setNewCategory] = useState('');
   const [editingCategoryIndex, setEditingCategoryIndex] = useState(null);
@@ -150,6 +155,13 @@ const SettingsPage = () => {
     }
   }, [settings, categoriesLoaded]);
 
+  // Load hierarchical categories when inventory tab is opened
+  useEffect(() => {
+    if (activeTab === 'inventory' && isSupervisor) {
+      fetchHierarchicalCategories();
+    }
+  }, [activeTab, isSupervisor]);
+
   // Cargar audit logs cuando se accede al tab
   useEffect(() => {
     if (activeTab === 'audit' && user?.role === 'account_admin') {
@@ -215,7 +227,65 @@ const SettingsPage = () => {
     }
   };
 
-  // Category Management Functions
+  // Hierarchical Categories Management Functions
+  const fetchHierarchicalCategories = async () => {
+    setLoadingCategories(true);
+    try {
+      const response = await axios.get(`${API}/categories`);
+      setHierarchicalCategories(response.data);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+      toast.error('Error al cargar categorías');
+    } finally {
+      setLoadingCategories(false);
+    }
+  };
+
+  const handleAddHierarchicalCategory = async (name, parentId = null) => {
+    try {
+      const response = await axios.post(`${API}/categories`, {
+        name: name,
+        parent_id: parentId
+      });
+      
+      toast.success('Categoría agregada exitosamente');
+      await fetchHierarchicalCategories();
+    } catch (error) {
+      const errorMessage = error.response?.data?.detail || 'Error al agregar categoría';
+      toast.error(errorMessage);
+      console.error('Error adding category:', error);
+    }
+  };
+
+  const handleEditHierarchicalCategory = async (categoryId, newName) => {
+    try {
+      await axios.put(`${API}/categories/${categoryId}`, {
+        name: newName
+      });
+      
+      toast.success('Categoría actualizada exitosamente');
+      await fetchHierarchicalCategories();
+    } catch (error) {
+      const errorMessage = error.response?.data?.detail || 'Error al actualizar categoría';
+      toast.error(errorMessage);
+      console.error('Error updating category:', error);
+    }
+  };
+
+  const handleDeleteHierarchicalCategory = async (categoryId) => {
+    try {
+      await axios.delete(`${API}/categories/${categoryId}`);
+      
+      toast.success('Categoría eliminada exitosamente');
+      await fetchHierarchicalCategories();
+    } catch (error) {
+      const errorMessage = error.response?.data?.detail || 'Error al eliminar categoría';
+      toast.error(errorMessage);
+      console.error('Error deleting category:', error);
+    }
+  };
+
+  // Category Management Functions (legacy - lista plana)
   const handleAddCategory = () => {
     if (!newCategory.trim()) {
       toast.error('Ingresa un nombre de categoría');
@@ -984,7 +1054,21 @@ const SettingsPage = () => {
         )}
 
         {/* Inventory Management Tab - Gestión de Categorías */}
+        {/* Inventory/Categories Tab */}
         {activeTab === 'inventory' && isSupervisor && (
+          <div className="bg-white border-2 border-slate-900 rounded-xl p-6"
+            style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}>
+            <h2 className="text-2xl font-black text-slate-900 mb-6">Gestión de Categorías</h2>
+            
+            <CategoryTree
+              categories={hierarchicalCategories}
+              onAddCategory={handleAddHierarchicalCategory}
+              onEditCategory={handleEditHierarchicalCategory}
+              onDeleteCategory={handleDeleteHierarchicalCategory}
+              loading={loadingCategories}
+            />
+          </div>
+        )}
           <div 
             className="bg-white border-2 border-slate-900 rounded-xl p-8"
             style={{ boxShadow: '8px 8px 0px 0px rgba(15,23,42,1)' }}

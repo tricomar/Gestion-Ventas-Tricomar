@@ -26,6 +26,7 @@ from .analytics import router as analytics_router
 from .audit import router as audit_router
 from .integrations import router as integrations_router
 from .ecommerce import router as ecommerce_router
+from .categories import router as categories_router
 
 # Crear el router principal con prefijo /api
 api_router = APIRouter(prefix="/api")
@@ -52,5 +53,6 @@ api_router.include_router(analytics_router, prefix="/analytics", tags=["analytic
 api_router.include_router(audit_router, prefix="/audit", tags=["audit"])
 api_router.include_router(integrations_router)
 api_router.include_router(ecommerce_router)
+api_router.include_router(categories_router)
 
 __all__ = ["api_router"]
