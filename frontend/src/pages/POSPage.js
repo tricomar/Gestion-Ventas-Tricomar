@@ -6,6 +6,8 @@ import { useNavigate } from 'react-router-dom';
 import { useStores } from '../hooks/useStores';
 import CartSidebar from '../components/pos/CartSidebar';
 import SaleDocument from '../components/pos/SaleDocument';
+import PastExpenseForm from '../components/PastExpenseForm';
+import PastIncomeForm from '../components/PastIncomeForm';
 import { v4 as uuidv4 } from 'uuid';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -26,6 +28,8 @@ const POSPage = () => {
   const [customerResults, setCustomerResults] = useState([]);
   const [showRecordsMenu, setShowRecordsMenu] = useState(false);
   const recordsMenuRef = useRef(null);
+  const [showExpenseForm, setShowExpenseForm] = useState(false);
+  const [showIncomeForm, setShowIncomeForm] = useState(false);
 
   useEffect(() => {
     fetchFrequentProducts();
@@ -61,7 +65,7 @@ const POSPage = () => {
 
   const fetchFrequentProducts = async () => {
     try {
-      const response = await axios.get(`${API}/products?limit=20`);
+      const response = await axios.get(`${API}/products`);
       setProducts(response.data);
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -290,7 +294,7 @@ const POSPage = () => {
         {/* Action Buttons - Egresos e Ingresos Extras */}
         <div className="mb-6 flex items-center gap-3">
           <button
-            onClick={() => navigate('/expenses-records')}
+            onClick={() => setShowExpenseForm(true)}
             className="flex items-center gap-2 px-4 py-3 bg-white border-2 border-slate-900 rounded-xl font-bold text-slate-900 hover:scale-105 transition-all"
             style={{ boxShadow: '3px 3px 0px 0px rgba(15,23,42,1)' }}
             data-testid="pos-expenses-button"
@@ -302,7 +306,7 @@ const POSPage = () => {
           </button>
 
           <button
-            onClick={() => navigate('/income-records')}
+            onClick={() => setShowIncomeForm(true)}
             className="flex items-center gap-2 px-4 py-3 bg-white border-2 border-slate-900 rounded-xl font-bold text-slate-900 hover:scale-105 transition-all"
             style={{ boxShadow: '3px 3px 0px 0px rgba(15,23,42,1)' }}
             data-testid="pos-income-button"
@@ -403,7 +407,9 @@ const POSPage = () => {
 
         {/* Product Grid */}
         <div>
-          <h2 className="text-xl font-black text-slate-900 mb-4">Productos Frecuentes</h2>
+          <h2 className="text-xl font-black text-slate-900 mb-4">
+            Productos Disponibles ({products.length})
+          </h2>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {products.map((product) => (
               <ProductCard key={product.id} product={product} />
@@ -431,6 +437,30 @@ const POSPage = () => {
             setShowDocument(false);
             setCompletedSale(null);
           }}
+        />
+      )}
+
+      {/* Expense Form Modal */}
+      {showExpenseForm && (
+        <PastExpenseForm
+          onClose={() => setShowExpenseForm(false)}
+          onSuccess={() => {
+            toast.success('Egreso registrado exitosamente');
+            setShowExpenseForm(false);
+          }}
+          initialDate={new Date().toISOString().split('T')[0]}
+        />
+      )}
+
+      {/* Income Form Modal */}
+      {showIncomeForm && (
+        <PastIncomeForm
+          onClose={() => setShowIncomeForm(false)}
+          onSuccess={() => {
+            toast.success('Ingreso registrado exitosamente');
+            setShowIncomeForm(false);
+          }}
+          initialDate={new Date().toISOString().split('T')[0]}
         />
       )}
     </div>
