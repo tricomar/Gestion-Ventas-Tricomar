@@ -281,6 +281,61 @@ async def get_sales(date: Optional[str] = None, current_user: User = Depends(get
     
     return result
 
+@router.patch("/{sale_id}/cart-sale")
+async def update_cart_sale(
+    sale_id: str, 
+    update_data: dict,
+    current_user: User = Depends(get_current_user)
+):
+    """Actualizar campos específicos de una venta de carrito"""
+    # Validar permisos: solo account_admin y supervisor pueden editar
+    if current_user.role not in ['account_admin', 'supervisor']:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permisos para editar registros de ventas"
+        )
+    
+    # Filtro de tenant
+    tenant_filter = get_tenant_filter(current_user.dict(), {'id': sale_id})
+    
+    existing = await db.sales.find_one(tenant_filter, {'_id': 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Venta no encontrada")
+    
+    # Solo permitir actualizar campos específicos de carrito
+    allowed_fields = {'customer_name', 'payment_method', 'total'}
+    filtered_update = {k: v for k, v in update_data.items() if k in allowed_fields}
+    
+    if not filtered_update:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No hay campos válidos para actualizar"
+        )
+    
+    # Guardar datos antiguos para auditoría
+    old_data = {
+        "customer_name": existing.get('customer_name'),
+        "payment_method": existing.get('payment_method'),
+        "total": existing.get('total')
+    }
+    
+    # Actualizar en base de datos
+    await db.sales.update_one(tenant_filter, {'$set': filtered_update})
+    
+    # Crear log de auditoría
+    await create_audit_log(
+        account_id=current_user.account_id,
+        user_id=current_user.id,
+        user_name=current_user.name,
+        action="update",
+        record_type="cart_sale",
+        record_id=sale_id,
+        old_data=old_data,
+        new_data=filtered_update
+    )
+    
+    return {"success": True, "message": "Venta de carrito actualizada exitosamente"}
+
 @router.put("/{sale_id}", response_model=Sale)
 async def update_sale(sale_id: str, sale_input: SaleCreate, current_user: User = Depends(get_current_user)):
     # Validar permisos: solo account_admin y supervisor pueden editar

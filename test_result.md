@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Validación integral de funcionalidades modificadas: Inventario (filtros, ordenamiento, marca, selección masiva) y Settings → Categorías antes de rediseño ERP"
+user_problem_statement: "Implementación de Registro de Ventas con detalles completos de carrito POS - Los carritos pagados deben registrarse en Registro de Ventas con la capacidad de consultar el carrito completo (productos, cantidades, precios, totales). Los roles account_admin y supervisor deben poder editar datos de ventas."
 
 frontend:
   - task: "Inventario - Fix stores is not defined error"
@@ -256,24 +256,74 @@ backend:
           agent: "main"
           comment: "Código revisado: brand_name definido correctamente en línea 452 como ps_prod.get('manufacturer_name', ''). Backend compila sin errores de lint. Pendiente validación con sincronización real de PrestaShop."
 
+  - task: "Registro de Ventas - Modal de detalles de carrito completo"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/SalesRecordPage.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "Implementado modal de detalles que muestra carrito completo de ventas POS. Modal incluye: número de venta, ID de carrito, cliente, lista de productos con cantidad/precio/subtotal, totales (subtotal sin IVA, IVA 19%, total), método de pago, usuario que registró. Se agregó botón 'Ver detalles' (ícono Eye) solo para ventas con cart_id o items. Cambios en líneas 28-30 (estado detailsModal), 390-433 (botón ver detalles en lista), 627-727 (modal completo con diseño neobrutalista). Pendiente: Testing E2E completo del flujo POS→Pago→Historial→Ver Detalles."
+
+  - task: "Registro de Ventas - Edición de ventas de carrito con permisos"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/SalesRecordPage.js, /app/backend/routes/sales.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "Implementado sistema de edición diferenciado para ventas de carrito vs ventas individuales. Frontend: Modal de edición detecta tipo de venta (isCartSale) y muestra campos apropiados. Para ventas de carrito solo permite editar: cliente, método de pago, total (productos no editables). Backend: Nuevo endpoint PATCH /api/sales/{sale_id}/cart-sale que valida permisos (account_admin y supervisor) y solo permite actualizar campos específicos (customer_name, payment_method, total). Incluye auditoría completa con create_audit_log. Cambios frontend líneas 28, 105-144, 521-625. Cambios backend líneas 284-339. Pendiente: Testing E2E de edición con ambos roles."
+
+backend:
+  - task: "Backend - Endpoint PATCH para actualización de ventas de carrito"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/routes/sales.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: "NA"
+          agent: "main"
+          comment: "Creado nuevo endpoint PATCH /api/sales/{sale_id}/cart-sale específico para actualizar ventas de carrito. Valida permisos (solo account_admin y supervisor), filtra por tenant, permite actualizar solo campos permitidos (customer_name, payment_method, total), crea log de auditoría. Endpoint implementado en líneas 284-339 de sales.py. Hot reload confirmó backend se reinició correctamente sin errores. Pendiente: Testing con curl y E2E."
+
+  - task: "Backend - Endpoint POST /api/sales/cart para guardar ventas POS"
+    implemented: true
+    working: true
+    file: "/app/backend/routes/sales.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "main"
+          comment: "Endpoint ya existe y funciona (líneas 44-100). Recibe CartSale con cart_id, items[], customer_id/name, payment_method, subtotal, iva, total, date. Genera sale_number único, guarda con tenant isolation, actualiza stock de productos automáticamente. Usado actualmente por POSPage.js línea 177. No requiere cambios."
+
 metadata:
   created_by: "main_agent"
   version: "1.0"
-  test_sequence: 16
+  test_sequence: 17
   run_ui: true
-  test_date: "2026-08-04"
+  test_date: "2026-08-05"
   test_accounts: "hola@tricomar.cl"
 
 test_plan:
   current_focus:
-    - "Validación completa exitosa - Listo para rediseño ERP"
+    - "Registro de Ventas - Modal de detalles de carrito completo"
+    - "Registro de Ventas - Edición de ventas de carrito con permisos"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
 
 agent_communication:
     - agent: "main"
-      message: "Corregidos errores críticos en InventoryPage.js: stores is not defined, filtro por tienda, ordenamiento, y categorías disponibles. Screenshots confirman página carga correctamente con todos los elementos visibles. Settings → Categorías validado sin errores. Pendiente testing E2E completo de flujos de selección masiva, exportación y eliminación. PrestaShop requiere validación con datos reales."
+      message: "IMPLEMENTACIÓN COMPLETADA: Registro de Ventas con detalles de carrito POS. Archivos modificados: SalesRecordPage.js (corregido código duplicado líneas 470-501, agregado modal de detalles líneas 627-727, sistema de edición diferenciado líneas 105-144 y 521-625), sales.py (nuevo endpoint PATCH /api/sales/{sale_id}/cart-sale líneas 284-339). Build frontend exitoso con warnings. Backend reiniciado automáticamente sin errores. Flujo implementado: POS paga carrito → guarda en /api/sales/cart con items[] → Registro de Ventas muestra ventas con ícono carrito y botón Eye para ver detalles → Modal muestra carrito completo (productos, cantidades, precios, totales, cliente, método pago) → Edición permite modificar solo campos específicos según rol (account_admin/supervisor). Permisos validados en backend. Auditoría completa implementada. PENDIENTE: Testing E2E completo del flujo POS→Pago→Historial→Ver Detalles→Editar con credenciales hola@tricomar.cl (account_admin)."
     - agent: "testing"
       message: "VALIDACIÓN INTEGRAL COMPLETADA (2026-08-04): Ejecutados 14 tests E2E con Playwright. RESULTADO: 13/14 PASSED (92.9% success rate). ✅ INVENTARIO: (1) Página carga sin error 'stores is not defined' - 238 productos mostrados, (2) Filtro por tienda funciona - 4 opciones (Todas/PetShop/GrowShop/Tabaqueria), (3) Filtro por categoría funciona - 3 opciones (Todas/GATOS/PERROS), (4) Búsqueda por nombre/SKU funciona, (5) Ordenamiento por Nombre A-Z/Z-A con iconos de flecha funciona, (6) Ordenamiento por Precio menor-mayor/mayor-menor funciona, (7) Columna Marca visible en tabla, (8) Selección masiva funciona - checkbox 'Seleccionar todos', barra superior con contador en tiempo real '238 productos seleccionados', (9) Modal eliminación masiva funciona - aparece solo al click en botón Eliminar, requiere escribir 'eliminar' para confirmar. ✅ SETTINGS → CATEGORÍAS: (10) Sección abre sin errores 'categoriesLoaded', (11) Crear categoría funciona con toast de confirmación, (12) Editar categoría funciona con input inline, (13) Eliminar categoría funciona (contador actualiza correctamente). ⚠️ ISSUE MENOR: Exportación productos seleccionados tiene problema de UI layering en test automatizado (barra superior intercepta click), pero funcionalidad está implementada correctamente. Screenshots capturados: inventory_page_loaded.png, store_filter_applied.png, search_applied.png, sort_by_name_asc/desc.png, sort_by_price_asc/desc.png, mass_selection_active.png, mass_deletion_modal.png, settings_categories_section.png, category_created.png, category_edited.png, category_deleted.png. CONCLUSIÓN: Todas las correcciones aplicadas funcionan correctamente. Sistema listo para proceder con rediseño ERP."
     status_history:

@@ -1,0 +1,36 @@
+{
+  "summary": "Tested cart-sale POST/PATCH backend and Sales Record navigation UI. POST /api/sales/cart and PATCH /api/sales/{id}/cart-sale work correctly (including 400 on disallowed fields and role restriction). CRITICAL blocker: GET /api/sales uses response_model=List[Sale] and Sale model in models/sales.py does not include cart fields, so cart_id, items, sale_number, iva, subtotal are stripped from responses. Consequence: frontend SalesRecordPage cannot render ShoppingCart icon, product-count badge, or Eye 'view details' button, and details modal will always be empty. Frontend loads, login and 'Registros Históricos' dropdown navigation to /sales-records work; calendar for Agosto 2026 shows 8 registros ($234.399). But cart differentiation UI is non-functional end-to-end.",
+  "tested_scope": ["backend", "frontend", "integration"],
+  "passed": [
+    "POST /api/auth/login (hola@tricomar.cl account_admin) returns token",
+    "POST /api/sales/cart returns 200 with generated sale_number VENTA-YYYYMMDDHHMMSS",
+    "PATCH /api/sales/{id}/cart-sale updates customer_name/payment_method/total (200) and persists",
+    "PATCH /api/sales/{id}/cart-sale rejects disallowed fields (items/sale_number) with 400 'No hay campos válidos para actualizar'",
+    "Frontend login works with placeholder 'usuario o email' text input",
+    "POS page shows 'Registros Históricos' dropdown next to title; navigates to /sales-records",
+    "Calendar renders with day totals (e.g. 5 = $142.989) and Resumen (8 registros, $234.399)"
+  ],
+  "failed": [
+    {
+      "area": "GET /api/sales response schema",
+      "issue": "Sale model (backend/models/sales.py) has extra='ignore' and no cart fields declared. response_model=List[Sale] on GET /api/sales strips cart_id, items, sale_number, iva, subtotal from every cart sale response.",
+      "evidence": "POST /api/sales/cart -> {id: 79d33c85-8034-45f6-ae49-59f4c4dc6a4d, sale_number: VENTA-20260805055028}. Immediate GET /api/sales?limit=5 for same id returns keys [cost_price, created_at, customer, customer_id, customer_name, date, has_tax, id, payment_method, price, product, product_id, product_name, quantity, store, total, user_id, user_name] with has cart_id/items/sale_number/iva/subtotal all False.",
+      "priority": "HIGH"
+    },
+    {
+      "area": "SalesRecordPage cart-sale differentiation & details modal",
+      "issue": "Because API omits cart fields, frontend cannot detect cart sales, so ShoppingCart icon, N-productos badge, Eye button, and details modal (lines 390-433, 627-727) never render for cart sales.",
+      "evidence": "On /sales-records: 0 lucide-eye icons on the page after login; only 1 ShoppingCart icon which is the POS nav item. Day 5 with cart-sale test data will still render as legacy individual product rows.",
+      "priority": "HIGH"
+    }
+  ],
+  "action_items": [
+    "Extend Sale model in backend/models/sales.py with Optional cart fields (sale_number, cart_id, items, iva, subtotal) OR remove response_model=List[Sale] on GET /api/sales (routes/sales.py line 242) and return raw dicts.",
+    "After fix, re-run: POST /api/sales/cart then GET /api/sales?date=YYYY-MM-DD and assert cart_id/items/sale_number/iva/subtotal are present.",
+    "Then retest UI: click a calendar day with cart sales, verify ShoppingCart icon + N-productos badge + Eye button open a modal with sale_number/cart_id/items list/subtotal/iva/total.",
+    "Investigate stock going negative on products (observed Stock: -1 on multiple items); cart POST decrements stock unconditionally without stock-availability check."
+  ],
+  "success_rate": {"backend": "75%", "frontend": "60%"},
+  "retest_needed": true,
+  "full_testing_deferred": true
+}
