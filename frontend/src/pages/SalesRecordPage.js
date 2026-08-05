@@ -579,19 +579,18 @@ const SalesRecordPage = () => {
               {/* Mostrar campos según tipo de venta */}
               {editModal.isCartSale ? (
                 <>
-                  {/* Campos para venta de carrito */}
-                  <div>
-                    <label className="block text-sm font-bold mb-2">Número de Venta</label>
-                    <input
-                      type="text"
-                      value={editModal.data.sale_number || 'N/A'}
-                      className="w-full px-3 py-2 border-2 border-slate-900 rounded-lg bg-slate-100"
-                      disabled
-                    />
+                  {/* Campos para venta de carrito - Similar al modal de detalles pero editable */}
+                  
+                  {/* Header con número de venta */}
+                  <div className="mb-4 p-3 bg-slate-100 border-2 border-slate-900 rounded-lg">
+                    <p className="text-xs font-bold text-slate-600">Número de Venta</p>
+                    <p className="text-lg font-black">{editModal.data.sale_number || 'N/A'}</p>
+                    <p className="text-xs text-slate-500 mt-1">ID Carrito: #{editModal.data.cart_id?.slice(0, 8).toUpperCase() || 'N/A'}</p>
                   </div>
                   
+                  {/* Cliente editable */}
                   <div>
-                    <label className="block text-sm font-bold mb-2">Cliente</label>
+                    <label className="block text-sm font-bold mb-2">Cliente:</label>
                     <input
                       type="text"
                       value={editModal.data.customer_name || 'Cliente General'}
@@ -599,7 +598,8 @@ const SalesRecordPage = () => {
                         ...editModal,
                         data: { ...editModal.data, customer_name: e.target.value }
                       })}
-                      className="w-full px-3 py-2 border-2 border-slate-900 rounded-lg"
+                      className="w-full px-3 py-2 border-2 border-slate-900 rounded-lg font-bold bg-blue-50"
+                      placeholder="Nombre del cliente"
                     />
                   </div>
 
@@ -661,9 +661,17 @@ const SalesRecordPage = () => {
                       ))}
                     </div>
                     
-                    {/* Total calculado */}
-                    <div className="mt-3 pt-3 border-t-2 border-slate-900">
-                      <div className="flex justify-between items-center">
+                    {/* Totales con estilo similar al modal de detalles */}
+                    <div className="mt-4 pt-4 border-t-2 border-slate-900 space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-slate-600">Subtotal (sin IVA):</span>
+                        <span className="font-bold">${Math.round(getTotalFromItems() / 1.19).toLocaleString('es-CL')}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-slate-600">IVA (19%):</span>
+                        <span className="font-bold">${Math.round(getTotalFromItems() - (getTotalFromItems() / 1.19)).toLocaleString('es-CL')}</span>
+                      </div>
+                      <div className="flex justify-between pt-2 border-t-2 border-slate-900">
                         <span className="font-black text-lg">TOTAL:</span>
                         <span className="font-black text-2xl font-mono">
                           ${Math.round(getTotalFromItems()).toLocaleString('es-CL')}
@@ -672,15 +680,16 @@ const SalesRecordPage = () => {
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-bold mb-2">Método de Pago</label>
+                  {/* Método de Pago editable */}
+                  <div className="border-2 border-slate-900 rounded-lg p-3 bg-green-50">
+                    <label className="block text-xs font-bold text-slate-600 mb-2">Método de Pago:</label>
                     <select
                       value={editModal.data.payment_method}
                       onChange={(e) => setEditModal({
                         ...editModal,
                         data: { ...editModal.data, payment_method: e.target.value }
                       })}
-                      className="w-full px-3 py-2 border-2 border-slate-900 rounded-lg"
+                      className="w-full px-3 py-2 border-2 border-slate-900 rounded-lg font-bold text-lg"
                     >
                       <option value="Efectivo">Efectivo</option>
                       <option value="Tarjeta">Tarjeta</option>
