@@ -73,7 +73,9 @@ async def create_category(
         name=category_input.name.strip(),
         parent_id=category_input.parent_id,
         level=level,
-        account_id=current_user.account_id
+        account_id=current_user.account_id,
+        source=category_input.source,
+        store=category_input.store
     )
     
     # Guardar en base de datos

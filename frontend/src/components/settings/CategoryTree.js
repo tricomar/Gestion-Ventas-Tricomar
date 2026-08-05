@@ -140,6 +140,13 @@ const CategoryTree = ({ categories = [], onAdd, onEdit, onDelete }) => {
             <>
               <span className="flex-1 text-sm text-slate-900">
                 {node.name}
+                {node.source && node.source !== 'manual' && (
+                  <span className="ml-2 text-xs px-2 py-1 rounded bg-blue-100 text-blue-700 font-bold">
+                    {node.source === 'import' ? '📥 Importado' : 
+                     node.source === 'prestashop' ? `🛒 ${node.store || 'PrestaShop'}` :
+                     `🔗 ${node.source}`}
+                  </span>
+                )}
               </span>
 
               {/* Action Buttons */}

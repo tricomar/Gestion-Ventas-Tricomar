@@ -1058,7 +1058,36 @@ const SettingsPage = () => {
         {activeTab === 'inventory' && isSupervisor && (
           <div className="bg-white border-2 border-slate-900 rounded-xl p-6"
             style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}>
-            <h2 className="text-2xl font-black text-slate-900 mb-6">Gestión de Categorías</h2>
+            
+            {/* Header con botón de importar */}
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-black text-slate-900">Gestión de Categorías</h2>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-500 border-2 border-slate-900 rounded-xl font-bold text-white hover:bg-blue-600 transition-all"
+                style={{ boxShadow: '3px 3px 0px 0px rgba(15,23,42,1)' }}
+              >
+                <FileUp className="w-4 h-4" />
+                Importar Categorías
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                onChange={handleImportCategories}
+                className="hidden"
+              />
+            </div>
+
+            {/* Info box explicando las 3 fuentes */}
+            <div className="bg-blue-50 border-2 border-blue-900 rounded-lg p-4 mb-6">
+              <p className="text-sm text-blue-900">
+                <strong>📁 Gestiona tus categorías desde 3 fuentes:</strong><br/>
+                1️⃣ <strong>Manual:</strong> Crea categorías directamente aquí<br/>
+                2️⃣ <strong>Importación:</strong> Importa desde Excel/CSV<br/>
+                3️⃣ <strong>Integración:</strong> Sincroniza desde PrestaShop (cambios bidireccionales)
+              </p>
+            </div>
             
             <CategoryTree
               categories={hierarchicalCategories}
@@ -1067,151 +1096,6 @@ const SettingsPage = () => {
               onDelete={handleDeleteHierarchicalCategory}
               loading={loadingCategories}
             />
-          </div>
-        )}
-          <div 
-            className="bg-white border-2 border-slate-900 rounded-xl p-8"
-            style={{ boxShadow: '8px 8px 0px 0px rgba(15,23,42,1)' }}
-          >
-            <div className="flex items-center gap-3 mb-6">
-              <Tag className="w-6 h-6" />
-              <h2 className="text-2xl font-bold text-slate-900">Categorías de Productos</h2>
-            </div>
-            
-            <div className="bg-blue-50 border-2 border-blue-900 rounded-lg p-4 mb-6">
-              <p className="text-sm text-blue-900">
-                <strong>🏷️ Gestiona las categorías de tu inventario</strong><br/>
-                Estas categorías estarán disponibles al crear o editar productos.
-              </p>
-            </div>
-
-            {/* Add New Category */}
-            <div className="mb-8">
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-bold text-slate-700">
-                  Agregar Nueva Categoría
-                </label>
-                <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex items-center gap-2 px-3 py-2 bg-blue-100 border-2 border-slate-900 rounded-lg font-bold text-sm hover:bg-blue-200 transition-all"
-                  style={{ boxShadow: '2px 2px 0px 0px rgba(15,23,42,1)' }}
-                  data-testid="import-categories-btn"
-                >
-                  <FileUp className="w-4 h-4" />
-                  Importar .xlsx/.csv
-                </button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".xlsx,.xls,.csv"
-                  onChange={handleImportCategories}
-                  className="hidden"
-                  data-testid="file-input-categories"
-                />
-              </div>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={newCategory}
-                  onChange={(e) => setNewCategory(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleAddCategory()}
-                  placeholder="Ej: Alimentos, Accesorios..."
-                  className="flex-1 px-4 py-3 border-2 border-slate-900 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-slate-900"
-                  data-testid="new-category-input"
-                />
-                <button
-                  onClick={handleAddCategory}
-                  className="px-6 py-3 bg-[#D4F0A5] border-2 border-slate-900 rounded-xl font-bold hover:bg-[#c5e196] transition-all"
-                  style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
-                  data-testid="add-category-btn"
-                >
-                  <Plus className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-
-            {/* Categories List */}
-            <div className="space-y-3 mb-8">
-              <h3 className="text-lg font-bold text-slate-900 mb-4">Categorías Actuales ({categories.length})</h3>
-              {categories.length === 0 ? (
-                <p className="text-slate-500 text-center py-8">No hay categorías creadas</p>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {categories.map((category, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between p-4 bg-slate-50 border-2 border-slate-900 rounded-xl"
-                      data-testid={`category-item-${index}`}
-                    >
-                      {editingCategoryIndex === index ? (
-                        <input
-                          type="text"
-                          value={editingCategoryValue}
-                          onChange={(e) => setEditingCategoryValue(e.target.value)}
-                          onKeyPress={(e) => e.key === 'Enter' && handleSaveEditCategory(index)}
-                          className="flex-1 px-3 py-1 border-2 border-slate-900 rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-slate-900"
-                          autoFocus
-                          data-testid={`edit-category-input-${index}`}
-                        />
-                      ) : (
-                        <span className="font-bold text-slate-900">{category}</span>
-                      )}
-                      <div className="flex items-center gap-2 ml-4">
-                        {editingCategoryIndex === index ? (
-                          <>
-                            <button
-                              onClick={() => handleSaveEditCategory(index)}
-                              className="p-2 bg-green-100 hover:bg-green-200 rounded-lg transition-colors"
-                              data-testid={`save-category-${index}`}
-                            >
-                              <Save className="w-4 h-4 text-green-700" />
-                            </button>
-                            <button
-                              onClick={() => {
-                                setEditingCategoryIndex(null);
-                                setEditingCategoryValue('');
-                              }}
-                              className="p-2 hover:bg-slate-200 rounded-lg transition-colors"
-                              data-testid={`cancel-edit-category-${index}`}
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            <button
-                              onClick={() => handleEditCategory(index)}
-                              className="p-2 hover:bg-slate-200 rounded-lg transition-colors"
-                              data-testid={`edit-category-${index}`}
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteCategory(index)}
-                              className="p-2 hover:bg-red-100 rounded-lg transition-colors"
-                              data-testid={`delete-category-${index}`}
-                            >
-                              <Trash2 className="w-4 h-4 text-red-600" />
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Save Button */}
-            <button
-              onClick={handleSaveCategories}
-              disabled={saving}
-              className="w-full px-6 py-4 bg-slate-900 text-white border-2 border-slate-900 rounded-xl font-bold hover:bg-slate-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
-              data-testid="save-categories-btn"
-            >
-              {saving ? 'Guardando...' : 'Guardar Categorías'}
-            </button>
           </div>
         )}
 
