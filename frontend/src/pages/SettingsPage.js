@@ -15,6 +15,7 @@ import StoresTab from '../components/settings/StoresTab';
 import ImportTab from '../components/settings/ImportTab';
 import IntegrationsTab from '../components/settings/IntegrationsTab';
 import PersonalizationTab from '../components/settings/PersonalizationTab';
+import POSTab from '../components/settings/POSTab';
 import CategoryTree from '../components/settings/CategoryTree';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -898,6 +899,23 @@ const SettingsPage = () => {
               Personalización
             </button>
           )}
+
+          {/* Configuración POS - Solo para account_admin y supervisor */}
+          {isSupervisor && (
+            <button
+              onClick={() => setActiveTab('pos')}
+              className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold border-2 border-slate-900 transition-all ${
+                activeTab === 'pos' 
+                  ? 'bg-slate-900 text-white' 
+                  : 'bg-white text-slate-900 hover:bg-slate-50'
+              }`}
+              style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
+              data-testid="pos-tab-btn"
+            >
+              <ShoppingCart className="w-5 h-5" />
+              POS
+            </button>
+          )}
           
           {/* Gestión de Categorías - Solo para account_admin y supervisor */}
           {isSupervisor && (
@@ -1059,6 +1077,11 @@ const SettingsPage = () => {
         {/* Personalization Tab */}
         {activeTab === 'personalization' && isSupervisor && (
           <PersonalizationTab />
+        )}
+
+        {/* POS Configuration Tab */}
+        {activeTab === 'pos' && isSupervisor && (
+          <POSTab />
         )}
 
         {/* Inventory Management Tab - Gestión de Categorías */}

@@ -38,7 +38,22 @@ const POSPage = () => {
   useEffect(() => {
     fetchFrequentProducts();
     fetchTodayStats();
+    fetchPOSSettings();
   }, []);
+
+  const fetchPOSSettings = async () => {
+    try {
+      const response = await axios.get(`${API}/settings`);
+      if (response.data.pos_discount_percentages) {
+        setDiscountPercentages(response.data.pos_discount_percentages);
+      }
+      if (response.data.pos_payment_methods) {
+        // Los métodos de pago se usarán en CartSidebar
+      }
+    } catch (error) {
+      console.error('Error fetching POS settings:', error);
+    }
+  };
 
   const fetchTodayStats = async () => {
     try {

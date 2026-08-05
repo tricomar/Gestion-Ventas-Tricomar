@@ -16,6 +16,9 @@ class SettingsUpdate(BaseModel):
     session_duration_hours: int = Field(default=168, ge=1)  # Default: 1 semana (168 horas)
     company_logo: Optional[str] = None  # Base64 o URL del logo
     company_name: Optional[str] = "Negocio Feliz"  # Nombre de la empresa
+    # Configuración POS
+    pos_discount_percentages: Optional[List[int]] = Field(default_factory=lambda: [0, 5, 10, 15, 20, 25, 30, 50])
+    pos_payment_methods: Optional[List[str]] = Field(default_factory=lambda: ['Efectivo', 'Tarjeta', 'Transferencia'])
 
 class Settings(SettingsUpdate):
     model_config = ConfigDict(extra="ignore")

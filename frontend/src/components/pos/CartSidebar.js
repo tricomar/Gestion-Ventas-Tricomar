@@ -16,6 +16,22 @@ const CartSidebar = ({
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showSalesModal, setShowSalesModal] = useState(false);
   const [cartDiscount, setCartDiscount] = useState({ type: 'none', value: 0 }); // 'percent', 'amount', 'none'
+  const [paymentMethods, setPaymentMethods] = useState(['Efectivo', 'Tarjeta', 'Transferencia']);
+
+  useEffect(() => {
+    fetchPaymentMethods();
+  }, []);
+
+  const fetchPaymentMethods = async () => {
+    try {
+      const response = await axios.get(`${API}/settings`);
+      if (response.data.pos_payment_methods) {
+        setPaymentMethods(response.data.pos_payment_methods);
+      }
+    } catch (error) {
+      console.error('Error fetching payment methods:', error);
+    }
+  };
 
   // Calcular subtotal por producto considerando descuentos individuales
   const calculateItemSubtotal = (item) => {
@@ -299,32 +315,31 @@ const CartSidebar = ({
             </div>
             
             <div className="space-y-3">
-              <button
-                onClick={() => handlePaymentMethod('Efectivo')}
-                className="w-full py-4 bg-gradient-to-r from-green-400 to-green-500 border-2 border-slate-900 rounded-xl font-bold text-white hover:scale-105 transition-all flex items-center justify-center gap-3"
-                style={{ boxShadow: '3px 3px 0px 0px rgba(15,23,42,1)' }}
-              >
-                <Banknote className="w-6 h-6" />
-                Efectivo
-              </button>
-              
-              <button
-                onClick={() => handlePaymentMethod('Tarjeta')}
-                className="w-full py-4 bg-gradient-to-r from-blue-400 to-blue-500 border-2 border-slate-900 rounded-xl font-bold text-white hover:scale-105 transition-all flex items-center justify-center gap-3"
-                style={{ boxShadow: '3px 3px 0px 0px rgba(15,23,42,1)' }}
-              >
-                <CreditCard className="w-6 h-6" />
-                Tarjeta
-              </button>
-              
-              <button
-                onClick={() => handlePaymentMethod('Transferencia')}
-                className="w-full py-4 bg-gradient-to-r from-purple-400 to-purple-500 border-2 border-slate-900 rounded-xl font-bold text-white hover:scale-105 transition-all flex items-center justify-center gap-3"
-                style={{ boxShadow: '3px 3px 0px 0px rgba(15,23,42,1)' }}
-              >
-                <CreditCard className="w-6 h-6" />
-                Transferencia
-              </button>
+              {paymentMethods.map((method, index) => {
+                // Colores por método (primeros 3 tienen colores específicos, resto usa gradiente genérico)
+                const colors = [
+                  'from-green-400 to-green-500',  // Efectivo
+                  'from-blue-400 to-blue-500',    // Tarjeta
+                  'from-purple-400 to-purple-500', // Transferencia
+                ];
+                const color = colors[index] || 'from-slate-400 to-slate-500';
+                
+                // Iconos por método
+                const icons = [Banknote, CreditCard, CreditCard];
+                const Icon = icons[index] || CreditCard;
+                
+                return (
+                  <button
+                    key={index}
+                    onClick={() => handlePaymentMethod(method)}
+                    className={`w-full py-4 bg-gradient-to-r ${color} border-2 border-slate-900 rounded-xl font-bold text-white hover:scale-105 transition-all flex items-center justify-center gap-3`}
+                    style={{ boxShadow: '3px 3px 0px 0px rgba(15,23,42,1)' }}
+                  >
+                    <Icon className="w-6 h-6" />
+                    {method}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
