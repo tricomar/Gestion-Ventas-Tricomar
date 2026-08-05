@@ -1,5 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Minus, Trash2, ShoppingCart, CreditCard, Banknote, X, Eye, Percent, DollarSign, TrendingDown, TrendingUp } from 'lucide-react';
+import axios from 'axios';
+
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const API = `${BACKEND_URL}/api`;
 
 const CartSidebar = ({ 
   cartItems, 
