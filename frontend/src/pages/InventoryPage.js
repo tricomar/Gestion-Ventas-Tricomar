@@ -381,15 +381,6 @@ const InventoryPage = () => {
         </div>
         <div className="flex gap-3">
           <button
-            onClick={() => navigate('/')}
-            className="flex items-center gap-2 bg-white border-2 border-slate-900 rounded-xl px-6 py-3 font-bold hover:bg-slate-50 transition-all"
-            style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
-            data-testid="back-to-dashboard-btn"
-          >
-            <Home className="w-5 h-5" />
-            Volver al Dashboard
-          </button>
-          <button
             onClick={() => setShowPriceCalculator(true)}
             className="flex items-center gap-2 text-slate-900 border-2 border-slate-900 rounded-xl px-6 py-3 font-bold transition-all hover:bg-purple-100"
             style={{

@@ -187,13 +187,6 @@ const ReportsPage = () => {
             <p className="text-slate-600 mb-6">
               No tienes permisos para acceder a la sección de Reportes.
             </p>
-            <button
-              onClick={() => navigate('/')}
-              className="px-6 py-3 bg-slate-900 text-white border-2 border-slate-900 rounded-xl font-bold hover:bg-slate-800 transition-all"
-              style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
-            >
-              Volver al Dashboard
-            </button>
           </div>
         </div>
       </div>
@@ -215,15 +208,6 @@ const ReportsPage = () => {
             <p className="text-base font-medium text-slate-600">Genera reportes descargables</p>
           </div>
         </div>
-        <button
-          onClick={() => navigate('/')}
-          className="flex items-center gap-2 bg-white border-2 border-slate-900 rounded-xl px-6 py-3 font-bold hover:bg-slate-50 transition-all"
-          style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
-          data-testid="back-to-dashboard-btn"
-        >
-          <Home className="w-5 h-5" />
-          Volver al Dashboard
-        </button>
       </div>
 
       {/* Report Generator */}

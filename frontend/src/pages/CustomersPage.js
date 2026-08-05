@@ -80,14 +80,6 @@ const CustomersPage = () => {
               Administra la información de tus clientes y su historial de compras
             </p>
           </div>
-          <button
-            onClick={() => navigate('/')}
-            className="flex items-center gap-2 px-6 py-3 bg-white border-2 border-slate-900 rounded-xl font-bold hover:bg-slate-50"
-            style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
-          >
-            <Home className="w-5 h-5" />
-            Volver al Dashboard
-          </button>
         </div>
       </header>
 
