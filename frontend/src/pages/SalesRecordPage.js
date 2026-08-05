@@ -104,12 +104,23 @@ const SalesRecordPage = () => {
 
   const handleEditSale = (sale) => {
     // Determinar si es venta de carrito o venta individual
-    const isCartSale = sale.cart_id || sale.items;
+    const isCartSale = !!(sale.cart_id || (sale.items && sale.items.length > 0));
+    
+    console.log('Editing sale:', {
+      sale_number: sale.sale_number,
+      cart_id: sale.cart_id,
+      items: sale.items,
+      isCartSale
+    });
     
     // Para ventas de carrito, copiar los items para poder editarlos
     const editableData = { ...sale };
     if (isCartSale && sale.items) {
       editableData.items = sale.items.map(item => ({ ...item }));
+    } else if (isCartSale && !sale.items) {
+      // Si es carrito pero no tiene items (error de datos), usar array vacío
+      editableData.items = [];
+      console.warn('Venta de carrito sin items:', sale);
     }
     
     setEditModal({ 
