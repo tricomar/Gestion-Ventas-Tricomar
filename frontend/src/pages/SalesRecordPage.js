@@ -525,10 +525,7 @@ const SalesRecordPage = () => {
                                 {canEdit && (
                                   <>
                                     <button
-                                      onClick={() => setEditModal({ 
-                                        open: true, 
-                                        data: { ...sale } 
-                                      })}
+                                      onClick={() => handleEditSale(sale)}
                                       className="p-1 hover:bg-slate-200 rounded transition-colors"
                                       title="Editar"
                                     >
