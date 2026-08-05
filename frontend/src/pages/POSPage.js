@@ -287,6 +287,33 @@ const POSPage = () => {
           </div>
         </div>
 
+        {/* Action Buttons - Egresos e Ingresos Extras */}
+        <div className="mb-6 flex items-center gap-3">
+          <button
+            onClick={() => navigate('/expenses-records')}
+            className="flex items-center gap-2 px-4 py-3 bg-white border-2 border-slate-900 rounded-xl font-bold text-slate-900 hover:scale-105 transition-all"
+            style={{ boxShadow: '3px 3px 0px 0px rgba(15,23,42,1)' }}
+            data-testid="pos-expenses-button"
+          >
+            <div className="p-1.5 rounded-lg bg-gradient-to-br from-red-400 to-pink-400">
+              <TrendingDown className="w-4 h-4 text-white" />
+            </div>
+            <span className="text-sm">Egresos</span>
+          </button>
+
+          <button
+            onClick={() => navigate('/income-records')}
+            className="flex items-center gap-2 px-4 py-3 bg-white border-2 border-slate-900 rounded-xl font-bold text-slate-900 hover:scale-105 transition-all"
+            style={{ boxShadow: '3px 3px 0px 0px rgba(15,23,42,1)' }}
+            data-testid="pos-income-button"
+          >
+            <div className="p-1.5 rounded-lg bg-gradient-to-br from-yellow-400 to-orange-400">
+              <DollarSign className="w-4 h-4 text-white" />
+            </div>
+            <span className="text-sm">Ingresos Extras</span>
+          </button>
+        </div>
+
         {/* Search Bar */}
         <div className="mb-6">
           <div className="relative">

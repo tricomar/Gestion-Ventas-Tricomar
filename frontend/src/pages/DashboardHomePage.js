@@ -140,7 +140,7 @@ const DashboardHomePage = () => {
         />
         <MetricCard 
           title="Transacciones Hoy"
-          value={`${realtimeMetrics.today_sales_count || 0} ventas`}
+          value={`${realtimeMetrics.today_sales_count ?? 0} ${(realtimeMetrics.today_sales_count ?? 0) === 1 ? 'venta' : 'ventas'}`}
           icon={ShoppingBag}
           gradient="from-blue-400 to-cyan-400"
           realtime={true}
