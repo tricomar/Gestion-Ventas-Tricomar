@@ -30,10 +30,24 @@ const POSPage = () => {
   const recordsMenuRef = useRef(null);
   const [showExpenseForm, setShowExpenseForm] = useState(false);
   const [showIncomeForm, setShowIncomeForm] = useState(false);
+  const [todayStats, setTodayStats] = useState(null);
+  const [showSalesModal, setShowSalesModal] = useState(false);
+  const [cartDiscount, setCartDiscount] = useState({ type: 'none', value: 0 }); // type: 'percent' | 'amount' | 'none'
+  const [discountPercentages, setDiscountPercentages] = useState([0, 5, 10, 15, 20, 25, 30, 50]); // Configurables
 
   useEffect(() => {
     fetchFrequentProducts();
+    fetchTodayStats();
   }, []);
+
+  const fetchTodayStats = async () => {
+    try {
+      const response = await axios.get(`${API}/pos-stats/today`);
+      setTodayStats(response.data);
+    } catch (error) {
+      console.error('Error fetching today stats:', error);
+    }
+  };
 
   // Click outside to close records menu
   useEffect(() => {
@@ -107,7 +121,7 @@ const POSPage = () => {
       ));
       toast.success(`Cantidad actualizada: ${product.name}`);
     } else {
-      setCartItems([...cartItems, { product, quantity: 1, id: uuidv4() }]);
+      setCartItems([...cartItems, { product, quantity: 1, discount: 0, id: uuidv4() }]); // Agregar campo discount
       toast.success(`Agregado al carrito: ${product.name}`);
     }
     
