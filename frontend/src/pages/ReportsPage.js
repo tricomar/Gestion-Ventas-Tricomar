@@ -19,7 +19,7 @@ const API = `${BACKEND_URL}/api`;
 const ReportsPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { getStoreName } = useStores();
+  const { getStoreName, stores, storeOptions } = useStores();
   const [period, setPeriod] = useState('day');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -251,7 +251,7 @@ const ReportsPage = () => {
           <label className="block text-xs font-bold tracking-widest uppercase text-slate-500 mb-2">
             Filtrar por Tienda/Caja
           </label>
-          <div className="grid grid-cols-3 gap-4">
+          <div className={`grid gap-4`} style={{ gridTemplateColumns: `repeat(${stores.length + 1}, minmax(0, 1fr))` }}>
             <button
               onClick={() => setSelectedStore('all')}
               className={`px-4 py-3 rounded-xl font-bold border-2 border-slate-900 transition-all ${
@@ -260,22 +260,17 @@ const ReportsPage = () => {
             >
               Todas
             </button>
-            <button
-              onClick={() => setSelectedStore('A')}
-              className={`px-4 py-3 rounded-xl font-bold border-2 border-slate-900 transition-all ${
-                selectedStore === 'A' ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'
-              }`}
-            >
-              {getStoreName('A')}
-            </button>
-            <button
-              onClick={() => setSelectedStore('B')}
-              className={`px-4 py-3 rounded-xl font-bold border-2 border-slate-900 transition-all ${
-                selectedStore === 'B' ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'
-              }`}
-            >
-              {getStoreName('B')}
-            </button>
+            {stores.map((store) => (
+              <button
+                key={store.key}
+                onClick={() => setSelectedStore(store.key)}
+                className={`px-4 py-3 rounded-xl font-bold border-2 border-slate-900 transition-all ${
+                  selectedStore === store.key ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'
+                }`}
+              >
+                {store.name}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -379,7 +374,12 @@ const ReportsPage = () => {
               </div>
               <h3 className="text-xs font-bold tracking-widest uppercase text-slate-500">Transacciones</h3>
               <p className="text-3xl font-black font-mono text-slate-900">
-                {(reportData.store_a?.sales_count || 0) + (reportData.store_b?.sales_count || 0)}
+                {stores.reduce((total, store) => {
+                  const storeKey = store.key.toLowerCase() === 'a' ? 'store_a' : 
+                                   store.key.toLowerCase() === 'b' ? 'store_b' : 
+                                   `store_${store.key.toLowerCase()}`;
+                  return total + (reportData[storeKey]?.sales_count || 0);
+                }, 0)}
               </p>
             </div>
           </div>
@@ -490,23 +490,30 @@ const ReportsPage = () => {
             style={{ boxShadow: '6px 6px 0px 0px rgba(15,23,42,1)' }}
           >
             <h2 className="text-xl font-bold mb-6">🏪 Comparación por Tienda</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="p-4 border-2 border-slate-900 rounded-xl" style={{ backgroundColor: '#D4F0A5' }}>
-                <h3 className="font-bold text-sm uppercase mb-2">{getStoreName('A')}</h3>
-                <p className="text-3xl font-black font-mono mb-2">${reportData.store_a.total_sales.toLocaleString('es-CL')}</p>
-                <p className="text-sm mb-1">{reportData.store_a.sales_count} ventas</p>
-                <p className="text-sm text-green-700 font-bold">
-                  Utilidad: ${reportData.store_a.profit?.toLocaleString('es-CL') || '0'}
-                </p>
-              </div>
-              <div className="p-4 border-2 border-slate-900 rounded-xl" style={{ backgroundColor: '#FADBB0' }}>
-                <h3 className="font-bold text-sm uppercase mb-2">{getStoreName('B')}</h3>
-                <p className="text-3xl font-black font-mono mb-2">${reportData.store_b.total_sales.toLocaleString('es-CL')}</p>
-                <p className="text-sm mb-1">{reportData.store_b.sales_count} ventas</p>
-                <p className="text-sm text-green-700 font-bold">
-                  Utilidad: ${reportData.store_b.profit?.toLocaleString('es-CL') || '0'}
-                </p>
-              </div>
+            <div className={`grid gap-6`} style={{ gridTemplateColumns: `repeat(${stores.length}, minmax(0, 1fr))` }}>
+              {stores.map((store, index) => {
+                const storeKey = store.key.toLowerCase() === 'a' ? 'store_a' : 
+                                 store.key.toLowerCase() === 'b' ? 'store_b' : 
+                                 `store_${store.key.toLowerCase()}`;
+                const storeData = reportData[storeKey] || { sales_count: 0, total_sales: 0, profit: 0 };
+                
+                return (
+                  <div 
+                    key={store.key}
+                    className="p-4 border-2 border-slate-900 rounded-xl" 
+                    style={{ backgroundColor: store.color || COLORS[index % COLORS.length] }}
+                  >
+                    <h3 className="font-bold text-sm uppercase mb-2">{store.name}</h3>
+                    <p className="text-3xl font-black font-mono mb-2">
+                      ${storeData.total_sales?.toLocaleString('es-CL') || '0'}
+                    </p>
+                    <p className="text-sm mb-1">{storeData.sales_count || 0} ventas</p>
+                    <p className="text-sm text-green-700 font-bold">
+                      Utilidad: ${storeData.profit?.toLocaleString('es-CL') || '0'}
+                    </p>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
