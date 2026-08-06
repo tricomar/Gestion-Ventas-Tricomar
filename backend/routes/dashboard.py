@@ -333,15 +333,12 @@ async def get_dashboard_stats(current_user: User = Depends(get_current_user)):
     Uses both POS sales_records and ecommerce_orders data
     """
     try:
-        # Date ranges - Use UTC for consistency with frontend display
-        now_utc = datetime.now(timezone.utc)
-        
-        # Today in UTC (not Chile time, to match frontend display)
-        today_start = now_utc.replace(hour=0, minute=0, second=0, microsecond=0)
+        # Date ranges - Use Chile timezone consistently
+        now_chile = datetime.now(CHILE_TZ)
+        today_start = now_chile.replace(hour=0, minute=0, second=0, microsecond=0).astimezone(timezone.utc)
         tomorrow_start = today_start + timedelta(days=1)
+        month_start = now_chile.replace(day=1, hour=0, minute=0, second=0, microsecond=0).astimezone(timezone.utc)
         
-        # Month in UTC
-        month_start = now_utc.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
         if month_start.month == 12:
             next_month_start = month_start.replace(year=month_start.year + 1, month=1)
         else:
@@ -466,15 +463,15 @@ async def get_dashboard_stats(current_user: User = Depends(get_current_user)):
             sales_by_store[store].append(sale)
         
         # Daily sales for last 30 days (from both collections)
-        thirty_days_ago = now_utc - timedelta(days=30)
+        thirty_days_ago = now_chile - timedelta(days=30)
         thirty_days_sales_records = await db.sales_records.find({
             'account_id': current_user.account_id,
-            'created_at': {'$gte': thirty_days_ago.isoformat()}
+            'created_at': {'$gte': thirty_days_ago.astimezone(timezone.utc).isoformat()}
         }, {'_id': 0}).to_list(100000)
         
         thirty_days_sales = await db.sales.find({
             'account_id': current_user.account_id,
-            'created_at': {'$gte': thirty_days_ago.isoformat()}
+            'created_at': {'$gte': thirty_days_ago.astimezone(timezone.utc).isoformat()}
         }, {'_id': 0}).to_list(100000)
         
         all_thirty_days = thirty_days_sales_records + thirty_days_sales
