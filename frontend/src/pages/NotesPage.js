@@ -196,11 +196,8 @@ const NotesPage = () => {
           {/* Notes for Selected Date */}
           <div className="lg:col-span-2">
             <DailyNotes
-              date={selectedDate}
-              notes={filteredNotes}
-              onEdit={handleUpdateNote}
-              onDelete={handleDeleteNote}
-              onRefresh={fetchNotes}
+              selectedDate={selectedDate}
+              onNoteChange={fetchNotes}
             />
           </div>
         </div>
