@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { Home, FileDown, Calendar, AlertCircle } from 'lucide-react';
+import { Home, FileDown, Calendar, AlertCircle, TrendingUp, DollarSign, Package, ShoppingCart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useStores } from '../hooks/useStores';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
+import {
+  LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
+} from 'recharts';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -19,8 +23,11 @@ const ReportsPage = () => {
   const [period, setPeriod] = useState('day');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [selectedStore, setSelectedStore] = useState('all');
   const [reportData, setReportData] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  const COLORS = ['#D4F0A5', '#FADBB0', '#A78BFA', '#FCA5A5', '#93C5FD'];
 
   // Verificar permisos - Empleados no tienen acceso
   const isEmployee = user?.role === 'employee';
@@ -38,6 +45,9 @@ const ReportsPage = () => {
       let url = `${API}/reports/data?period=${period}`;
       if (period === 'custom' && startDate && endDate) {
         url += `&start_date=${startDate}&end_date=${endDate}`;
+      }
+      if (selectedStore !== 'all') {
+        url += `&store=${selectedStore}`;
       }
 
       const response = await axios.get(url);
@@ -236,6 +246,39 @@ const ReportsPage = () => {
           ))}
         </div>
 
+        {/* Store Filter */}
+        <div className="mb-6">
+          <label className="block text-xs font-bold tracking-widest uppercase text-slate-500 mb-2">
+            Filtrar por Tienda/Caja
+          </label>
+          <div className="grid grid-cols-3 gap-4">
+            <button
+              onClick={() => setSelectedStore('all')}
+              className={`px-4 py-3 rounded-xl font-bold border-2 border-slate-900 transition-all ${
+                selectedStore === 'all' ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'
+              }`}
+            >
+              Todas
+            </button>
+            <button
+              onClick={() => setSelectedStore('A')}
+              className={`px-4 py-3 rounded-xl font-bold border-2 border-slate-900 transition-all ${
+                selectedStore === 'A' ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'
+              }`}
+            >
+              {getStoreName('A')}
+            </button>
+            <button
+              onClick={() => setSelectedStore('B')}
+              className={`px-4 py-3 rounded-xl font-bold border-2 border-slate-900 transition-all ${
+                selectedStore === 'B' ? 'bg-slate-900 text-white' : 'bg-white text-slate-900'
+              }`}
+            >
+              {getStoreName('B')}
+            </button>
+          </div>
+        </div>
+
         {/* Custom Date Range */}
         {period === 'custom' && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
@@ -284,46 +327,215 @@ const ReportsPage = () => {
 
       {/* Report Results */}
       {reportData && (
-        <div 
-          className="bg-white border-2 border-slate-900 rounded-xl p-6 md:p-8"
-          style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
-        >
-          <h2 className="text-xl font-bold mb-6">Resumen del Reporte</h2>
-          
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div className="p-4 border-2 border-slate-900 rounded-xl" style={{ backgroundColor: '#D4F0A5' }}>
-              <h3 className="font-bold text-sm uppercase mb-2">{getStoreName('A')}</h3>
-              <p className="text-2xl font-black font-mono">${reportData.store_a.total_sales.toLocaleString('es-CL')}</p>
-              <p className="text-sm">{ reportData.store_a.sales_count} ventas</p>
+        <div className="space-y-6">
+          {/* Key Metrics */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div 
+              className="bg-white border-4 border-slate-900 rounded-xl p-5"
+              style={{ boxShadow: '6px 6px 0px 0px rgba(15,23,42,1)' }}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <DollarSign className="w-8 h-8 text-green-600" />
+                <TrendingUp className="w-5 h-5 text-green-500" />
+              </div>
+              <h3 className="text-xs font-bold tracking-widest uppercase text-slate-500">Ventas Totales</h3>
+              <p className="text-3xl font-black font-mono text-slate-900">
+                ${reportData.total_sales?.toLocaleString('es-CL') || '0'}
+              </p>
             </div>
-            <div className="p-4 border-2 border-slate-900 rounded-xl" style={{ backgroundColor: '#FADBB0' }}>
-              <h3 className="font-bold text-sm uppercase mb-2">{getStoreName('B')}</h3>
-              <p className="text-2xl font-black font-mono">${reportData.store_b.total_sales.toLocaleString('es-CL')}</p>
-              <p className="text-sm">{reportData.store_b.sales_count} ventas</p>
+
+            <div 
+              className="bg-white border-4 border-slate-900 rounded-xl p-5"
+              style={{ boxShadow: '6px 6px 0px 0px rgba(15,23,42,1)' }}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <TrendingUp className="w-8 h-8 text-blue-600" />
+              </div>
+              <h3 className="text-xs font-bold tracking-widest uppercase text-slate-500">Utilidad Bruta</h3>
+              <p className="text-3xl font-black font-mono text-slate-900">
+                ${reportData.total_profit?.toLocaleString('es-CL') || '0'}
+              </p>
+            </div>
+
+            <div 
+              className="bg-white border-4 border-slate-900 rounded-xl p-5"
+              style={{ boxShadow: '6px 6px 0px 0px rgba(15,23,42,1)' }}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <Package className="w-8 h-8 text-purple-600" />
+              </div>
+              <h3 className="text-xs font-bold tracking-widest uppercase text-slate-500">Ganancia Neta</h3>
+              <p className="text-3xl font-black font-mono text-slate-900">
+                ${reportData.net_profit?.toLocaleString('es-CL') || '0'}
+              </p>
+            </div>
+
+            <div 
+              className="bg-white border-4 border-slate-900 rounded-xl p-5"
+              style={{ boxShadow: '6px 6px 0px 0px rgba(15,23,42,1)' }}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <ShoppingCart className="w-8 h-8 text-orange-600" />
+              </div>
+              <h3 className="text-xs font-bold tracking-widest uppercase text-slate-500">Transacciones</h3>
+              <p className="text-3xl font-black font-mono text-slate-900">
+                {(reportData.store_a?.sales_count || 0) + (reportData.store_b?.sales_count || 0)}
+              </p>
+            </div>
+          </div>
+
+          {/* Charts */}
+          {reportData.daily_sales_chart && reportData.daily_sales_chart.length > 0 && (
+            <div 
+              className="bg-white border-4 border-slate-900 rounded-xl p-6"
+              style={{ boxShadow: '6px 6px 0px 0px rgba(15,23,42,1)' }}
+            >
+              <h2 className="text-xl font-bold mb-6">📈 Ventas Diarias</h2>
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={reportData.daily_sales_chart}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis 
+                    dataKey="date" 
+                    stroke="#475569"
+                    tick={{ fontSize: 12 }}
+                  />
+                  <YAxis 
+                    stroke="#475569"
+                    tick={{ fontSize: 12 }}
+                  />
+                  <Tooltip 
+                    contentStyle={{
+                      backgroundColor: '#fff',
+                      border: '2px solid #0f172a',
+                      borderRadius: '8px'
+                    }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="total" 
+                    stroke="#0f172a" 
+                    strokeWidth={3}
+                    dot={{ fill: '#D4F0A5', stroke: '#0f172a', strokeWidth: 2, r: 5 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+          {/* Top Products and Payment Methods */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Top Products */}
+            {reportData.top_products && reportData.top_products.length > 0 && (
+              <div 
+                className="bg-white border-4 border-slate-900 rounded-xl p-6"
+                style={{ boxShadow: '6px 6px 0px 0px rgba(15,23,42,1)' }}
+              >
+                <h2 className="text-xl font-bold mb-6">🏆 Productos Más Vendidos</h2>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={reportData.top_products}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis 
+                      dataKey="name" 
+                      angle={-45}
+                      textAnchor="end"
+                      height={100}
+                      tick={{ fontSize: 10 }}
+                    />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="total" fill="#D4F0A5" stroke="#0f172a" strokeWidth={2} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+
+            {/* Payment Methods */}
+            {reportData.payment_methods && Object.keys(reportData.payment_methods).length > 0 && (
+              <div 
+                className="bg-white border-4 border-slate-900 rounded-xl p-6"
+                style={{ boxShadow: '6px 6px 0px 0px rgba(15,23,42,1)' }}
+              >
+                <h2 className="text-xl font-bold mb-6">💳 Métodos de Pago</h2>
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={Object.entries(reportData.payment_methods).map(([key, value]) => ({
+                        name: key,
+                        value: value.total
+                      }))}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                      stroke="#0f172a"
+                      strokeWidth={2}
+                    >
+                      {Object.keys(reportData.payment_methods).map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </div>
+
+          {/* Store Comparison */}
+          <div 
+            className="bg-white border-4 border-slate-900 rounded-xl p-6"
+            style={{ boxShadow: '6px 6px 0px 0px rgba(15,23,42,1)' }}
+          >
+            <h2 className="text-xl font-bold mb-6">🏪 Comparación por Tienda</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="p-4 border-2 border-slate-900 rounded-xl" style={{ backgroundColor: '#D4F0A5' }}>
+                <h3 className="font-bold text-sm uppercase mb-2">{getStoreName('A')}</h3>
+                <p className="text-3xl font-black font-mono mb-2">${reportData.store_a.total_sales.toLocaleString('es-CL')}</p>
+                <p className="text-sm mb-1">{reportData.store_a.sales_count} ventas</p>
+                <p className="text-sm text-green-700 font-bold">
+                  Utilidad: ${reportData.store_a.profit?.toLocaleString('es-CL') || '0'}
+                </p>
+              </div>
+              <div className="p-4 border-2 border-slate-900 rounded-xl" style={{ backgroundColor: '#FADBB0' }}>
+                <h3 className="font-bold text-sm uppercase mb-2">{getStoreName('B')}</h3>
+                <p className="text-3xl font-black font-mono mb-2">${reportData.store_b.total_sales.toLocaleString('es-CL')}</p>
+                <p className="text-sm mb-1">{reportData.store_b.sales_count} ventas</p>
+                <p className="text-sm text-green-700 font-bold">
+                  Utilidad: ${reportData.store_b.profit?.toLocaleString('es-CL') || '0'}
+                </p>
+              </div>
             </div>
           </div>
 
           {/* Download Buttons */}
-          <div className="flex gap-4">
-            <button
-              onClick={downloadPDF}
-              className="flex-1 bg-white text-slate-900 border-2 border-slate-900 rounded-xl px-6 py-4 font-bold transition-all"
-              style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
-              data-testid="download-pdf-btn"
-            >
-              <FileDown className="inline w-5 h-5 mr-2" />
-              Descargar PDF
-            </button>
-            <button
-              onClick={downloadExcel}
-              className="flex-1 bg-white text-slate-900 border-2 border-slate-900 rounded-xl px-6 py-4 font-bold transition-all"
-              style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
-              data-testid="download-excel-btn"
-            >
-              <FileDown className="inline w-5 h-5 mr-2" />
-              Descargar Excel
-            </button>
+          <div 
+            className="bg-white border-4 border-slate-900 rounded-xl p-6"
+            style={{ boxShadow: '6px 6px 0px 0px rgba(15,23,42,1)' }}
+          >
+            <h2 className="text-xl font-bold mb-4">Descargar Reporte</h2>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <button
+                onClick={downloadPDF}
+                className="flex-1 bg-white text-slate-900 border-2 border-slate-900 rounded-xl px-6 py-4 font-bold transition-all hover:bg-slate-50"
+                style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
+                data-testid="download-pdf-btn"
+              >
+                <FileDown className="inline w-5 h-5 mr-2" />
+                Descargar PDF
+              </button>
+              <button
+                onClick={downloadExcel}
+                className="flex-1 bg-white text-slate-900 border-2 border-slate-900 rounded-xl px-6 py-4 font-bold transition-all hover:bg-slate-50"
+                style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
+                data-testid="download-excel-btn"
+              >
+                <FileDown className="inline w-5 h-5 mr-2" />
+                Descargar Excel
+              </button>
+            </div>
           </div>
         </div>
       )}

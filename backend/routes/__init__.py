@@ -29,6 +29,7 @@ from .ecommerce import router as ecommerce_router
 from .categories import router as categories_router
 from .debug import router as debug_router
 from .pos_stats import router as pos_stats_router
+from .reports import router as reports_router
 
 # Crear el router principal con prefijo /api
 api_router = APIRouter(prefix="/api")
@@ -58,5 +59,6 @@ api_router.include_router(ecommerce_router)
 api_router.include_router(categories_router)
 api_router.include_router(debug_router)
 api_router.include_router(pos_stats_router)
+api_router.include_router(reports_router)
 
 __all__ = ["api_router"]
