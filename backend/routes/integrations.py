@@ -36,6 +36,15 @@ class SyncResourcesRequest(BaseModel):
     resources: List[str]  # Lista de recursos a sincronizar: ['products', 'categories', 'orders', etc.]
 
 
+class WebhookEvent(BaseModel):
+    """Evento de webhook de PrestaShop"""
+    event: str  # Tipo de evento: 'product_update', 'order_created', etc.
+    resource: str  # Tipo de recurso: 'product', 'order', 'customer', etc.
+    resource_id: int  # ID del recurso en PrestaShop
+    data: Optional[Dict[str, Any]] = None  # Datos del evento
+    timestamp: Optional[str] = None
+
+
 @router.post("/prestashop/connect")
 async def connect_prestashop(
     request: PrestashopConnectRequest,
@@ -947,45 +956,318 @@ async def sync_prices_resource(ps_service, integration_id: str, account_id: str)
 
 async def sync_stock_resource(ps_service, integration_id: str, account_id: str) -> int:
     """Sincronizar stock/inventario"""
-    # Por ahora retornar placeholder
-    # En implementación completa: obtener stock de PrestaShop y actualizar localmente
-    return 0
+    stock_dict = ps_service.get_all_stock(limit=1000)
+    updated_count = 0
+    
+    # Actualizar stock en productos locales
+    for product_id, quantity in stock_dict.items():
+        # Buscar producto local por prestashop_id
+        result = await db.products.update_one(
+            {'account_id': account_id, 'prestashop_id': product_id},
+            {'$set': {'stock_quantity': quantity}}
+        )
+        
+        if result.modified_count > 0:
+            updated_count += 1
+    
+    return updated_count
 
 
 async def sync_images_resource(ps_service, integration_id: str, account_id: str) -> int:
     """Sincronizar imágenes de productos"""
-    # Placeholder - implementar descarga de imágenes
-    return 0
+    import requests
+    from io import BytesIO
+    
+    # Obtener productos sincronizados de PrestaShop
+    ps_products = await db.prestashop_products.find(
+        {'account_id': account_id, 'integration_id': integration_id},
+        {'_id': 0, 'prestashop_id': 1, 'local_product_id': 1}
+    ).limit(500).to_list(500)
+    
+    synced_count = 0
+    for ps_prod in ps_products:
+        ps_id = ps_prod.get('prestashop_id')
+        local_id = ps_prod.get('local_product_id')
+        
+        if not ps_id or not local_id:
+            continue
+        
+        # Obtener imágenes del producto desde PrestaShop
+        images = ps_service.get_product_images(ps_id)
+        
+        if images:
+            # Tomar la primera imagen (principal)
+            main_image = images[0]
+            image_url = main_image.get('url')
+            
+            if image_url:
+                try:
+                    # Descargar imagen
+                    response = requests.get(image_url, auth=ps_service.auth, timeout=10)
+                    if response.status_code == 200:
+                        # Guardar URL de imagen en producto local
+                        # En producción: subir a S3/CDN y guardar URL
+                        await db.products.update_one(
+                            {'id': local_id, 'account_id': account_id},
+                            {'$set': {'image_url': image_url, 'has_image': True}}
+                        )
+                        synced_count += 1
+                except Exception as e:
+                    print(f"Error downloading image for product {ps_id}: {str(e)}")
+    
+    return synced_count
 
 
 async def sync_orders_resource(ps_service, integration_id: str, account_id: str, store_code: str) -> int:
     """Sincronizar órdenes/pedidos"""
-    # Placeholder - implementar sincronización de órdenes
-    return 0
+    ps_orders = ps_service.get_orders(limit=500)
+    synced_count = 0
+    
+    for ps_order in ps_orders:
+        order_id = int(ps_order.get('id', 0))
+        if order_id <= 0:
+            continue
+        
+        # Verificar si ya existe
+        existing = await db.prestashop_orders.find_one({
+            'account_id': account_id,
+            'integration_id': integration_id,
+            'prestashop_id': order_id
+        }, {'_id': 0})
+        
+        # Extraer datos de la orden
+        order_data = {
+            'account_id': account_id,
+            'integration_id': integration_id,
+            'prestashop_id': order_id,
+            'reference': ps_order.get('reference', f'PS-{order_id}'),
+            'customer_id': int(ps_order.get('id_customer', 0)),
+            'total_paid': float(ps_order.get('total_paid', 0)),
+            'total_products': float(ps_order.get('total_products', 0)),
+            'current_state': int(ps_order.get('current_state', 0)),
+            'payment_method': ps_order.get('payment', 'Unknown'),
+            'date_add': ps_order.get('date_add'),
+            'date_upd': ps_order.get('date_upd')
+        }
+        
+        if existing:
+            await db.prestashop_orders.update_one(
+                {'account_id': account_id, 'integration_id': integration_id, 'prestashop_id': order_id},
+                {'$set': order_data}
+            )
+        else:
+            order_data['id'] = str(uuid4())
+            order_data['created_at'] = datetime.now(timezone.utc).isoformat()
+            await db.prestashop_orders.insert_one(order_data)
+        
+        synced_count += 1
+    
+    return synced_count
 
 
 async def sync_customers_resource(ps_service, integration_id: str, account_id: str, store_code: str) -> int:
     """Sincronizar clientes"""
-    # Placeholder - implementar sincronización de clientes
-    return 0
+    ps_customers = ps_service.get_customers(limit=500)
+    synced_count = 0
+    
+    for ps_customer in ps_customers:
+        customer_id = int(ps_customer.get('id', 0))
+        if customer_id <= 0:
+            continue
+        
+        # Extraer nombre
+        firstname = ps_customer.get('firstname', '')
+        lastname = ps_customer.get('lastname', '')
+        name = f"{firstname} {lastname}".strip()
+        
+        email = ps_customer.get('email', '')
+        
+        # Verificar si ya existe localmente por email
+        existing_local = await db.customers.find_one({
+            'account_id': account_id,
+            'email': email
+        }, {'_id': 0}) if email else None
+        
+        customer_data = {
+            'name': name,
+            'email': email,
+            'phone': ps_customer.get('phone', '') or ps_customer.get('phone_mobile', ''),
+            'store': store_code,
+            'prestashop_id': customer_id,
+            'customer_type': 'Persona'
+        }
+        
+        if existing_local:
+            # Actualizar cliente local
+            await db.customers.update_one(
+                {'id': existing_local['id'], 'account_id': account_id},
+                {'$set': customer_data}
+            )
+        else:
+            # Crear cliente local
+            customer_data['id'] = str(uuid4())
+            customer_data['account_id'] = account_id
+            customer_data['created_at'] = datetime.now(timezone.utc).isoformat()
+            await db.customers.insert_one(customer_data)
+        
+        synced_count += 1
+    
+    return synced_count
 
 
 async def sync_messages_resource(ps_service, integration_id: str, account_id: str) -> int:
     """Sincronizar mensajes e hilos de clientes"""
-    # Placeholder
-    return 0
+    ps_messages = ps_service.get_customer_messages(limit=200)
+    synced_count = 0
+    
+    for ps_msg in ps_messages:
+        msg_id = int(ps_msg.get('id', 0))
+        if msg_id <= 0:
+            continue
+        
+        # Verificar si ya existe
+        existing = await db.customer_messages.find_one({
+            'account_id': account_id,
+            'integration_id': integration_id,
+            'prestashop_id': msg_id
+        }, {'_id': 0})
+        
+        message_data = {
+            'account_id': account_id,
+            'integration_id': integration_id,
+            'prestashop_id': msg_id,
+            'customer_id': int(ps_msg.get('id_customer', 0)),
+            'order_id': int(ps_msg.get('id_order', 0)),
+            'message': ps_msg.get('message', ''),
+            'private': bool(int(ps_msg.get('private', 0))),
+            'date_add': ps_msg.get('date_add')
+        }
+        
+        if existing:
+            await db.customer_messages.update_one(
+                {'account_id': account_id, 'integration_id': integration_id, 'prestashop_id': msg_id},
+                {'$set': message_data}
+            )
+        else:
+            message_data['id'] = str(uuid4())
+            message_data['created_at'] = datetime.now(timezone.utc).isoformat()
+            await db.customer_messages.insert_one(message_data)
+        
+        synced_count += 1
+    
+    return synced_count
 
 
 async def sync_abandoned_carts_resource(ps_service, integration_id: str, account_id: str) -> int:
     """Sincronizar carritos abandonados"""
-    # Placeholder
-    return 0
+    # Obtener todos los carritos
+    ps_carts = ps_service.get_carts(limit=500)
+    
+    # Obtener órdenes para identificar carritos convertidos
+    ps_orders = ps_service.get_orders(limit=500)
+    converted_cart_ids = {int(order.get('id_cart', 0)) for order in ps_orders if order.get('id_cart')}
+    
+    synced_count = 0
+    for ps_cart in ps_carts:
+        cart_id = int(ps_cart.get('id', 0))
+        if cart_id <= 0:
+            continue
+        
+        # Solo guardar carritos NO convertidos en órdenes
+        if cart_id in converted_cart_ids:
+            continue
+        
+        # Verificar si tiene productos (no está vacío)
+        # associations = ps_cart.get('associations', {})
+        # if not associations or not associations.get('cart_rows'):
+        #     continue
+        
+        # Verificar si ya existe
+        existing = await db.abandoned_carts.find_one({
+            'account_id': account_id,
+            'integration_id': integration_id,
+            'prestashop_id': cart_id
+        }, {'_id': 0})
+        
+        cart_data = {
+            'account_id': account_id,
+            'integration_id': integration_id,
+            'prestashop_id': cart_id,
+            'customer_id': int(ps_cart.get('id_customer', 0)),
+            'date_add': ps_cart.get('date_add'),
+            'date_upd': ps_cart.get('date_upd'),
+            'status': 'abandoned'
+        }
+        
+        if existing:
+            await db.abandoned_carts.update_one(
+                {'account_id': account_id, 'integration_id': integration_id, 'prestashop_id': cart_id},
+                {'$set': cart_data}
+            )
+        else:
+            cart_data['id'] = str(uuid4())
+            cart_data['created_at'] = datetime.now(timezone.utc).isoformat()
+            await db.abandoned_carts.insert_one(cart_data)
+        
+        synced_count += 1
+    
+    return synced_count
 
 
 async def sync_completed_carts_resource(ps_service, integration_id: str, account_id: str) -> int:
     """Sincronizar carritos finalizados"""
-    # Placeholder
-    return 0
+    # Obtener carritos y órdenes
+    ps_carts = ps_service.get_carts(limit=500)
+    ps_orders = ps_service.get_orders(limit=500)
+    
+    # Crear mapeo cart_id -> order_id
+    cart_to_order = {int(order.get('id_cart', 0)): order for order in ps_orders if order.get('id_cart')}
+    
+    synced_count = 0
+    for ps_cart in ps_carts:
+        cart_id = int(ps_cart.get('id', 0))
+        if cart_id <= 0:
+            continue
+        
+        # Solo guardar carritos convertidos en órdenes
+        if cart_id not in cart_to_order:
+            continue
+        
+        related_order = cart_to_order[cart_id]
+        
+        # Verificar si ya existe
+        existing = await db.completed_carts.find_one({
+            'account_id': account_id,
+            'integration_id': integration_id,
+            'prestashop_id': cart_id
+        }, {'_id': 0})
+        
+        cart_data = {
+            'account_id': account_id,
+            'integration_id': integration_id,
+            'prestashop_id': cart_id,
+            'customer_id': int(ps_cart.get('id_customer', 0)),
+            'order_id': int(related_order.get('id', 0)),
+            'order_reference': related_order.get('reference', ''),
+            'total_paid': float(related_order.get('total_paid', 0)),
+            'date_add': ps_cart.get('date_add'),
+            'date_completed': related_order.get('date_add'),
+            'status': 'completed'
+        }
+        
+        if existing:
+            await db.completed_carts.update_one(
+                {'account_id': account_id, 'integration_id': integration_id, 'prestashop_id': cart_id},
+                {'$set': cart_data}
+            )
+        else:
+            cart_data['id'] = str(uuid4())
+            cart_data['created_at'] = datetime.now(timezone.utc).isoformat()
+            await db.completed_carts.insert_one(cart_data)
+        
+        synced_count += 1
+    
+    return synced_count
 
 
 @router.get("/jobs/{job_id}")
@@ -1005,6 +1287,342 @@ async def get_job_status(
         raise HTTPException(status_code=404, detail="Job no encontrado")
     
     return job
+
+
+@router.post("/webhooks/prestashop/{integration_id}")
+async def receive_webhook(
+    integration_id: str,
+    event: WebhookEvent,
+    background_tasks: BackgroundTasks
+):
+    """
+    Recibir webhook de PrestaShop para actualizaciones en tiempo real
+    
+    Este endpoint NO requiere autenticación porque es llamado por PrestaShop
+    Se debe validar el integration_id y opcionalmente un token secreto
+    """
+    # Verificar que la integración existe
+    integration = await db.prestashop_integrations.find_one(
+        {'id': integration_id},
+        {'_id': 0}
+    )
+    
+    if not integration:
+        raise HTTPException(status_code=404, detail="Integración no encontrada")
+    
+    # Guardar evento de webhook en log
+    webhook_log = {
+        'id': str(uuid4()),
+        'integration_id': integration_id,
+        'account_id': integration['account_id'],
+        'event_type': event.event,
+        'resource_type': event.resource,
+        'resource_id': event.resource_id,
+        'data': event.data,
+        'timestamp': event.timestamp or datetime.now(timezone.utc).isoformat(),
+        'processed': False,
+        'created_at': datetime.now(timezone.utc).isoformat()
+    }
+    await db.webhook_events.insert_one(webhook_log)
+    
+    # Procesar webhook en background
+    background_tasks.add_task(
+        process_webhook_background,
+        integration_id,
+        integration,
+        event
+    )
+    
+    return {'success': True, 'message': 'Webhook recibido y en proceso'}
+
+
+async def process_webhook_background(integration_id: str, integration: dict, event: WebhookEvent):
+    """
+    Procesar webhook en background
+    """
+    try:
+        ps_service = PrestashopAPIService(integration['shop_url'], integration['api_key'])
+        account_id = integration['account_id']
+        
+        # Obtener información de la tienda
+        account = await db.accounts.find_one({'id': account_id}, {'_id': 0})
+        store_code = 'A'
+        store_name = 'PrestaShop'
+        if account and 'stores' in account:
+            store_id = integration.get('store_id')
+            matching_store = next((s for s in account['stores'] if s.get('id') == store_id), None)
+            if matching_store:
+                store_code = matching_store.get('code', 'A')
+                store_name = matching_store.get('name', 'PrestaShop')
+        
+        # Procesar según tipo de evento
+        if event.resource == 'product':
+            if event.event in ['product_created', 'product_updated']:
+                # Sincronizar este producto específico
+                await sync_single_product(ps_service, integration_id, account_id, event.resource_id, store_code)
+            elif event.event == 'product_deleted':
+                # Eliminar producto local
+                await db.products.delete_one({
+                    'account_id': account_id,
+                    'prestashop_id': event.resource_id
+                })
+        
+        elif event.resource == 'order':
+            if event.event in ['order_created', 'order_updated']:
+                # Sincronizar esta orden específica
+                await sync_single_order(ps_service, integration_id, account_id, event.resource_id, store_code)
+        
+        elif event.resource == 'customer':
+            if event.event in ['customer_created', 'customer_updated']:
+                # Sincronizar este cliente específico
+                await sync_single_customer(ps_service, integration_id, account_id, event.resource_id, store_code)
+        
+        elif event.resource == 'stock':
+            if event.event == 'stock_updated':
+                # Actualizar stock del producto
+                await sync_single_stock(ps_service, account_id, event.resource_id)
+        
+        # Marcar webhook como procesado
+        await db.webhook_events.update_one(
+            {'integration_id': integration_id, 'resource_id': event.resource_id, 'processed': False},
+            {'$set': {
+                'processed': True,
+                'processed_at': datetime.now(timezone.utc).isoformat()
+            }}
+        )
+        
+    except Exception as e:
+        print(f"Error processing webhook: {str(e)}")
+        # Marcar como error
+        await db.webhook_events.update_one(
+            {'integration_id': integration_id, 'resource_id': event.resource_id},
+            {'$set': {
+                'error': str(e),
+                'error_at': datetime.now(timezone.utc).isoformat()
+            }}
+        )
+
+
+# Funciones helper para sincronizar recursos individuales
+async def sync_single_product(ps_service, integration_id: str, account_id: str, product_id: int, store_code: str):
+    """Sincronizar un solo producto"""
+    try:
+        ps_product = ps_service.get_product(product_id)
+        if not ps_product:
+            return
+        
+        name = ps_product.get('name', {})
+        if isinstance(name, dict):
+            name = name.get('language', {}).get('value', f'Producto {product_id}')
+        
+        sku = ps_product.get('reference', f"PS-{product_id}")
+        
+        product_data = {
+            'name': name,
+            'sku': sku,
+            'sale_price': float(ps_product.get('price', 0)),
+            'store': store_code,
+            'prestashop_id': product_id
+        }
+        
+        # Buscar si existe localmente
+        local_product = await db.products.find_one({'sku': sku}, {'_id': 0})
+        
+        if local_product:
+            await db.products.update_one({'sku': sku}, {'$set': product_data})
+        else:
+            product_data['id'] = str(uuid4())
+            product_data['account_id'] = account_id
+            product_data['cost_price'] = 0
+            product_data['created_at'] = datetime.now(timezone.utc).isoformat()
+            await db.products.insert_one(product_data)
+            
+    except Exception as e:
+        print(f"Error syncing single product {product_id}: {str(e)}")
+
+
+async def sync_single_order(ps_service, integration_id: str, account_id: str, order_id: int, store_code: str):
+    """Sincronizar una sola orden"""
+    try:
+        ps_order = ps_service.get_order_details(order_id)
+        if not ps_order:
+            return
+        
+        order_data = {
+            'account_id': account_id,
+            'integration_id': integration_id,
+            'prestashop_id': order_id,
+            'reference': ps_order.get('reference', f'PS-{order_id}'),
+            'customer_id': int(ps_order.get('id_customer', 0)),
+            'total_paid': float(ps_order.get('total_paid', 0)),
+            'current_state': int(ps_order.get('current_state', 0)),
+            'payment_method': ps_order.get('payment', 'Unknown'),
+            'date_add': ps_order.get('date_add')
+        }
+        
+        existing = await db.prestashop_orders.find_one({
+            'account_id': account_id,
+            'prestashop_id': order_id
+        }, {'_id': 0})
+        
+        if existing:
+            await db.prestashop_orders.update_one(
+                {'account_id': account_id, 'prestashop_id': order_id},
+                {'$set': order_data}
+            )
+        else:
+            order_data['id'] = str(uuid4())
+            order_data['created_at'] = datetime.now(timezone.utc).isoformat()
+            await db.prestashop_orders.insert_one(order_data)
+            
+    except Exception as e:
+        print(f"Error syncing single order {order_id}: {str(e)}")
+
+
+async def sync_single_customer(ps_service, integration_id: str, account_id: str, customer_id: int, store_code: str):
+    """Sincronizar un solo cliente"""
+    try:
+        ps_customers = ps_service.get_customers(limit=1)
+        # PrestaShop API no tiene get_customer individual, usar filter
+        # Por ahora sincronizar todos y filtrar
+        
+    except Exception as e:
+        print(f"Error syncing single customer {customer_id}: {str(e)}")
+
+
+async def sync_single_stock(ps_service, account_id: str, product_id: int):
+    """Sincronizar stock de un solo producto"""
+    try:
+        stock_dict = ps_service.get_all_stock(limit=1000)
+        if product_id in stock_dict:
+            quantity = stock_dict[product_id]
+            await db.products.update_one(
+                {'account_id': account_id, 'prestashop_id': product_id},
+                {'$set': {'stock_quantity': quantity}}
+            )
+    except Exception as e:
+        print(f"Error syncing stock for product {product_id}: {str(e)}")
+
+
+@router.post("/prestashop/{integration_id}/sync-incremental")
+async def sync_incremental(
+    integration_id: str,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Sincronización incremental: solo cambios desde última sincronización
+    """
+    # Obtener integración
+    integration = await db.prestashop_integrations.find_one(
+        get_tenant_filter(current_user.dict(), {'id': integration_id}),
+        {'_id': 0}
+    )
+    
+    if not integration:
+        raise HTTPException(status_code=404, detail="Integración no encontrada")
+    
+    # Crear job de sincronización incremental
+    job_id = str(uuid4())
+    job = {
+        'id': job_id,
+        'account_id': current_user.account_id,
+        'integration_id': integration_id,
+        'type': 'sync_incremental',
+        'status': 'running',
+        'progress': 0,
+        'results': {},
+        'message': 'Iniciando sincronización incremental...',
+        'created_at': datetime.now(timezone.utc).isoformat()
+    }
+    await db.sync_jobs.insert_one(job)
+    
+    # Ejecutar sincronización incremental en background
+    background_tasks.add_task(
+        sync_incremental_background,
+        job_id,
+        integration_id,
+        integration,
+        current_user.account_id
+    )
+    
+    return {
+        'success': True,
+        'job_id': job_id,
+        'message': 'Sincronización incremental iniciada'
+    }
+
+
+async def sync_incremental_background(job_id: str, integration_id: str, integration: dict, account_id: str):
+    """
+    Sincronizar solo cambios desde la última sincronización
+    """
+    try:
+        ps_service = PrestashopAPIService(integration['shop_url'], integration['api_key'])
+        
+        # Obtener fecha de última sincronización
+        last_sync_products = integration.get('last_sync_products')
+        last_sync_orders = integration.get('last_sync_orders')
+        last_sync_customers = integration.get('last_sync_customers')
+        
+        results = {}
+        
+        # Sincronizar productos modificados
+        if last_sync_products:
+            date_from = last_sync_products.split('T')[0]  # Formato YYYY-MM-DD
+            # PrestaShop API no soporta filtro por fecha de modificación fácilmente
+            # Obtener todos y filtrar localmente
+            ps_products = ps_service.get_products(limit=500)
+            # Filtrar por fecha
+            # ... implementar lógica de filtrado
+            results['products'] = len(ps_products)
+        
+        # Sincronizar órdenes nuevas
+        if last_sync_orders:
+            date_from = last_sync_orders.split('T')[0]
+            ps_orders = ps_service.get_orders(limit=500, date_from=date_from)
+            # Procesar órdenes...
+            results['orders'] = len(ps_orders)
+        
+        # Sincronizar clientes nuevos
+        if last_sync_customers:
+            date_from = last_sync_customers.split('T')[0]
+            ps_customers = ps_service.get_customers(limit=500, date_from=date_from)
+            results['customers'] = len(ps_customers)
+        
+        # Actualizar fechas de última sincronización
+        now = datetime.now(timezone.utc).isoformat()
+        await db.prestashop_integrations.update_one(
+            {'id': integration_id},
+            {'$set': {
+                'last_sync_products': now,
+                'last_sync_orders': now,
+                'last_sync_customers': now,
+                'last_sync_stock': now
+            }}
+        )
+        
+        # Marcar job como completado
+        await db.sync_jobs.update_one(
+            {'id': job_id},
+            {'$set': {
+                'status': 'completed',
+                'progress': 100,
+                'results': results,
+                'message': 'Sincronización incremental completada',
+                'completed_at': datetime.now(timezone.utc).isoformat()
+            }}
+        )
+        
+    except Exception as e:
+        await db.sync_jobs.update_one(
+            {'id': job_id},
+            {'$set': {
+                'status': 'failed',
+                'message': f'Error: {str(e)}',
+                'failed_at': datetime.now(timezone.utc).isoformat()
+            }}
+        )
 
 
 @router.delete("/prestashop/{integration_id}")

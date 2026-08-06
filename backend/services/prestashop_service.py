@@ -448,3 +448,253 @@ class PrestashopAPIService:
         except Exception as e:
             print(f"Error getting all stock: {str(e)}")
             return {}
+
+
+    def get_orders(self, limit: int = 500, offset: int = 0, date_from: Optional[str] = None) -> List[Dict[str, Any]]:
+        """
+        Obtener órdenes/pedidos de PrestaShop
+        
+        Args:
+            limit: Número máximo de órdenes
+            offset: Offset para paginación
+            date_from: Fecha desde (formato: YYYY-MM-DD) para sincronización incremental
+            
+        Returns:
+            Lista de órdenes
+        """
+        params = {
+            'display': 'full',
+            'limit': f'{offset},{limit}',
+            'sort': '[id_DESC]'
+        }
+        
+        if date_from:
+            params['filter[date_add]'] = f'[{date_from},]'
+        
+        try:
+            response = self._make_request('orders', params=params)
+            
+            orders = []
+            if 'orders' in response:
+                if isinstance(response['orders'], list):
+                    orders = response['orders']
+                elif isinstance(response['orders'], dict):
+                    orders = [response['orders']]
+            
+            return orders
+        except Exception as e:
+            print(f"Error getting orders: {str(e)}")
+            return []
+    
+    
+    def get_order_details(self, order_id: int) -> Optional[Dict[str, Any]]:
+        """
+        Obtener detalles completos de una orden incluyendo productos
+        
+        Args:
+            order_id: ID de la orden
+            
+        Returns:
+            Datos completos de la orden
+        """
+        try:
+            params = {'display': 'full'}
+            response = self._make_request(f'orders/{order_id}', params=params)
+            
+            if 'order' in response:
+                return response['order']
+            elif 'orders' in response:
+                if isinstance(response['orders'], dict):
+                    return response['orders']
+            return None
+        except Exception as e:
+            print(f"Error getting order {order_id}: {str(e)}")
+            return None
+    
+    
+    def get_customers(self, limit: int = 500, offset: int = 0, date_from: Optional[str] = None) -> List[Dict[str, Any]]:
+        """
+        Obtener clientes de PrestaShop
+        
+        Args:
+            limit: Número máximo de clientes
+            offset: Offset para paginación
+            date_from: Fecha desde para sincronización incremental
+            
+        Returns:
+            Lista de clientes
+        """
+        params = {
+            'display': 'full',
+            'limit': f'{offset},{limit}'
+        }
+        
+        if date_from:
+            params['filter[date_add]'] = f'[{date_from},]'
+        
+        try:
+            response = self._make_request('customers', params=params)
+            
+            customers = []
+            if 'customers' in response:
+                if isinstance(response['customers'], list):
+                    customers = response['customers']
+                elif isinstance(response['customers'], dict):
+                    customers = [response['customers']]
+            
+            return customers
+        except Exception as e:
+            print(f"Error getting customers: {str(e)}")
+            return []
+    
+    
+    def get_customer_messages(self, limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
+        """
+        Obtener mensajes de clientes
+        
+        Args:
+            limit: Número máximo de mensajes
+            offset: Offset para paginación
+            
+        Returns:
+            Lista de mensajes
+        """
+        params = {
+            'display': 'full',
+            'limit': f'{offset},{limit}',
+            'sort': '[id_DESC]'
+        }
+        
+        try:
+            response = self._make_request('customer_messages', params=params)
+            
+            messages = []
+            if 'customer_messages' in response:
+                if isinstance(response['customer_messages'], list):
+                    messages = response['customer_messages']
+                elif isinstance(response['customer_messages'], dict):
+                    messages = [response['customer_messages']]
+            
+            return messages
+        except Exception as e:
+            print(f"Error getting customer messages: {str(e)}")
+            return []
+    
+    
+    def get_carts(self, limit: int = 500, offset: int = 0, date_from: Optional[str] = None) -> List[Dict[str, Any]]:
+        """
+        Obtener carritos de compra
+        
+        Args:
+            limit: Número máximo de carritos
+            offset: Offset para paginación
+            date_from: Fecha desde para sincronización incremental
+            
+        Returns:
+            Lista de carritos
+        """
+        params = {
+            'display': 'full',
+            'limit': f'{offset},{limit}',
+            'sort': '[id_DESC]'
+        }
+        
+        if date_from:
+            params['filter[date_add]'] = f'[{date_from},]'
+        
+        try:
+            response = self._make_request('carts', params=params)
+            
+            carts = []
+            if 'carts' in response:
+                if isinstance(response['carts'], list):
+                    carts = response['carts']
+                elif isinstance(response['carts'], dict):
+                    carts = [response['carts']]
+            
+            return carts
+        except Exception as e:
+            print(f"Error getting carts: {str(e)}")
+            return []
+    
+    
+    def get_product_images(self, product_id: int) -> List[Dict[str, Any]]:
+        """
+        Obtener URLs de imágenes de un producto
+        
+        Args:
+            product_id: ID del producto
+            
+        Returns:
+            Lista de imágenes con URLs
+        """
+        try:
+            params = {'display': 'full'}
+            response = self._make_request(f'images/products/{product_id}', params=params)
+            
+            images = []
+            if 'image' in response:
+                if isinstance(response['image'], list):
+                    images = response['image']
+                elif isinstance(response['image'], dict):
+                    images = [response['image']]
+            
+            # Construir URLs completas
+            for img in images:
+                img_id = img.get('id')
+                if img_id:
+                    img['url'] = f"{self.shop_url}/api/images/products/{product_id}/{img_id}"
+            
+            return images
+        except Exception as e:
+            print(f"Error getting images for product {product_id}: {str(e)}")
+            return []
+    
+    
+    def update_stock(self, product_id: int, quantity: int) -> bool:
+        """
+        Actualizar stock de un producto en PrestaShop
+        
+        Args:
+            product_id: ID del producto
+            quantity: Nueva cantidad de stock
+            
+        Returns:
+            True si se actualizó correctamente
+        """
+        try:
+            # Primero obtener el stock_available_id del producto
+            params = {
+                'display': 'full',
+                'filter[id_product]': f'[{product_id}]'
+            }
+            response = self._make_request('stock_availables', params=params)
+            
+            stock_id = None
+            if 'stock_availables' in response:
+                stock_data = response['stock_availables']
+                if isinstance(stock_data, list) and len(stock_data) > 0:
+                    stock_id = stock_data[0].get('id')
+                elif isinstance(stock_data, dict):
+                    stock_id = stock_data.get('id')
+            
+            if not stock_id:
+                print(f"No stock_available found for product {product_id}")
+                return False
+            
+            # Actualizar stock
+            xml_data = f'''<?xml version="1.0" encoding="UTF-8"?>
+            <prestashop xmlns:xlink="http://www.w3.org/1999/xlink">
+                <stock_available>
+                    <id>{stock_id}</id>
+                    <id_product>{product_id}</id_product>
+                    <quantity>{quantity}</quantity>
+                </stock_available>
+            </prestashop>'''
+            
+            self._make_request(f'stock_availables/{stock_id}', method='PUT', data=xml_data)
+            return True
+            
+        except Exception as e:
+            print(f"Error updating stock for product {product_id}: {str(e)}")
+            return False
