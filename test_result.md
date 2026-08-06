@@ -640,3 +640,37 @@ agent_communication:
       message: "IMPORTAR DATOS FEATURE VERIFICATION COMPLETED (2026-07-24): Successfully tested the new 'Importar Datos' functionality in Settings page. Test account: hola@tricomar.cl (account_admin role). ALL TESTS PASSED: ✅ 'Importar Datos' tab visible in Settings (data-testid='import-tab-btn') ✅ All 3 sections displayed correctly (Paso 1: Descarga la Plantilla, Paso 2: Completa la Información, Paso 3: Sube el Archivo) ✅ 'Descargar Plantilla Excel' button functional - successfully downloaded 'plantilla_productos_2026-07-24.xlsx' ✅ Success notification 'Plantilla descargada correctamente' appeared ✅ File input element present with correct accept attribute (.xlsx,.xls) ✅ 'Seleccionar Archivo' button visible and functional ✅ 'Importar Productos' button correctly disabled when no file selected ✅ Neobrutalist design style confirmed (7 elements with border-2 border-slate-900) ✅ No console errors detected ✅ API call to /api/import-export/products/template successful. Role-based access control working correctly - tab only visible for account_admin/supervisor roles. Screenshots: settings_page_all_tabs.png, import_interface_full.png, after_download_notification.png, import_interface_complete.png. Feature is production-ready."
     - agent: "testing"
       message: "STORE CODE EDITING VERIFICATION (2026-07-24): Tested store code editing functionality in both Super-Admin and Settings interfaces. FIXES APPLIED: ✅ Added font-mono class to SuperAdminPage.js code input field (line 823) - was missing monospace font ✅ Fixed SettingsPage.js storeCodes state initialization (lines 108-119) - codes now properly loaded from stores data. CODE REVIEW FINDINGS: SuperAdminPage.js edit modal (lines 817-827): Code field present, editable, maxLength=3, auto-converts to uppercase, NOW has font-mono class. SettingsPage.js Tiendas tab (lines 732-747): Code field present, editable, maxLength=3, auto-converts to uppercase, has font-mono class, includes help text 'Máximo 3 caracteres. Se usará en registros y reportes.' Backend endpoint /api/super-admin/accounts/{account_id}/stores/{store_id} (super_admin.py lines 268-320): Correctly updates store code if provided (lines 296-298). Database verification: Account 'Negocio de Tricomar' (acc_cd0a3e485753) has 3 stores with codes: PetSHop (PS), GrowShop (GS), Tabaqueria (TB). User hola@tricomar.cl has role account_admin with access to Settings. IMPLEMENTATION COMPLETE: Both interfaces now support store code editing with proper styling (font-mono), validation (3 char max), uppercase conversion, and persistence."GrowShop (GS), Tabaqueria (TB). User hola@tricomar.cl has role account_admin with access to Settings. IMPLEMENTATION COMPLETE: Both interfaces now support store code editing with proper styling (font-mono), validation (3 char max), uppercase conversion, and persistence."
+  - task: "Webhooks PrestaShop - Sistema de prueba, logs y notificaciones"
+    implemented: true
+    working: true
+    file: "/app/frontend/src/components/settings/IntegrationsTab.js, /app/backend/routes/integrations.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: false
+          agent: "user"
+          comment: "Usuario reportó que el estado del webhook muestra 'Webhook Inactivo' aunque configuró la URL en ambos módulos PrestaShop (PetShop y GrowShop)"
+        - working: true
+          agent: "main"
+          comment: "IMPLEMENTADO SISTEMA COMPLETO DE WEBHOOKS (2026-08-06): ✅ Botón 'Probar Webhook' (🧪) visible en cada integración ✅ Endpoint POST /api/integrations/webhooks/prestashop/{id}/test crea eventos de prueba ✅ Botón 'Ver Logs' (📊) abre modal con historial completo de eventos ✅ Endpoint GET /api/integrations/webhooks/prestashop/{id}/logs retorna últimos 100 eventos ✅ Modal de logs muestra: timestamp, tipo de evento, recurso, ID, badges (PRUEBA/PROCESADO/ERROR), datos expandibles ✅ Sistema de reintentos: máximo 3 intentos con campos retry_count, retry_scheduled, retry_failed ✅ Estados de webhook: 'active' (eventos recientes <24h), 'inactive' (sin actividad), 'configured' (solo pruebas), 'not_configured', 'error' ✅ Nota informativa sobre Preview vs Producción explicando que URL de preview no es accesible públicamente ✅ Badges de estado con colores: 🟢 Activo, 🟡 Inactivo, 🔵 Configurado, ⚪ Sin configurar, 🔴 Error ✅ Notificaciones toast con instrucciones claras. Testing completo con screenshots: integraciones mostradas con badge 'Configurado', botones visibles, modal de logs funcionando con 2 eventos de prueba procesados. Base de datos verificada: 3 eventos webhook registrados correctamente. API status retorna: 'configured', 'Webhook configurado (solo pruebas)', test_events: 2."
+
+backend:
+  - task: "Webhook endpoints - Test, Status y Logs"
+    implemented: true
+    working: true
+    file: "/app/backend/routes/integrations.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "main"
+          comment: "Implementados 3 endpoints: POST /webhooks/prestashop/{id}/test (línea 1628) - crea evento de prueba local con campo test:true, GET /webhooks/prestashop/{id}/status (línea 1670) - determina estado basado en eventos reales (excluyendo tests) con lógica temporal, GET /webhooks/prestashop/{id}/logs (línea 1771) - retorna últimos 100 eventos ordenados por timestamp. Sistema de reintentos implementado en process_webhook_background (líneas 1385-1430): máximo 3 reintentos, campos retry_count/retry_scheduled/retry_failed. Lógica de estado mejorada: 'configured' cuando solo hay eventos de prueba con mensaje 'Esperando eventos reales desde PrestaShop'. Probado con curl: status endpoint retorna JSON correcto."
+
+metadata:
+  created_by: "main_agent"
+  version: "2.0"
+  test_sequence: 17
+  last_updated: "2026-08-06"
+

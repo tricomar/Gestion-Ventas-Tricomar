@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { CheckCircle, XCircle, Trash2, Settings, ShoppingCart, Package, Download, Webhook } from 'lucide-react';
+import { CheckCircle, XCircle, Trash2, Settings, ShoppingCart, Package, Download, Webhook, Activity, Clock, AlertCircle } from 'lucide-react';
 import PrestashopModal from './PrestashopModal';
 import { useStores } from '../../hooks/useStores';
 
@@ -15,6 +15,9 @@ const IntegrationsTab = () => {
   const [showPrestashopModal, setShowPrestashopModal] = useState(false);
   const [selectedIntegration, setSelectedIntegration] = useState(null);
   const [webhookStatus, setWebhookStatus] = useState({}); // Estado de webhooks por integration_id
+  const [showWebhookLogs, setShowWebhookLogs] = useState(false);
+  const [webhookLogs, setWebhookLogs] = useState([]);
+  const [selectedIntegrationForLogs, setSelectedIntegrationForLogs] = useState(null);
 
   useEffect(() => {
     fetchIntegrations();
@@ -102,6 +105,24 @@ const IntegrationsTab = () => {
         textColor: 'text-yellow-800',
         label: 'Webhook Inactivo',
         icon: '🟡'
+      };
+    } else if (status.status === 'configured') {
+      return {
+        color: 'cyan',
+        bgColor: 'bg-cyan-100',
+        borderColor: 'border-cyan-600',
+        textColor: 'text-cyan-800',
+        label: 'Configurado',
+        icon: '🔵'
+      };
+    } else if (status.status === 'not_configured') {
+      return {
+        color: 'slate',
+        bgColor: 'bg-slate-100',
+        borderColor: 'border-slate-500',
+        textColor: 'text-slate-700',
+        label: 'Sin configurar',
+        icon: '⚪'
       };
     } else if (status.status === 'error') {
       return {
@@ -192,6 +213,38 @@ const IntegrationsTab = () => {
     });
   };
 
+  const handleTestWebhook = async (integrationId) => {
+    try {
+      const response = await axios.post(`${API}/integrations/webhooks/prestashop/${integrationId}/test`);
+      
+      toast.success('Webhook de prueba enviado', {
+        description: response.data.instructions,
+        duration: 6000
+      });
+      
+      // Actualizar estado inmediatamente
+      setTimeout(() => {
+        checkWebhookStatus(integrationId);
+      }, 1000);
+      
+    } catch (error) {
+      console.error('Error testing webhook:', error);
+      toast.error('Error al enviar webhook de prueba');
+    }
+  };
+
+  const handleViewWebhookLogs = async (integration) => {
+    try {
+      setSelectedIntegrationForLogs(integration);
+      const response = await axios.get(`${API}/integrations/webhooks/prestashop/${integration.id}/logs`);
+      setWebhookLogs(response.data);
+      setShowWebhookLogs(true);
+    } catch (error) {
+      console.error('Error fetching webhook logs:', error);
+      toast.error('Error al cargar logs de webhooks');
+    }
+  };
+
   const ecommercePlatforms = [
     {
       id: 'prestashop',
@@ -242,6 +295,23 @@ const IntegrationsTab = () => {
           <strong>🔗 Conecta tu negocio con plataformas ecommerce</strong><br/>
           Sincroniza productos, categorías y stock automáticamente con tus tiendas online.
         </p>
+      </div>
+
+      {/* Nota sobre Preview vs Producción */}
+      <div className="bg-amber-50 border-2 border-amber-600 rounded-lg p-4 mb-6">
+        <div className="flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-amber-700 flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-amber-900">
+            <strong>⚠️ Importante: Webhooks en Preview</strong>
+            <p className="mt-1">
+              La URL del preview de Emergent <strong>no es accesible públicamente</strong> desde internet. 
+              Para recibir webhooks reales desde PrestaShop, necesitas desplegar en producción con un dominio público.
+            </p>
+            <p className="mt-2">
+              <strong>Mientras usas preview:</strong> Usa el botón <span className="inline-flex items-center px-2 py-0.5 bg-amber-100 border border-amber-700 rounded text-xs">🧪 Probar Webhook</span> para simular eventos localmente y validar que todo funciona correctamente.
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Integraciones Activas */}
@@ -328,11 +398,27 @@ const IntegrationsTab = () => {
                     </button>
                     
                     <button
+                      onClick={() => handleViewWebhookLogs(integration)}
+                      className="p-2 bg-indigo-100 border-2 border-slate-900 rounded-lg hover:bg-indigo-200 transition-colors"
+                      title="Ver Logs de Webhooks"
+                    >
+                      <Activity className="w-5 h-5 text-indigo-700" />
+                    </button>
+                    
+                    <button
                       onClick={() => handleCopyWebhookUrl(integration.id)}
                       className="p-2 bg-purple-100 border-2 border-slate-900 rounded-lg hover:bg-purple-200 transition-colors"
                       title="Copiar URL de Webhook"
                     >
                       <Webhook className="w-5 h-5 text-purple-700" />
+                    </button>
+                    
+                    <button
+                      onClick={() => handleTestWebhook(integration.id)}
+                      className="p-2 bg-amber-100 border-2 border-slate-900 rounded-lg hover:bg-amber-200 transition-colors"
+                      title="Probar Webhook"
+                    >
+                      <span className="text-lg">🧪</span>
                     </button>
                     
                     <button
@@ -426,6 +512,151 @@ const IntegrationsTab = () => {
           }}
           stores={stores}
         />
+      )}
+
+      {/* Modal de Logs de Webhooks */}
+      {showWebhookLogs && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white border-4 border-slate-900 rounded-xl max-w-4xl w-full max-h-[80vh] overflow-hidden"
+               style={{ boxShadow: '12px 12px 0px 0px rgba(15,23,42,1)' }}>
+            {/* Header */}
+            <div className="bg-gradient-to-r from-indigo-500 to-purple-600 border-b-4 border-slate-900 p-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Activity className="w-6 h-6 text-white" />
+                  <div>
+                    <h3 className="text-2xl font-bold text-white">Logs de Webhooks</h3>
+                    <p className="text-indigo-100 text-sm">
+                      {selectedIntegrationForLogs?.store_name} • {webhookLogs.length} evento{webhookLogs.length !== 1 ? 's' : ''}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowWebhookLogs(false)}
+                  className="text-white hover:bg-white hover:bg-opacity-20 rounded-lg p-2 transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 overflow-y-auto max-h-[calc(80vh-140px)]">
+              {webhookLogs.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="text-6xl mb-4">📭</div>
+                  <p className="text-slate-600 text-lg font-semibold mb-2">No hay eventos registrados</p>
+                  <p className="text-slate-500 text-sm">
+                    Usa el botón <span className="font-bold">🧪 Probar Webhook</span> o realiza cambios en tu tienda PrestaShop para ver eventos aquí.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {webhookLogs.map((log, index) => (
+                    <div
+                      key={log.id || index}
+                      className={`border-2 rounded-lg p-4 ${
+                        log.test 
+                          ? 'border-amber-400 bg-amber-50'
+                          : log.error
+                          ? 'border-red-400 bg-red-50'
+                          : log.processed
+                          ? 'border-green-400 bg-green-50'
+                          : 'border-blue-400 bg-blue-50'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          {log.test && <span className="text-xl">🧪</span>}
+                          {log.error && <span className="text-xl">🔴</span>}
+                          {!log.test && !log.error && log.processed && <span className="text-xl">✅</span>}
+                          {!log.test && !log.error && !log.processed && <span className="text-xl">⏳</span>}
+                          
+                          <div>
+                            <p className="font-bold text-slate-900">
+                              {log.event_type || 'Evento'} - {log.resource_type || 'Recurso'}
+                            </p>
+                            <p className="text-xs text-slate-600 flex items-center gap-1">
+                              <Clock className="w-3 h-3" />
+                              {new Date(log.timestamp || log.created_at).toLocaleString('es-CL', {
+                                day: '2-digit',
+                                month: 'short',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                second: '2-digit'
+                              })}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div className="flex flex-col items-end gap-1">
+                          {log.test && (
+                            <span className="px-2 py-0.5 bg-amber-200 border border-amber-600 rounded text-xs font-bold text-amber-900">
+                              PRUEBA
+                            </span>
+                          )}
+                          {log.processed && !log.error && (
+                            <span className="px-2 py-0.5 bg-green-200 border border-green-600 rounded text-xs font-bold text-green-900">
+                              PROCESADO
+                            </span>
+                          )}
+                          {log.error && (
+                            <span className="px-2 py-0.5 bg-red-200 border border-red-600 rounded text-xs font-bold text-red-900">
+                              ERROR
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {log.resource_id && (
+                        <p className="text-sm text-slate-700 mb-2">
+                          <strong>ID Recurso:</strong> {log.resource_id}
+                        </p>
+                      )}
+
+                      {log.data && (
+                        <details className="mt-2">
+                          <summary className="text-xs font-semibold text-slate-700 cursor-pointer hover:text-slate-900">
+                            Ver datos del evento
+                          </summary>
+                          <pre className="mt-2 p-2 bg-slate-100 border border-slate-300 rounded text-xs overflow-x-auto">
+                            {JSON.stringify(log.data, null, 2)}
+                          </pre>
+                        </details>
+                      )}
+
+                      {log.error && (
+                        <div className="mt-2 p-2 bg-red-100 border border-red-300 rounded">
+                          <p className="text-xs font-semibold text-red-900">Error:</p>
+                          <p className="text-xs text-red-800">{log.error}</p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="border-t-4 border-slate-900 p-4 bg-slate-50">
+              <div className="flex items-center justify-between">
+                <button
+                  onClick={() => handleViewWebhookLogs(selectedIntegrationForLogs)}
+                  className="px-4 py-2 bg-blue-500 text-white border-2 border-slate-900 rounded-lg font-bold hover:bg-blue-600 transition-colors"
+                >
+                  🔄 Refrescar
+                </button>
+                <button
+                  onClick={() => setShowWebhookLogs(false)}
+                  className="px-4 py-2 bg-slate-200 border-2 border-slate-900 rounded-lg font-bold hover:bg-slate-300 transition-colors"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

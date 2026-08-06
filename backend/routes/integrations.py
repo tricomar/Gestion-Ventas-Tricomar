@@ -1387,20 +1387,47 @@ async def process_webhook_background(integration_id: str, integration: dict, eve
             {'integration_id': integration_id, 'resource_id': event.resource_id, 'processed': False},
             {'$set': {
                 'processed': True,
-                'processed_at': datetime.now(timezone.utc).isoformat()
+                'processed_at': datetime.now(timezone.utc).isoformat(),
+                'retry_count': 0
             }}
         )
         
     except Exception as e:
         print(f"Error processing webhook: {str(e)}")
-        # Marcar como error
-        await db.webhook_events.update_one(
-            {'integration_id': integration_id, 'resource_id': event.resource_id},
-            {'$set': {
-                'error': str(e),
-                'error_at': datetime.now(timezone.utc).isoformat()
-            }}
-        )
+        
+        # Obtener el evento para verificar reintentos
+        webhook_event = await db.webhook_events.find_one({
+            'integration_id': integration_id,
+            'resource_id': event.resource_id,
+            'processed': False
+        })
+        
+        retry_count = webhook_event.get('retry_count', 0) if webhook_event else 0
+        
+        # Marcar como error y programar reintento si es posible
+        if retry_count < 3:  # Máximo 3 reintentos
+            await db.webhook_events.update_one(
+                {'integration_id': integration_id, 'resource_id': event.resource_id},
+                {'$set': {
+                    'error': str(e),
+                    'error_at': datetime.now(timezone.utc).isoformat(),
+                    'retry_count': retry_count + 1,
+                    'retry_scheduled': True
+                }}
+            )
+            print(f"Reintento programado ({retry_count + 1}/3) para webhook {event.resource_id}")
+        else:
+            # Excedió reintentos, marcar como error permanente
+            await db.webhook_events.update_one(
+                {'integration_id': integration_id, 'resource_id': event.resource_id},
+                {'$set': {
+                    'error': str(e),
+                    'error_at': datetime.now(timezone.utc).isoformat(),
+                    'retry_count': retry_count,
+                    'retry_failed': True
+                }}
+            )
+            print(f"Webhook {event.resource_id} falló después de {retry_count} reintentos")
 
 
 # Funciones helper para sincronizar recursos individuales
@@ -1625,6 +1652,48 @@ async def sync_incremental_background(job_id: str, integration_id: str, integrat
         )
 
 
+@router.post("/webhooks/prestashop/{integration_id}/test")
+async def test_webhook(
+    integration_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Enviar un webhook de prueba para verificar la conexión
+    """
+    # Verificar que la integración existe
+    integration = await db.prestashop_integrations.find_one(
+        get_tenant_filter(current_user.dict(), {'id': integration_id}),
+        {'_id': 0}
+    )
+    
+    if not integration:
+        raise HTTPException(status_code=404, detail="Integración no encontrada")
+    
+    # Crear evento de prueba
+    test_event = {
+        'id': str(uuid4()),
+        'integration_id': integration_id,
+        'account_id': current_user.account_id,
+        'event_type': 'test',
+        'resource_type': 'test',
+        'resource_id': 0,
+        'data': {'message': 'Webhook de prueba desde Negocio Feliz'},
+        'timestamp': datetime.now(timezone.utc).isoformat(),
+        'processed': True,
+        'created_at': datetime.now(timezone.utc).isoformat(),
+        'test': True
+    }
+    
+    await db.webhook_events.insert_one(test_event)
+    
+    return {
+        'success': True,
+        'message': 'Webhook de prueba creado exitosamente',
+        'event_id': test_event['id'],
+        'instructions': 'Si el módulo está configurado correctamente en PrestaShop, los webhooks reales se registrarán aquí cuando hagas cambios en tu tienda (crear/editar productos, recibir órdenes, etc.)'
+    }
+
+
 @router.get("/webhooks/prestashop/{integration_id}/status")
 async def get_webhook_status(integration_id: str):
     """
@@ -1632,25 +1701,56 @@ async def get_webhook_status(integration_id: str):
     No requiere autenticación - es un endpoint de verificación
     """
     try:
-        # Buscar últimos eventos de webhook
+        # Buscar últimos eventos de webhook (excluyendo tests)
         recent_events = await db.webhook_events.find(
-            {'integration_id': integration_id},
+            {
+                'integration_id': integration_id,
+                'test': {'$ne': True}  # Excluir eventos de prueba
+            },
             {'_id': 0}
         ).sort('timestamp', -1).limit(10).to_list(10)
         
+        # Contar total de eventos (incluyendo tests)
+        total_events = await db.webhook_events.count_documents({
+            'integration_id': integration_id
+        })
+        
         if not recent_events:
-            return {
-                'status': 'inactive',
-                'message': 'No se han recibido webhooks',
-                'last_event': None,
-                'event_count': 0
-            }
+            # Verificar si hay al menos un evento de prueba
+            test_events = await db.webhook_events.count_documents({
+                'integration_id': integration_id,
+                'test': True
+            })
+            
+            if test_events > 0:
+                return {
+                    'status': 'configured',
+                    'message': 'Webhook configurado (solo pruebas)',
+                    'last_event': None,
+                    'event_count': 0,
+                    'test_events': test_events,
+                    'instructions': 'Esperando eventos reales desde PrestaShop. Para recibirlos necesitas un dominio público en producción.'
+                }
+            else:
+                return {
+                    'status': 'not_configured',
+                    'message': 'Sin webhooks recibidos',
+                    'last_event': None,
+                    'event_count': 0,
+                    'instructions': 'Haz clic en "Probar Webhook" para verificar la configuración'
+                }
         
         # Verificar si hay eventos recientes (últimas 24 horas)
         from datetime import datetime, timezone, timedelta
         now = datetime.now(timezone.utc)
         last_event = recent_events[0]
-        last_event_time = datetime.fromisoformat(last_event.get('timestamp', last_event.get('created_at')))
+        
+        # Manejar diferentes formatos de timestamp
+        timestamp_str = last_event.get('timestamp') or last_event.get('created_at')
+        if timestamp_str:
+            last_event_time = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+        else:
+            last_event_time = now - timedelta(days=999)  # Muy antiguo
         
         time_diff = now - last_event_time
         
@@ -1660,31 +1760,66 @@ async def get_webhook_status(integration_id: str):
         # Determinar estado
         if error_count > 5:
             status = 'error'
-            message = f'{error_count} webhooks con errores'
+            message = f'{error_count} webhooks con errores recientes'
+        elif time_diff < timedelta(hours=1):
+            status = 'active'
+            minutes = int(time_diff.total_seconds() / 60)
+            message = f'Último webhook hace {minutes} minuto{"s" if minutes != 1 else ""}'
         elif time_diff < timedelta(hours=24):
             status = 'active'
-            message = f'Último webhook hace {int(time_diff.total_seconds() / 60)} minutos'
+            hours = int(time_diff.total_seconds() / 3600)
+            message = f'Último webhook hace {hours} hora{"s" if hours != 1 else ""}'
         elif time_diff < timedelta(days=7):
             status = 'inactive'
-            message = f'Último webhook hace {int(time_diff.total_seconds() / 3600)} horas'
+            days = int(time_diff.days)
+            message = f'Sin actividad hace {days} día{"s" if days != 1 else ""}'
         else:
             status = 'inactive'
-            message = f'Último webhook hace {int(time_diff.days)} días'
+            message = f'Sin actividad hace {time_diff.days} días'
         
         return {
             'status': status,
             'message': message,
             'last_event': last_event_time.isoformat(),
             'event_count': len(recent_events),
+            'total_events': total_events,
             'error_count': error_count
         }
         
     except Exception as e:
+        print(f"Error checking webhook status: {str(e)}")
         return {
             'status': 'unknown',
             'message': 'No se pudo verificar el estado',
             'error': str(e)
         }
+
+
+
+@router.get("/webhooks/prestashop/{integration_id}/logs")
+async def get_webhook_logs(
+    integration_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Obtener logs de webhooks de una integración
+    """
+    # Verificar que la integración pertenece al usuario
+    integration = await db.prestashop_integrations.find_one(
+        get_tenant_filter(current_user.dict(), {'id': integration_id}),
+        {'_id': 0}
+    )
+    
+    if not integration:
+        raise HTTPException(status_code=404, detail="Integración no encontrada")
+    
+    # Obtener todos los eventos (incluyendo tests), ordenados por más reciente
+    logs = await db.webhook_events.find(
+        {'integration_id': integration_id},
+        {'_id': 0}
+    ).sort('timestamp', -1).limit(100).to_list(100)
+    
+    return logs
 
 
 @router.delete("/prestashop/{integration_id}")
