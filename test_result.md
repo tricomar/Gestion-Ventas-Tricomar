@@ -537,7 +537,91 @@ test_plan:
           agent: "testing"
           comment: "Tested on 2026-07-24. VERIFIED WORKING. File input element (input[type='file']#file-input) is present with correct accept attribute '.xlsx,.xls' for Excel files. 'Seleccionar Archivo' button/label is visible and clickable. 'Importar Productos' button is present and correctly disabled when no file is selected (expected behavior). Button states are properly managed based on file selection. UI follows neobrutalist design with proper borders and shadows. All interactive elements are accessible and functional."
 
+## current_task_gestión_clientes:
+## backend:
+##   - task: "Agregar endpoints PUT y DELETE para clientes"
+##     implemented: true
+##     working: true
+##     file: "/app/backend/routes/customers.py"
+##     stuck_count: 0
+##     priority: "high"
+##     needs_retesting: false
+##     status_history:
+##         - working: true
+##           agent: "main"
+##           comment: "Implementados endpoints PUT /api/customers/{id} y DELETE /api/customers/{id} con validación de tenant. Probados con curl exitosamente."
+##
+##   - task: "Extender modelo Customer con nuevos campos"
+##     implemented: true
+##     working: true
+##     file: "/app/backend/models/customers.py"
+##     stuck_count: 0
+##     priority: "high"
+##     needs_retesting: false
+##     status_history:
+##         - working: true
+##           agent: "main"
+##           comment: "Agregados campos: customer_type, rut, sin_rut, nombre_fantasia, giro, direccion, ciudad, email. Modelo actualizado con CustomerUpdate para PATCH/PUT."
+##
+##   - task: "Validación de RUT chileno en backend"
+##     implemented: true
+##     working: true
+##     file: "/app/backend/routes/customers.py"
+##     stuck_count: 0
+##     priority: "high"
+##     needs_retesting: false
+##     status_history:
+##         - working: true
+##           agent: "main"
+##           comment: "Implementada función validate_rut() con algoritmo chileno. Validación integrada en POST y PUT. Probada con curl: RUT válido acepta, RUT inválido rechaza con mensaje de error."
+##
+##   - task: "Filtro por tienda en GET /api/customers"
+##     implemented: true
+##     working: true
+##     file: "/app/backend/routes/customers.py"
+##     stuck_count: 0
+##     priority: "high"
+##     needs_retesting: false
+##     status_history:
+##         - working: true
+##           agent: "main"
+##           comment: "Agregado parámetro opcional 'store' en GET /api/customers. Filtro tenant-aware implementado correctamente."
+##
+## frontend:
+##   - task: "Actualizar CustomerForm con todos los nuevos campos"
+##     implemented: true
+##     working: "pending_test"
+##     file: "/app/frontend/src/components/CustomerForm.js"
+##     stuck_count: 0
+##     priority: "high"
+##     needs_retesting: true
+##     status_history:
+##         - working: "pending_test"
+##           agent: "main"
+##           comment: "Formulario actualizado con: Tipo Cliente (Persona/Empresa), Nombre/Razón Social, RUT con validación frontend, checkbox Sin RUT, Nombre Fantasía (condicional), Giro (condicional), Dirección, Ciudad, Correo electrónico, Teléfono. Validación de RUT en tiempo real implementada. Frontend compila sin errores."
+##
+##   - task: "Lógica condicional campos Empresa"
+##     implemented: true
+##     working: "pending_test"
+##     file: "/app/frontend/src/components/CustomerForm.js"
+##     stuck_count: 0
+##     priority: "high"
+##     needs_retesting: true
+##     status_history:
+##         - working: "pending_test"
+##           agent: "main"
+##           comment: "Campos Nombre de Fantasía y Giro solo se muestran cuando customer_type === 'Empresa'. RUT requerido cuando tipo Empresa y sin_rut=false."
+##
+## test_plan:
+##   - Test CRUD completo de clientes: Crear cliente Persona con RUT válido, Crear cliente Empresa con todos los campos (nombre_fantasia, giro), Editar cliente existente, Eliminar cliente, Verificar persistencia tras reload
+##   - Test validación RUT: Intentar RUT inválido (debe rechazar), Activar checkbox Sin RUT (debe deshabilitar campo), Validación en tiempo real mientras se escribe
+##   - Test filtro por tienda: Seleccionar filtro Tienda A, B, Todas - verificar que lista se filtra correctamente
+##   - Test campos condicionales: Seleccionar Persona (campos Nombre Fantasía y Giro deben ocultarse), Seleccionar Empresa (campos deben aparecer)
+##   - Test de integración: Crear cliente desde POS (flujo completo), Verificar cliente en listado, Editar desde listado
+##
 agent_communication:
+    - agent: "main"
+      message: "GESTIÓN DE CLIENTES - IMPLEMENTACIÓN COMPLETADA (2026-08-06): Backend totalmente funcional con endpoints PUT y DELETE implementados y probados. Modelo Customer extendido con 8 nuevos campos. Validación de RUT chileno implementada y funcionando. Frontend actualizado con formulario completo de 2 columnas, lógica condicional para campos de Empresa, validación RUT en tiempo real. Compilación exitosa. Backend verificado con curl: ✅ PUT funciona, ✅ DELETE funciona, ✅ Validación RUT funciona, ✅ Filtro por tienda funciona. Pendiente: Testing E2E completo con testing subagent para verificar flujo frontend completo (crear, editar, eliminar, filtrar). Selector Tipo Cliente: Persona y Empresa (ONG NO incluido según confirmación del usuario)."
     - agent: "testing"
       message: "CLOCK RELOCATION VERIFICATION COMPLETED (2026-07-24): Successfully tested the clock relocation from economic indicators bar to sidebar 'Registros del Día'. ALL REQUIREMENTS MET: ✅ Clock removed from economic indicators bar (only shows UF, Dólar, Bitcoin, Euro, UTM) ✅ Clock relocated to sidebar header next to 'Registros del Día' title ✅ Clock format correct: [Clock Icon] HH:MM:SS [Country Code] ✅ No date displayed in clock ✅ No 'Servidor' word ✅ Clock updates every second (verified: 14:20:17 → 14:20:19) ✅ Layout correct: title left, clock right using flexbox justify-between ✅ Uses JetBrains Mono monospace font. Country code shows 'INT' (international) due to server timezone configuration - would show 'CL' in production with Chile timezone. Screenshots captured: dashboard_full_view.png, dashboard_with_sidebar.png. Feature is production-ready."
     - agent: "testing"

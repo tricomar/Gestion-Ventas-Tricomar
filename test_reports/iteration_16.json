@@ -1,0 +1,26 @@
+{
+  "summary": "Smoke test of Customer CRUD + Chilean RUT validation + store filters. Backend endpoints (GET/POST/PUT/DELETE /api/customers) and full frontend E2E flow verified. All primary user journeys work end-to-end.",
+  "tested_scope": ["backend", "frontend", "integration"],
+  "passed": [
+    "Backend POST /api/customers rejects invalid RUT (12.345.678-9) with 400 and expected error message",
+    "Backend POST /api/customers accepts valid RUT (12.345.678-5) and returns 200 with all new fields (customer_type, rut, sin_rut, nombre_fantasia, giro, direccion, ciudad, email)",
+    "Backend PUT /api/customers/{id} updates fields successfully (verified with phone update)",
+    "Backend DELETE /api/customers/{id} removes customer successfully",
+    "Backend GET /api/customers returns 200 with tenant-filtered data",
+    "Frontend login (hola@tricomar.cl) succeeds and navigates to /dashboard",
+    "Customers page loads at /customers via Clientes nav button; store filter buttons render (Todas, PetShop, GrowShop)",
+    "CustomerForm modal opens: fields NOMBRE DE FANTASÍA and GIRO are hidden for tipo=Persona and appear when tipo=Empresa (conditional rendering works)",
+    "Real-time RUT validation: 'RUT inválido' error shown for 12.345.678-9, cleared for 12.345.678-5",
+    "E2E create Persona customer with valid RUT + store selection succeeds; new row appears in the table",
+    "E2E edit customer via pencil icon: name update persists and new name visible in table",
+    "E2E delete customer via trash icon + confirm dialog: row removed and 'Cliente eliminado' toast confirmed",
+    "Store filter buttons work without page errors"
+  ],
+  "failed": [],
+  "action_items": [
+    "Non-blocking: Dashboard shows 404 errors for some data-fetch endpoints in console (unrelated to Customers scope). Consider investigating in a later iteration."
+  ],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "retest_needed": false,
+  "full_testing_deferred": true
+}

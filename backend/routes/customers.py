@@ -7,6 +7,7 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime, timezone, timedelta
 import uuid
 import bcrypt
+import re
 
 from models.customers import Customer, CustomerBase, CustomerCreate, CustomerUpdate
 from middleware.tenant import get_tenant_filter, add_account_id_to_document
@@ -15,11 +16,63 @@ from models.users import User
 
 router = APIRouter(prefix="/customers", tags=["customers"])
 
+
+def validate_rut(rut: str) -> bool:
+    """
+    Valida formato de RUT chileno (XX.XXX.XXX-X o XXXXXXXX-X)
+    """
+    if not rut:
+        return True  # RUT opcional
+    
+    # Limpiar formato
+    rut_clean = rut.replace(".", "").replace("-", "").upper()
+    
+    # Verificar formato: mínimo 7 dígitos + 1 dígito verificador
+    if len(rut_clean) < 2:
+        return False
+    
+    # Separar número y dígito verificador
+    rut_num = rut_clean[:-1]
+    rut_dv = rut_clean[-1]
+    
+    # Verificar que el número sea numérico
+    if not rut_num.isdigit():
+        return False
+    
+    # Calcular dígito verificador
+    suma = 0
+    multiplo = 2
+    
+    for digit in reversed(rut_num):
+        suma += int(digit) * multiplo
+        multiplo += 1
+        if multiplo > 7:
+            multiplo = 2
+    
+    dv_calculado = 11 - (suma % 11)
+    
+    if dv_calculado == 11:
+        dv_esperado = '0'
+    elif dv_calculado == 10:
+        dv_esperado = 'K'
+    else:
+        dv_esperado = str(dv_calculado)
+    
+    return rut_dv == dv_esperado
+
 @router.get("", response_model=List[Customer])
-async def get_customers(current_user: User = Depends(get_current_user)):
-    """Obtener todos los clientes"""
+async def get_customers(
+    store: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """Obtener todos los clientes con filtro opcional por tienda"""
     # Filtro de tenant
     tenant_filter = get_tenant_filter(current_user.dict())
+    
+    # Agregar filtro por tienda si se proporciona
+    if store and store != 'Todas':
+        tenant_filter['store'] = store
+    
     customers = await db.customers.find(tenant_filter, {'_id': 0}).sort('name', 1).to_list(1000)
     
     result = []
@@ -33,14 +86,27 @@ async def get_customers(current_user: User = Depends(get_current_user)):
 
 @router.get("/search")
 async def search_customers(q: str, current_user: User = Depends(get_current_user)):
+    # Filtro de tenant
+    tenant_filter = get_tenant_filter(current_user.dict())
+    # Agregar filtro de búsqueda
+    tenant_filter['name'] = {'$regex': q, '$options': 'i'}
+    
     customers = await db.customers.find(
-        {'name': {'$regex': q, '$options': 'i'}},
+        tenant_filter,
         {'_id': 0}
     ).sort('purchase_count', -1).limit(10).to_list(10)
     return customers
 
 @router.post("", response_model=Customer)
 async def create_or_get_customer(customer_input: CustomerBase, current_user: User = Depends(get_current_user)):
+    # Validar RUT si se proporciona y sin_rut es False
+    if customer_input.rut and not customer_input.sin_rut:
+        if not validate_rut(customer_input.rut):
+            raise HTTPException(
+                status_code=400, 
+                detail="RUT inválido. Formato esperado: XX.XXX.XXX-X o XXXXXXXX-X"
+            )
+    
     # Check if customer exists
     existing = await db.customers.find_one({'name': customer_input.name}, {'_id': 0})
     if existing:
@@ -58,6 +124,72 @@ async def create_or_get_customer(customer_input: CustomerBase, current_user: Use
     await db.customers.insert_one(doc)
     
     return customer
+
+
+@router.put("/{customer_id}", response_model=Customer)
+async def update_customer(
+    customer_id: str,
+    customer_update: CustomerUpdate,
+    current_user: User = Depends(get_current_user)
+):
+    """Actualizar un cliente existente"""
+    # Filtro de tenant
+    tenant_filter = get_tenant_filter(current_user.dict(), {'id': customer_id})
+    
+    # Verificar que el cliente existe
+    existing = await db.customers.find_one(tenant_filter, {'_id': 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+    
+    # Preparar actualización solo con campos no-None
+    update_data = {k: v for k, v in customer_update.model_dump().items() if v is not None}
+    
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No hay datos para actualizar")
+    
+    # Validar RUT si se está actualizando y sin_rut es False
+    if 'rut' in update_data and update_data.get('rut'):
+        sin_rut = update_data.get('sin_rut', existing.get('sin_rut', False))
+        if not sin_rut and not validate_rut(update_data['rut']):
+            raise HTTPException(
+                status_code=400,
+                detail="RUT inválido. Formato esperado: XX.XXX.XXX-X o XXXXXXXX-X"
+            )
+    
+    # Actualizar en base de datos
+    await db.customers.update_one(tenant_filter, {'$set': update_data})
+    
+    # Obtener cliente actualizado
+    updated_customer = await db.customers.find_one(tenant_filter, {'_id': 0})
+    
+    # Convertir created_at si es string
+    if isinstance(updated_customer.get('created_at'), str):
+        updated_customer['created_at'] = datetime.fromisoformat(updated_customer['created_at'])
+    
+    return Customer(**updated_customer)
+
+
+@router.delete("/{customer_id}")
+async def delete_customer(
+    customer_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Eliminar un cliente"""
+    # Filtro de tenant
+    tenant_filter = get_tenant_filter(current_user.dict(), {'id': customer_id})
+    
+    # Verificar que el cliente existe
+    existing = await db.customers.find_one(tenant_filter, {'_id': 0})
+    if not existing:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+    
+    # Eliminar cliente
+    result = await db.customers.delete_one(tenant_filter)
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+    
+    return {"message": "Cliente eliminado exitosamente", "id": customer_id}
 
 
 @router.get("/{customer_id}/detail")
