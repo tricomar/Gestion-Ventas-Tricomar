@@ -1,0 +1,63 @@
+# INSTRUCCIONES DE INSTALACIÓN
+
+## Paso 1: Descargar el módulo
+Ya has descargado el archivo `emergent_webhooks.zip` ✅
+
+## Paso 2: Instalar en PrestaShop
+
+1. Inicia sesión en tu panel de administración de PrestaShop
+2. Ve al menú **Módulos** → **Gestor de módulos**
+3. Haz clic en el botón **"Subir un módulo"** (esquina superior derecha)
+4. Selecciona el archivo `emergent_webhooks.zip` que descargaste
+5. Espera a que se suba y se instale automáticamente
+6. Cuando termine, haz clic en **"Configurar"**
+
+## Paso 3: Configurar el Webhook
+
+En la pantalla de configuración del módulo:
+
+1. **URL de Webhook**: Pega la URL que copiaste desde Negocio Feliz
+   
+   La URL tiene este formato:
+   ```
+   https://tu-dominio.com/api/integrations/webhooks/prestashop/[ID]
+   ```
+
+2. **Activar Webhooks**: Asegúrate de que esté en **"Activado"**
+
+3. Haz clic en **"Guardar"**
+
+## Paso 4: Verificar funcionamiento
+
+1. Vuelve a Negocio Feliz
+2. Ve a **Configuración** > **Integraciones** > **PrestaShop**
+3. Haz clic en **"Sincronizar Ahora"** para la sincronización inicial
+4. Luego, cualquier cambio en PrestaShop se reflejará automáticamente en tiempo real
+
+## ✅ ¡Listo!
+
+Ahora tu tienda PrestaShop está conectada en tiempo real con Negocio Feliz.
+
+Cada vez que:
+- Crees o edites un producto
+- Recibas un pedido
+- Actualices el stock
+- Agregues un cliente
+
+El cambio se sincronizará automáticamente en menos de 1 segundo.
+
+## ⚠️ Problemas comunes
+
+**El módulo no aparece después de instalarlo:**
+- Verifica que la carpeta se llame exactamente `emergent_webhooks`
+- Asegúrate de que PHP cURL esté habilitado en tu servidor
+
+**Los webhooks no llegan:**
+- Verifica que la URL de webhook sea correcta
+- Asegúrate de que tu dominio tenga certificado SSL (HTTPS)
+- Verifica que el módulo esté activado en la configuración
+
+## 📞 Soporte
+
+Si tienes problemas, contacta a soporte técnico o revisa los logs de PrestaShop en:
+`[tu-prestashop]/var/logs/`

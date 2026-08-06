@@ -1649,3 +1649,40 @@ async def delete_integration(
     )
     
     return {'success': True, 'message': 'Integración eliminada exitosamente'}
+
+
+@router.get("/prestashop/download-module")
+async def download_prestashop_module():
+    """
+    Descargar módulo de webhooks para PrestaShop
+    No requiere autenticación - es un recurso público
+    """
+    import zipfile
+    from io import BytesIO
+    from fastapi.responses import StreamingResponse
+    
+    # Ruta del módulo
+    module_path = '/app/backend/static/prestashop_module/emergent_webhooks'
+    
+    # Crear ZIP en memoria
+    zip_buffer = BytesIO()
+    
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+        # Agregar archivos del módulo
+        import os
+        for root, dirs, files in os.walk(module_path):
+            for file in files:
+                file_path = os.path.join(root, file)
+                arcname = os.path.relpath(file_path, os.path.dirname(module_path))
+                zip_file.write(file_path, arcname)
+    
+    # Preparar respuesta
+    zip_buffer.seek(0)
+    
+    return StreamingResponse(
+        zip_buffer,
+        media_type='application/zip',
+        headers={
+            'Content-Disposition': 'attachment; filename="emergent_webhooks.zip"'
+        }
+    )

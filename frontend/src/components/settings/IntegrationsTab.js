@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { CheckCircle, XCircle, Trash2, Settings, ShoppingCart, Package } from 'lucide-react';
+import { CheckCircle, XCircle, Trash2, Settings, ShoppingCart, Package, Download } from 'lucide-react';
 import PrestashopModal from './PrestashopModal';
 import { useStores } from '../../hooks/useStores';
 
@@ -55,6 +55,22 @@ const IntegrationsTab = () => {
   const handleNewIntegration = () => {
     setSelectedIntegration(null);
     setShowPrestashopModal(true);
+  };
+
+  const handleDownloadModule = () => {
+    const downloadUrl = `${API}/integrations/prestashop/download-module`;
+    
+    // Crear link temporal y hacer clic
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = 'emergent_webhooks.zip';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast.success('Descargando módulo de PrestaShop...', {
+      description: 'Instálalo en tu tienda para sincronización en tiempo real'
+    });
   };
 
   const ecommercePlatforms = [
@@ -215,9 +231,31 @@ const IntegrationsTab = () => {
               <p className="text-xs text-slate-700 mb-4">{platform.description}</p>
               
               {platform.available ? (
-                <button className="w-full px-4 py-2 bg-white border-2 border-slate-900 rounded-lg font-bold hover:bg-slate-50 transition-colors">
-                  Conectar
-                </button>
+                <div className="space-y-2">
+                  <button 
+                    className="w-full px-4 py-2 bg-white border-2 border-slate-900 rounded-lg font-bold hover:bg-slate-50 transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleNewIntegration();
+                    }}
+                  >
+                    Conectar
+                  </button>
+                  
+                  {platform.id === 'prestashop' && (
+                    <button
+                      className="w-full px-4 py-2 bg-green-500 text-white border-2 border-slate-900 rounded-lg font-bold hover:bg-green-600 transition-colors flex items-center justify-center gap-2"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDownloadModule();
+                      }}
+                      title="Descargar módulo de webhooks"
+                    >
+                      <Download className="w-4 h-4" />
+                      Módulo Webhooks
+                    </button>
+                  )}
+                </div>
               ) : (
                 <div className="px-4 py-2 bg-slate-300 border-2 border-slate-400 rounded-lg font-bold text-slate-600">
                   Próximamente
