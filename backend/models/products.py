@@ -10,6 +10,8 @@ class ProductBase(BaseModel):
     sale_price: float = 0
     sku: Optional[str] = None
     brand: Optional[str] = None  # Marca del producto
+    barcode: Optional[str] = None  # Código de barra
+    expiry_date: Optional[str] = None  # Fecha de vencimiento (YYYY-MM-DD)
     category: Optional[str] = None
     
     @field_validator('sku')

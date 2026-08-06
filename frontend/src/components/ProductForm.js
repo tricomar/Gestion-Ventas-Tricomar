@@ -17,6 +17,8 @@ const ProductForm = ({ product, onClose }) => {
   const [salePrice, setSalePrice] = useState('');
   const [sku, setSku] = useState('');
   const [brand, setBrand] = useState('');
+  const [barcode, setBarcode] = useState('');
+  const [expiryDate, setExpiryDate] = useState('');
   const [category, setCategory] = useState('');
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState([]);
@@ -78,6 +80,8 @@ const ProductForm = ({ product, onClose }) => {
         sale_price: salePrice ? parseFloat(salePrice) : 0,
         sku: sku || null,
         brand: brand || null,
+        barcode: barcode || null,
+        expiry_date: expiryDate || null,
         category: category || null
       };
 
@@ -219,6 +223,35 @@ const ProductForm = ({ product, onClose }) => {
             </div>
           </div>
 
+          {/* Barcode and Expiry Date Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold tracking-widest uppercase text-slate-500 mb-2">
+                Código de Barra
+              </label>
+              <input
+                type="text"
+                value={barcode}
+                onChange={(e) => setBarcode(e.target.value)}
+                className="w-full bg-white border-2 border-slate-900 rounded-xl px-4 py-3 font-medium font-mono text-slate-900 focus:ring-0 focus:outline-none focus:border-indigo-500"
+                placeholder="Ej: 7501234567890"
+                data-testid="product-barcode-input"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold tracking-widest uppercase text-slate-500 mb-2">
+                Fecha de Vencimiento
+              </label>
+              <input
+                type="date"
+                value={expiryDate}
+                onChange={(e) => setExpiryDate(e.target.value)}
+                className="w-full bg-white border-2 border-slate-900 rounded-xl px-4 py-3 font-medium text-slate-900 focus:ring-0 focus:outline-none focus:border-indigo-500 cursor-pointer"
+                data-testid="product-expiry-date-input"
+              />
+            </div>
+          </div>
+
           {/* Prices Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -328,3 +361,4 @@ const ProductForm = ({ product, onClose }) => {
 };
 
 export default ProductForm;
+ ProductForm;
