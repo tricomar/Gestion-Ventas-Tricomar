@@ -903,6 +903,13 @@ async def sync_products_resource(ps_service, integration_id: str, account_id: st
         
         sku = ps_prod.get('reference', f"PS-{prod_id}-{str(uuid4())[:8]}")
         
+        # Obtener stock de PrestaShop
+        stock_quantity = ps_prod.get('quantity', 0)
+        if isinstance(stock_quantity, dict):
+            stock_quantity = int(stock_quantity.get('quantity', 0))
+        else:
+            stock_quantity = int(stock_quantity) if stock_quantity else 0
+        
         # Buscar producto local existente
         local_product = await db.products.find_one({'sku': sku}, {'_id': 0})
         
@@ -913,7 +920,8 @@ async def sync_products_resource(ps_service, integration_id: str, account_id: st
             'sale_price': float(ps_prod.get('price', 0)),
             'store': store_code,
             'category': None,
-            'brand': None
+            'brand': None,
+            'stock': stock_quantity
         }
         
         if local_product:

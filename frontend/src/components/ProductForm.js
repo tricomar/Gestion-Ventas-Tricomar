@@ -20,6 +20,7 @@ const ProductForm = ({ product, onClose }) => {
   const [barcode, setBarcode] = useState('');
   const [expiryDate, setExpiryDate] = useState('');
   const [category, setCategory] = useState('');
+  const [stock, setStock] = useState('');
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState([]);
 
@@ -35,7 +36,10 @@ const ProductForm = ({ product, onClose }) => {
       setSalePrice(product.sale_price ? product.sale_price.toString() : '');
       setSku(product.sku || '');
       setBrand(product.brand || '');
+      setBarcode(product.barcode || '');
+      setExpiryDate(product.expiry_date || '');
       setCategory(product.category || '');
+      setStock(product.stock !== undefined ? product.stock.toString() : '');
     } else if (stores && stores.length > 0) {
       // Para nuevo producto, usar la primera tienda disponible
       setStore(stores[0].key);
@@ -82,7 +86,8 @@ const ProductForm = ({ product, onClose }) => {
         brand: brand || null,
         barcode: barcode || null,
         expiry_date: expiryDate || null,
-        category: category || null
+        category: category || null,
+        stock: stock ? parseInt(stock) : 0
       };
 
       if (product) {
@@ -223,8 +228,8 @@ const ProductForm = ({ product, onClose }) => {
             </div>
           </div>
 
-          {/* Barcode and Expiry Date Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Barcode, Expiry Date, and Stock Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-bold tracking-widest uppercase text-slate-500 mb-2">
                 Código de Barra
@@ -248,6 +253,21 @@ const ProductForm = ({ product, onClose }) => {
                 onChange={(e) => setExpiryDate(e.target.value)}
                 className="w-full bg-white border-2 border-slate-900 rounded-xl px-4 py-3 font-medium text-slate-900 focus:ring-0 focus:outline-none focus:border-indigo-500 cursor-pointer"
                 data-testid="product-expiry-date-input"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold tracking-widest uppercase text-slate-500 mb-2">
+                Stock Disponible
+              </label>
+              <input
+                type="number"
+                step="1"
+                min="0"
+                value={stock}
+                onChange={(e) => setStock(e.target.value)}
+                className="w-full bg-white border-2 border-slate-900 rounded-xl px-4 py-3 font-medium text-slate-900 focus:ring-0 focus:outline-none focus:border-indigo-500"
+                placeholder="0"
+                data-testid="product-stock-input"
               />
             </div>
           </div>

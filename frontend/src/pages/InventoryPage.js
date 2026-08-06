@@ -840,6 +840,9 @@ const InventoryPage = () => {
                       )}
                     </div>
                   </th>
+                  <th className="px-6 py-4 text-center text-xs font-bold uppercase tracking-wider">
+                    Stock Disponible
+                  </th>
                   <th 
                     className="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider cursor-pointer hover:bg-slate-800 transition-colors"
                     onClick={() => handleSortToggle('price')}
@@ -951,6 +954,17 @@ const InventoryPage = () => {
                       ) : (
                         <span className="text-slate-400">-</span>
                       )}
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className={`px-3 py-1 rounded-lg text-sm font-bold border-2 border-slate-900 ${
+                        (product.stock || 0) <= 0 
+                          ? 'bg-red-200 text-red-900' 
+                          : (product.stock || 0) <= (product.min_stock || 5)
+                          ? 'bg-yellow-200 text-yellow-900'
+                          : 'bg-green-200 text-green-900'
+                      }`}>
+                        {product.stock || 0}
+                      </span>
                     </td>
                     <td className="px-6 py-4 text-right font-mono font-bold text-lg text-slate-900">
                       ${(product.sale_price || 0).toLocaleString('es-CL')}

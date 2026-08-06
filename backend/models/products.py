@@ -13,6 +13,7 @@ class ProductBase(BaseModel):
     barcode: Optional[str] = None  # Código de barra
     expiry_date: Optional[str] = None  # Fecha de vencimiento (YYYY-MM-DD)
     category: Optional[str] = None
+    stock: Optional[int] = 0  # Stock disponible
     
     @field_validator('sku')
     @classmethod
