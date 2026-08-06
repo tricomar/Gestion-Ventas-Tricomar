@@ -1,10 +1,94 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { X, Check, Loader, ShoppingCart, RefreshCw, Package, Tag } from 'lucide-react';
+import { X, Check, Loader, ShoppingCart, RefreshCw, Package, Tag, Users, FileText, MessageSquare, Image, ShoppingBag } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
+
+// Definición de recursos disponibles para sincronizar
+const SYNC_RESOURCES = [
+  {
+    id: 'products',
+    label: 'Productos y Marcas',
+    description: 'Importa el catálogo completo de productos incluyendo nombres, SKU, marcas y descripciones',
+    icon: Package,
+    color: 'green',
+    essential: true
+  },
+  {
+    id: 'categories',
+    label: 'Categorías',
+    description: 'Importa la estructura de categorías y subcategorías de tu tienda',
+    icon: Tag,
+    color: 'purple',
+    essential: true
+  },
+  {
+    id: 'prices',
+    label: 'Precios',
+    description: 'Sincroniza precios de venta y precios de costo',
+    icon: '$',
+    color: 'yellow',
+    essential: true
+  },
+  {
+    id: 'stock',
+    label: 'Stock / Inventario',
+    description: 'Mantén actualizado el stock de productos en ambas plataformas',
+    icon: Package,
+    color: 'blue',
+    essential: true
+  },
+  {
+    id: 'images',
+    label: 'Imágenes de Productos',
+    description: 'Descarga y asocia las imágenes de productos a tu inventario local',
+    icon: Image,
+    color: 'indigo',
+    essential: true
+  },
+  {
+    id: 'orders',
+    label: 'Órdenes / Pedidos',
+    description: 'Importa pedidos completados con detalles de productos, clientes y pagos',
+    icon: ShoppingBag,
+    color: 'orange',
+    essential: true
+  },
+  {
+    id: 'customers',
+    label: 'Clientes',
+    description: 'Sincroniza información de clientes: nombres, emails, teléfonos y direcciones',
+    icon: Users,
+    color: 'teal',
+    essential: false
+  },
+  {
+    id: 'messages',
+    label: 'Mensajes e Hilos',
+    description: 'Importa conversaciones y mensajes de clientes para seguimiento',
+    icon: MessageSquare,
+    color: 'pink',
+    essential: false
+  },
+  {
+    id: 'abandoned_carts',
+    label: 'Carritos Abandonados',
+    description: 'Rastrea carritos de compra no finalizados para estrategias de recuperación',
+    icon: ShoppingCart,
+    color: 'red',
+    essential: false
+  },
+  {
+    id: 'completed_carts',
+    label: 'Carritos Finalizados',
+    description: 'Historial completo de carritos de compra convertidos en órdenes',
+    icon: Check,
+    color: 'emerald',
+    essential: false
+  }
+];
 
 const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) => {
   const [step, setStep] = useState(1); // 1: Conexión, 2: Sincronización
@@ -24,6 +108,23 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
   const [categoriesCount, setCategoriesCount] = useState(0);
   const [productsCount, setProductsCount] = useState(0);
   const [syncProgress, setSyncProgress] = useState(0); // Porcentaje 0-100
+  
+  // Recursos a sincronizar (checkboxes)
+  const [syncResources, setSyncResources] = useState({
+    products: true,          // Productos (incluye marcas) - ESENCIAL
+    categories: true,        // Categorías - ESENCIAL
+    customers: false,        // Clientes
+    orders: true,            // Órdenes/Pedidos - ESENCIAL
+    messages: false,         // Mensajes e hilos de clientes
+    images: true,            // Imágenes de productos - ESENCIAL
+    abandoned_carts: false,  // Carritos abandonados
+    completed_carts: false,  // Carritos finalizados
+    stock: true,             // Stock de productos - ESENCIAL
+    prices: true             // Precios de productos - ESENCIAL
+  });
+  
+  const [syncing, setSyncing] = useState(false);
+  const [syncResults, setSyncResults] = useState({});
 
   useEffect(() => {
     if (integration) {
@@ -120,50 +221,26 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
     }
   };
 
-  const handleSyncCategories = async () => {
+  const handleSyncResources = async () => {
     if (!integrationId) return;
-
-    setSyncingCategories(true);
-    try {
-      const response = await axios.post(
-        `${API}/integrations/prestashop/${integrationId}/sync-categories`
-      );
-      
-      setCategoriesCount(response.data.synced_count);
-      toast.success(`✓ ${response.data.synced_count} categorías sincronizadas`);
-    } catch (error) {
-      // Manejar diferentes tipos de errores
-      let errorMsg = 'Error al sincronizar categorías';
-      
-      if (error.response?.data) {
-        const data = error.response.data;
-        
-        if (Array.isArray(data.detail)) {
-          errorMsg = data.detail.map(err => err.msg).join(', ');
-        } else if (typeof data.detail === 'string') {
-          errorMsg = data.detail;
-        } else if (data.message) {
-          errorMsg = data.message;
-        }
-      }
-      
-      toast.error(errorMsg);
-    } finally {
-      setSyncingCategories(false);
+    
+    // Obtener solo los recursos seleccionados
+    const selectedResources = Object.keys(syncResources).filter(key => syncResources[key]);
+    
+    if (selectedResources.length === 0) {
+      toast.error('Selecciona al menos un recurso para sincronizar');
+      return;
     }
-  };
 
-  const handleSyncProducts = async () => {
-    if (!integrationId) return;
-
-    setSyncingProducts(true);
+    setSyncing(true);
     setSyncProgress(0);
-    setProductsCount(0);
+    setSyncResults({});
     
     try {
       // Iniciar sincronización
       const response = await axios.post(
-        `${API}/integrations/prestashop/${integrationId}/sync-products`
+        `${API}/integrations/prestashop/${integrationId}/sync`,
+        { resources: selectedResources }
       );
       
       const jobId = response.data.job_id;
@@ -174,47 +251,44 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
           const jobResponse = await axios.get(`${API}/integrations/jobs/${jobId}`);
           const job = jobResponse.data;
           
-          // Actualizar progreso y contador
+          // Actualizar progreso
           setSyncProgress(job.progress || 0);
-          if (job.total > 0) {
-            const current = Math.floor((job.progress / 100) * job.total);
-            setProductsCount(current);
-          }
+          setSyncResults(job.results || {});
           
           if (job.status === 'completed') {
             clearInterval(pollInterval);
             setSyncProgress(100);
-            setProductsCount(job.total || 0);
-            setSyncingProducts(false);
-            toast.success(`✓ ${job.total} productos sincronizados`, {
+            setSyncing(false);
+            
+            // Mostrar resumen
+            const totalSynced = Object.values(job.results || {}).reduce((sum, val) => sum + (val || 0), 0);
+            toast.success(`✓ Sincronización completada: ${totalSynced} elementos`, {
               duration: 5000
             });
           } else if (job.status === 'failed') {
             clearInterval(pollInterval);
-            setSyncingProducts(false);
+            setSyncing(false);
             toast.error(`Error: ${job.message}`);
           }
         } catch (error) {
           console.error('Error polling job:', error);
         }
-      }, 2000); // Verificar cada 2 segundos
+      }, 2000);
       
-      // Timeout de seguridad (5 minutos)
+      // Timeout de seguridad (10 minutos)
       setTimeout(() => {
         clearInterval(pollInterval);
-        if (syncingProducts) {
-          setSyncingProducts(false);
+        if (syncing) {
+          setSyncing(false);
           toast.error('Sincronización tomó demasiado tiempo. Verifica el estado más tarde.');
         }
-      }, 300000);
+      }, 600000);
       
     } catch (error) {
-      // Manejar diferentes tipos de errores
-      let errorMsg = 'Error al sincronizar productos';
+      let errorMsg = 'Error al sincronizar recursos';
       
       if (error.response?.data) {
         const data = error.response.data;
-        
         if (Array.isArray(data.detail)) {
           errorMsg = data.detail.map(err => err.msg).join(', ');
         } else if (typeof data.detail === 'string') {
@@ -225,8 +299,31 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
       }
       
       toast.error(errorMsg);
-      setSyncingProducts(false);
+      setSyncing(false);
     }
+  };
+
+  const handleToggleResource = (resourceId) => {
+    setSyncResources(prev => ({
+      ...prev,
+      [resourceId]: !prev[resourceId]
+    }));
+  };
+
+  const handleSelectAll = () => {
+    const newState = {};
+    SYNC_RESOURCES.forEach(resource => {
+      newState[resource.id] = true;
+    });
+    setSyncResources(newState);
+  };
+
+  const handleSelectEssential = () => {
+    const newState = {};
+    SYNC_RESOURCES.forEach(resource => {
+      newState[resource.id] = resource.essential;
+    });
+    setSyncResources(newState);
   };
 
   const handleFinish = () => {
@@ -417,134 +514,167 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
 
             {step === 2 && (
               <div className="space-y-6">
-                <div className="bg-blue-50 border-2 border-blue-900 rounded-lg p-4">
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-900 rounded-xl p-4">
                   <p className="text-sm text-blue-900">
-                    <strong>🔄 Sincronización Inicial</strong><br/>
-                    Importa categorías y productos desde tu tienda PrestaShop. Este proceso puede tardar unos minutos.
+                    <strong>🔄 Selecciona los recursos a sincronizar</strong><br/>
+                    Elige qué información quieres importar desde tu tienda PrestaShop. Los recursos esenciales están preseleccionados.
                   </p>
                 </div>
 
-                {/* Sincronizar Categorías */}
-                <div className="border-2 border-slate-900 rounded-xl p-6 bg-gradient-to-br from-purple-50 to-purple-100">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <Tag className="w-6 h-6 text-purple-600" />
-                      <div>
-                        <h3 className="text-lg font-bold text-slate-900">Categorías</h3>
-                        <p className="text-sm text-slate-600">Importar categorías de productos</p>
-                      </div>
-                    </div>
-                    {categoriesCount > 0 && (
-                      <span className="px-3 py-1 bg-green-100 border-2 border-green-600 rounded-full text-sm font-bold text-green-800">
-                        {categoriesCount} sincronizadas
-                      </span>
-                    )}
-                  </div>
-                  
+                {/* Botones de selección rápida */}
+                <div className="flex gap-3">
                   <button
-                    onClick={handleSyncCategories}
-                    disabled={syncingCategories}
-                    className="w-full flex items-center justify-center gap-2 bg-purple-600 text-white border-2 border-slate-900 rounded-xl px-6 py-3 font-bold hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                    style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
+                    type="button"
+                    onClick={handleSelectEssential}
+                    className="flex-1 px-4 py-2 bg-green-100 border-2 border-green-600 rounded-lg font-bold text-green-900 hover:bg-green-200 transition-colors text-sm"
                   >
-                    {syncingCategories ? (
-                      <>
-                        <Loader className="w-5 h-5 animate-spin" />
-                        Sincronizando...
-                      </>
-                    ) : (
-                      <>
-                        <RefreshCw className="w-5 h-5" />
-                        Sincronizar Categorías
-                      </>
-                    )}
+                    ✓ Solo Esenciales
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSelectAll}
+                    className="flex-1 px-4 py-2 bg-blue-100 border-2 border-blue-600 rounded-lg font-bold text-blue-900 hover:bg-blue-200 transition-colors text-sm"
+                  >
+                    Seleccionar Todo
                   </button>
                 </div>
 
-                {/* Sincronizar Productos */}
-                <div className="border-2 border-slate-900 rounded-xl p-6 bg-gradient-to-br from-green-50 to-green-100">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                      <Package className="w-6 h-6 text-green-600" />
-                      <div>
-                        <h3 className="text-lg font-bold text-slate-900">Productos</h3>
-                        <p className="text-sm text-slate-600">Importar productos con precios y stock</p>
+                {/* Lista de recursos con checkboxes */}
+                <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
+                  {SYNC_RESOURCES.map((resource) => {
+                    const Icon = resource.icon;
+                    const isSelected = syncResources[resource.id];
+                    const colorClasses = {
+                      green: 'from-green-50 to-green-100 border-green-600',
+                      purple: 'from-purple-50 to-purple-100 border-purple-600',
+                      yellow: 'from-yellow-50 to-yellow-100 border-yellow-600',
+                      blue: 'from-blue-50 to-blue-100 border-blue-600',
+                      indigo: 'from-indigo-50 to-indigo-100 border-indigo-600',
+                      orange: 'from-orange-50 to-orange-100 border-orange-600',
+                      teal: 'from-teal-50 to-teal-100 border-teal-600',
+                      pink: 'from-pink-50 to-pink-100 border-pink-600',
+                      red: 'from-red-50 to-red-100 border-red-600',
+                      emerald: 'from-emerald-50 to-emerald-100 border-emerald-600'
+                    };
+
+                    return (
+                      <div
+                        key={resource.id}
+                        className={`border-2 rounded-xl p-4 cursor-pointer transition-all ${
+                          isSelected 
+                            ? `bg-gradient-to-br ${colorClasses[resource.color]} shadow-md` 
+                            : 'bg-slate-50 border-slate-300 hover:border-slate-400'
+                        }`}
+                        onClick={() => handleToggleResource(resource.id)}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="flex items-center pt-0.5">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => {}}
+                              className="w-5 h-5 rounded border-2 border-slate-900 cursor-pointer"
+                            />
+                          </div>
+                          
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              {typeof Icon === 'string' ? (
+                                <span className="text-lg">{Icon}</span>
+                              ) : (
+                                <Icon className="w-5 h-5" />
+                              )}
+                              <h4 className="font-bold text-slate-900">
+                                {resource.label}
+                                {resource.essential && (
+                                  <span className="ml-2 px-2 py-0.5 bg-yellow-100 border border-yellow-600 rounded text-xs font-bold text-yellow-900">
+                                    ESENCIAL
+                                  </span>
+                                )}
+                              </h4>
+                            </div>
+                            <p className="text-xs text-slate-600 leading-relaxed">
+                              {resource.description}
+                            </p>
+                            
+                            {/* Mostrar resultado de sincronización si existe */}
+                            {syncResults[resource.id] !== undefined && (
+                              <div className="mt-2 flex items-center gap-2">
+                                <Check className="w-4 h-4 text-green-600" />
+                                <span className="text-xs font-bold text-green-800">
+                                  {syncResults[resource.id]} elementos sincronizados
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                    {productsCount > 0 && !syncingProducts && (
-                      <span className="px-3 py-1 bg-green-100 border-2 border-green-600 rounded-full text-sm font-bold text-green-800">
-                        {productsCount} sincronizados
-                      </span>
-                    )}
-                  </div>
-                  
-                  {/* Barra de progreso */}
-                  {syncingProducts && (
-                    <div className="mb-4">
-                      <div className="flex justify-between text-sm mb-2">
-                        <span className="text-slate-700 font-semibold">Sincronizando productos...</span>
-                        <span className="text-slate-600 font-bold">{Math.round(syncProgress)}%</span>
-                      </div>
-                      <div className="w-full bg-slate-200 rounded-full h-3 border-2 border-slate-900 overflow-hidden">
-                        <div 
-                          className="bg-gradient-to-r from-green-500 to-green-600 h-full transition-all duration-500 ease-out"
-                          style={{ 
-                            width: `${syncProgress}%`
-                          }}
-                        />
-                      </div>
-                      <p className="text-xs text-slate-500 mt-2">
-                        ⏱️ {productsCount} productos sincronizados... Esto puede tardar varios minutos.
-                      </p>
-                    </div>
-                  )}
-                  
-                  <button
-                    onClick={handleSyncProducts}
-                    disabled={syncingProducts}
-                    className="w-full flex items-center justify-center gap-2 bg-green-600 text-white border-2 border-slate-900 rounded-xl px-6 py-3 font-bold hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                    style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
-                  >
-                    {syncingProducts ? (
-                      <>
-                        <Loader className="w-5 h-5 animate-spin" />
-                        Sincronizando...
-                      </>
-                    ) : (
-                      <>
-                        <RefreshCw className="w-5 h-5" />
-                        Sincronizar Productos
-                      </>
-                    )}
-                  </button>
+                    );
+                  })}
                 </div>
 
-                {(categoriesCount > 0 || productsCount > 0) && (
-                  <div className="bg-green-50 border-2 border-green-600 rounded-lg p-4">
-                    <p className="text-sm text-green-900 font-semibold mb-2">
-                      ✓ Sincronización completada
-                    </p>
-                    <p className="text-xs text-green-800">
-                      Los productos se sincronizarán automáticamente cada 15 minutos.
-                      El stock se actualizará en PrestaShop cuando registres ventas locales.
+                {/* Barra de progreso de sincronización */}
+                {syncing && (
+                  <div className="bg-white border-2 border-slate-900 rounded-xl p-4">
+                    <div className="flex justify-between text-sm mb-2">
+                      <span className="text-slate-700 font-semibold">Sincronizando recursos...</span>
+                      <span className="text-slate-600 font-bold">{Math.round(syncProgress)}%</span>
+                    </div>
+                    <div className="w-full bg-slate-200 rounded-full h-3 border-2 border-slate-900 overflow-hidden">
+                      <div 
+                        className="bg-gradient-to-r from-pink-500 to-rose-600 h-full transition-all duration-500 ease-out"
+                        style={{ width: `${syncProgress}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-slate-500 mt-2 flex items-center gap-2">
+                      <Loader className="w-3 h-3 animate-spin" />
+                      Este proceso puede tardar varios minutos dependiendo de la cantidad de datos...
                     </p>
                   </div>
                 )}
 
-                <div className="flex justify-end gap-3 pt-4 border-t-2 border-slate-200">
+                {/* Mensaje de éxito */}
+                {Object.keys(syncResults).length > 0 && !syncing && (
+                  <div className="bg-green-50 border-2 border-green-600 rounded-lg p-4">
+                    <p className="text-sm text-green-900 font-semibold mb-2">
+                      ✓ Sincronización completada exitosamente
+                    </p>
+                    <p className="text-xs text-green-800">
+                      Los recursos seleccionados se sincronizarán automáticamente cada 15 minutos.
+                      Puedes volver a sincronizar manualmente cuando lo necesites.
+                    </p>
+                  </div>
+                )}
+
+                {/* Botones de acción */}
+                <div className="flex justify-between gap-3 pt-4 border-t-2 border-slate-200">
                   <button
                     onClick={onClose}
                     className="px-6 py-3 bg-slate-100 border-2 border-slate-900 rounded-xl font-bold hover:bg-slate-200 transition-colors"
                   >
-                    Cancelar
+                    {Object.keys(syncResults).length > 0 ? 'Cerrar' : 'Cancelar'}
                   </button>
-                  <button
-                    onClick={handleFinish}
-                    className="px-6 py-3 bg-pink-500 text-white border-2 border-slate-900 rounded-xl font-bold hover:bg-pink-600 transition-colors"
-                    style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
-                  >
-                    Finalizar
-                  </button>
+                  
+                  <div className="flex gap-3">
+                    <button
+                      onClick={handleSyncResources}
+                      disabled={syncing || Object.keys(syncResources).filter(k => syncResources[k]).length === 0}
+                      className="flex items-center gap-2 px-6 py-3 bg-pink-500 text-white border-2 border-slate-900 rounded-xl font-bold hover:bg-pink-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                      style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
+                    >
+                      {syncing ? (
+                        <>
+                          <Loader className="w-5 h-5 animate-spin" />
+                          Sincronizando...
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw className="w-5 h-5" />
+                          Sincronizar Ahora
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
