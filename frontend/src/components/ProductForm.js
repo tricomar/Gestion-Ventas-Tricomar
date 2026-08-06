@@ -12,7 +12,7 @@ const ProductForm = ({ product, onClose }) => {
   const { settings } = useSettings();
   const { storeOptions, stores } = useStores();
   const [name, setName] = useState('');
-  const [store, setStore] = useState('A');
+  const [store, setStore] = useState(stores && stores.length > 0 ? stores[0].key : 'A');
   const [costPrice, setCostPrice] = useState('');
   const [salePrice, setSalePrice] = useState('');
   const [sku, setSku] = useState('');
@@ -32,8 +32,11 @@ const ProductForm = ({ product, onClose }) => {
       setSalePrice(product.sale_price ? product.sale_price.toString() : '');
       setSku(product.sku || '');
       setCategory(product.category || '');
+    } else if (stores && stores.length > 0) {
+      // Para nuevo producto, usar la primera tienda disponible
+      setStore(stores[0].key);
     }
-  }, [product]);
+  }, [product, stores]);
 
   const fetchCategories = async () => {
     try {
@@ -46,9 +49,15 @@ const ProductForm = ({ product, onClose }) => {
 
   // Filtrar categorías por tienda seleccionada
   const availableCategories = React.useMemo(() => {
-    const selectedStoreName = stores?.find(s => s.id === store)?.name;
+    if (!store || !stores || stores.length === 0) return [];
+    
+    // Buscar el nombre de la tienda a partir del código (key)
+    const selectedStore = stores.find(s => s.key === store);
+    const selectedStoreName = selectedStore?.name;
+    
     if (!selectedStoreName) return [];
     
+    // Filtrar categorías que pertenecen a esa tienda
     return categories
       .filter(c => c.store === selectedStoreName)
       .map(c => c.name)
