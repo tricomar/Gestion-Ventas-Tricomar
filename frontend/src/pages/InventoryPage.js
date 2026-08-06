@@ -33,7 +33,7 @@ const InventoryPage = () => {
   const [customExpiryEnd, setCustomExpiryEnd] = useState('');
   
   // Sorting
-  const [sortBy, setSortBy] = useState(null); // 'name', 'price'
+  const [sortBy, setSortBy] = useState(null); // 'name', 'price', 'brand', 'expiry_date'
   const [sortOrder, setSortOrder] = useState('asc'); // 'asc', 'desc'
   
   // Multi-select for bulk delete
@@ -202,6 +202,32 @@ const InventoryPage = () => {
         return sortOrder === 'asc' 
           ? priceA - priceB 
           : priceB - priceA;
+      });
+    } else if (sortBy === 'brand') {
+      filtered.sort((a, b) => {
+        const brandA = (a.brand || '').toLowerCase();
+        const brandB = (b.brand || '').toLowerCase();
+        // Poner productos sin marca al final
+        if (!brandA && !brandB) return 0;
+        if (!brandA) return 1;
+        if (!brandB) return -1;
+        return sortOrder === 'asc' 
+          ? brandA.localeCompare(brandB) 
+          : brandB.localeCompare(brandA);
+      });
+    } else if (sortBy === 'expiry_date') {
+      filtered.sort((a, b) => {
+        const dateA = a.expiry_date ? new Date(a.expiry_date).getTime() : null;
+        const dateB = b.expiry_date ? new Date(b.expiry_date).getTime() : null;
+        
+        // Poner productos sin fecha al final
+        if (dateA === null && dateB === null) return 0;
+        if (dateA === null) return 1;
+        if (dateB === null) return -1;
+        
+        return sortOrder === 'asc' 
+          ? dateA - dateB 
+          : dateB - dateA;
       });
     }
     
@@ -780,8 +806,18 @@ const InventoryPage = () => {
                       )}
                     </div>
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider">
-                    Marca
+                  <th 
+                    className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider cursor-pointer hover:bg-slate-800 transition-colors"
+                    onClick={() => handleSortToggle('brand')}
+                  >
+                    <div className="flex items-center gap-2">
+                      Marca
+                      {sortBy === 'brand' && (
+                        sortOrder === 'asc' ? 
+                          <ChevronUp className="w-4 h-4" /> : 
+                          <ChevronDown className="w-4 h-4" />
+                      )}
+                    </div>
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider">
                     SKU
@@ -789,8 +825,18 @@ const InventoryPage = () => {
                   <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider">
                     Categoría
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider">
-                    Fecha Vencimiento
+                  <th 
+                    className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider cursor-pointer hover:bg-slate-800 transition-colors"
+                    onClick={() => handleSortToggle('expiry_date')}
+                  >
+                    <div className="flex items-center gap-2">
+                      Fecha Vencimiento
+                      {sortBy === 'expiry_date' && (
+                        sortOrder === 'asc' ? 
+                          <ChevronUp className="w-4 h-4" /> : 
+                          <ChevronDown className="w-4 h-4" />
+                      )}
+                    </div>
                   </th>
                   <th 
                     className="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider cursor-pointer hover:bg-slate-800 transition-colors"
