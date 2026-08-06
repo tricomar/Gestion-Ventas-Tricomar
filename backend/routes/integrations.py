@@ -31,6 +31,11 @@ class PrestashopConnectRequest(BaseModel):
     store_id: str
 
 
+class SyncResourcesRequest(BaseModel):
+    """Request para sincronización selectiva de recursos"""
+    resources: List[str]  # Lista de recursos a sincronizar: ['products', 'categories', 'orders', etc.]
+
+
 @router.post("/prestashop/connect")
 async def connect_prestashop(
     request: PrestashopConnectRequest,
@@ -639,6 +644,348 @@ async def get_prestashop_products(
     ).to_list(1000)
     
     return products
+
+
+@router.post("/prestashop/{integration_id}/sync")
+async def sync_resources(
+    integration_id: str,
+    request: SyncResourcesRequest,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Sincronizar múltiples recursos seleccionados desde PrestaShop
+    """
+    # Validar que hay recursos seleccionados
+    if not request.resources:
+        raise HTTPException(status_code=400, detail="Debes seleccionar al menos un recurso")
+    
+    # Validar recursos permitidos
+    allowed_resources = {
+        'products', 'categories', 'prices', 'stock', 'images',
+        'orders', 'customers', 'messages', 'abandoned_carts', 'completed_carts'
+    }
+    invalid = set(request.resources) - allowed_resources
+    if invalid:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Recursos no válidos: {', '.join(invalid)}"
+        )
+    
+    # Obtener integración
+    integration = await db.prestashop_integrations.find_one(
+        get_tenant_filter(current_user.dict(), {'id': integration_id}),
+        {'_id': 0}
+    )
+    
+    if not integration:
+        raise HTTPException(status_code=404, detail="Integración no encontrada")
+    
+    # Crear job de sincronización multi-recurso
+    job_id = str(uuid4())
+    job = {
+        'id': job_id,
+        'account_id': current_user.account_id,
+        'integration_id': integration_id,
+        'type': 'sync_resources',
+        'resources': request.resources,
+        'status': 'running',
+        'progress': 0,
+        'results': {},  # Diccionario con resultados por recurso
+        'message': 'Iniciando sincronización de recursos...',
+        'created_at': datetime.now(timezone.utc).isoformat()
+    }
+    await db.sync_jobs.insert_one(job)
+    
+    # Ejecutar sincronización en background
+    background_tasks.add_task(
+        sync_resources_background,
+        job_id,
+        integration_id,
+        integration,
+        request.resources,
+        current_user.account_id
+    )
+    
+    return {
+        'success': True,
+        'job_id': job_id,
+        'message': f'Sincronización de {len(request.resources)} recursos iniciada'
+    }
+
+
+async def sync_resources_background(
+    job_id: str,
+    integration_id: str,
+    integration: dict,
+    resources: List[str],
+    account_id: str
+):
+    """
+    Sincronizar múltiples recursos en background
+    """
+    try:
+        # Crear servicio de PrestaShop
+        ps_service = PrestashopAPIService(integration['shop_url'], integration['api_key'])
+        
+        # Obtener información de la tienda
+        account = await db.accounts.find_one({'id': account_id}, {'_id': 0})
+        store_name = 'PrestaShop'
+        store_code = 'A'
+        if account and 'stores' in account:
+            store_id = integration.get('store_id')
+            matching_store = next((s for s in account['stores'] if s.get('id') == store_id), None)
+            if matching_store:
+                store_name = matching_store.get('name', 'PrestaShop')
+                store_code = matching_store.get('code', 'A')
+        
+        results = {}
+        total_resources = len(resources)
+        
+        # Sincronizar cada recurso
+        for idx, resource in enumerate(resources):
+            progress = int((idx / total_resources) * 100)
+            await db.sync_jobs.update_one(
+                {'id': job_id},
+                {'$set': {
+                    'progress': progress,
+                    'message': f'Sincronizando {resource}...'
+                }}
+            )
+            
+            try:
+                if resource == 'categories':
+                    count = await sync_categories_resource(ps_service, integration_id, account_id, store_name)
+                    results['categories'] = count
+                    
+                elif resource == 'products':
+                    count = await sync_products_resource(ps_service, integration_id, account_id, store_name, store_code)
+                    results['products'] = count
+                    
+                elif resource == 'prices':
+                    count = await sync_prices_resource(ps_service, integration_id, account_id)
+                    results['prices'] = count
+                    
+                elif resource == 'stock':
+                    count = await sync_stock_resource(ps_service, integration_id, account_id)
+                    results['stock'] = count
+                    
+                elif resource == 'images':
+                    count = await sync_images_resource(ps_service, integration_id, account_id)
+                    results['images'] = count
+                    
+                elif resource == 'orders':
+                    count = await sync_orders_resource(ps_service, integration_id, account_id, store_code)
+                    results['orders'] = count
+                    
+                elif resource == 'customers':
+                    count = await sync_customers_resource(ps_service, integration_id, account_id, store_code)
+                    results['customers'] = count
+                    
+                elif resource == 'messages':
+                    count = await sync_messages_resource(ps_service, integration_id, account_id)
+                    results['messages'] = count
+                    
+                elif resource == 'abandoned_carts':
+                    count = await sync_abandoned_carts_resource(ps_service, integration_id, account_id)
+                    results['abandoned_carts'] = count
+                    
+                elif resource == 'completed_carts':
+                    count = await sync_completed_carts_resource(ps_service, integration_id, account_id)
+                    results['completed_carts'] = count
+                    
+            except Exception as e:
+                # Si falla un recurso, continuar con los demás
+                results[resource] = f"Error: {str(e)}"
+        
+        # Marcar job como completado
+        await db.sync_jobs.update_one(
+            {'id': job_id},
+            {'$set': {
+                'status': 'completed',
+                'progress': 100,
+                'results': results,
+                'message': 'Sincronización completada',
+                'completed_at': datetime.now(timezone.utc).isoformat()
+            }}
+        )
+        
+    except Exception as e:
+        # Marcar job como fallido
+        await db.sync_jobs.update_one(
+            {'id': job_id},
+            {'$set': {
+                'status': 'failed',
+                'message': f'Error: {str(e)}',
+                'failed_at': datetime.now(timezone.utc).isoformat()
+            }}
+        )
+
+
+# Funciones helper para sincronizar cada tipo de recurso
+async def sync_categories_resource(ps_service, integration_id: str, account_id: str, store_name: str) -> int:
+    """Sincronizar categorías"""
+    from services.category_sync_service import CategorySyncService
+    
+    category_sync = CategorySyncService(ps_service, account_id, store_name)
+    ps_categories = ps_service.get_categories(limit=200)
+    
+    synced_count = 0
+    for ps_cat in ps_categories:
+        cat_id = int(ps_cat.get('id', 0))
+        if cat_id <= 0:
+            continue
+        
+        # Buscar si ya existe
+        existing = await db.prestashop_categories.find_one({
+            'account_id': account_id,
+            'integration_id': integration_id,
+            'prestashop_id': cat_id
+        }, {'_id': 0})
+        
+        name = ps_cat.get('name', {})
+        if isinstance(name, dict):
+            name = name.get('language', {}).get('value', f'Categoría {cat_id}')
+        elif not name:
+            name = f'Categoría {cat_id}'
+        
+        category_doc = {
+            'account_id': account_id,
+            'integration_id': integration_id,
+            'prestashop_id': cat_id,
+            'name': name,
+            'parent_id': int(ps_cat.get('id_parent', 0)),
+            'active': ps_cat.get('active', '1') == '1'
+        }
+        
+        if existing:
+            await db.prestashop_categories.update_one(
+                {'account_id': account_id, 'integration_id': integration_id, 'prestashop_id': cat_id},
+                {'$set': category_doc}
+            )
+        else:
+            category_doc['id'] = str(uuid4())
+            category_doc['created_at'] = datetime.now(timezone.utc).isoformat()
+            await db.prestashop_categories.insert_one(category_doc)
+        
+        synced_count += 1
+    
+    # Sincronizar a la colección de categorías locales
+    await category_sync.sync_to_local_categories()
+    
+    return synced_count
+
+
+async def sync_products_resource(ps_service, integration_id: str, account_id: str, store_name: str, store_code: str) -> int:
+    """Sincronizar productos (simplificado)"""
+    from services.category_sync_service import CategorySyncService
+    
+    category_sync = CategorySyncService(ps_service, account_id, store_name)
+    ps_products = ps_service.get_products(limit=500)
+    
+    synced_count = 0
+    for ps_prod in ps_products:
+        prod_id = int(ps_prod.get('id', 0))
+        if prod_id <= 0:
+            continue
+        
+        name = ps_prod.get('name', {})
+        if isinstance(name, dict):
+            name = name.get('language', {}).get('value', f'Producto {prod_id}')
+        elif not name:
+            name = f'Producto {prod_id}'
+        
+        sku = ps_prod.get('reference', f"PS-{prod_id}-{str(uuid4())[:8]}")
+        
+        # Buscar producto local existente
+        local_product = await db.products.find_one({'sku': sku}, {'_id': 0})
+        
+        product_data = {
+            'name': name,
+            'sku': sku,
+            'cost_price': 0,
+            'sale_price': float(ps_prod.get('price', 0)),
+            'store': store_code,
+            'category': None,
+            'brand': None
+        }
+        
+        if local_product:
+            await db.products.update_one({'sku': sku}, {'$set': product_data})
+        else:
+            product_data['id'] = str(uuid4())
+            product_data['account_id'] = account_id
+            product_data['created_at'] = datetime.now(timezone.utc).isoformat()
+            await db.products.insert_one(product_data)
+        
+        synced_count += 1
+    
+    return synced_count
+
+
+async def sync_prices_resource(ps_service, integration_id: str, account_id: str) -> int:
+    """Sincronizar precios de productos existentes"""
+    ps_products = ps_service.get_products(limit=500)
+    updated_count = 0
+    
+    for ps_prod in ps_products:
+        sku = ps_prod.get('reference', '')
+        if not sku:
+            continue
+        
+        price = float(ps_prod.get('price', 0))
+        result = await db.products.update_one(
+            {'account_id': account_id, 'sku': sku},
+            {'$set': {'sale_price': price}}
+        )
+        
+        if result.modified_count > 0:
+            updated_count += 1
+    
+    return updated_count
+
+
+async def sync_stock_resource(ps_service, integration_id: str, account_id: str) -> int:
+    """Sincronizar stock/inventario"""
+    # Por ahora retornar placeholder
+    # En implementación completa: obtener stock de PrestaShop y actualizar localmente
+    return 0
+
+
+async def sync_images_resource(ps_service, integration_id: str, account_id: str) -> int:
+    """Sincronizar imágenes de productos"""
+    # Placeholder - implementar descarga de imágenes
+    return 0
+
+
+async def sync_orders_resource(ps_service, integration_id: str, account_id: str, store_code: str) -> int:
+    """Sincronizar órdenes/pedidos"""
+    # Placeholder - implementar sincronización de órdenes
+    return 0
+
+
+async def sync_customers_resource(ps_service, integration_id: str, account_id: str, store_code: str) -> int:
+    """Sincronizar clientes"""
+    # Placeholder - implementar sincronización de clientes
+    return 0
+
+
+async def sync_messages_resource(ps_service, integration_id: str, account_id: str) -> int:
+    """Sincronizar mensajes e hilos de clientes"""
+    # Placeholder
+    return 0
+
+
+async def sync_abandoned_carts_resource(ps_service, integration_id: str, account_id: str) -> int:
+    """Sincronizar carritos abandonados"""
+    # Placeholder
+    return 0
+
+
+async def sync_completed_carts_resource(ps_service, integration_id: str, account_id: str) -> int:
+    """Sincronizar carritos finalizados"""
+    # Placeholder
+    return 0
 
 
 @router.get("/jobs/{job_id}")
