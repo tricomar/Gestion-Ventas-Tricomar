@@ -111,11 +111,54 @@ const CustomerDetailPanel = ({ customerId, isOpen, onClose }) => {
                   Información Personal
                 </h3>
                 <div className="space-y-3">
+                  {/* Tipo de Cliente */}
                   <div>
-                    <label className="text-xs font-bold text-slate-600 uppercase">Nombre</label>
+                    <label className="text-xs font-bold text-slate-600 uppercase">Tipo de Cliente</label>
+                    <p className="inline-block mt-1 px-3 py-1 bg-white border-2 border-slate-900 rounded-full text-sm font-bold">
+                      {customerDetail.customer.customer_type || 'Persona'}
+                    </p>
+                  </div>
+
+                  {/* Nombre/Razón Social */}
+                  <div>
+                    <label className="text-xs font-bold text-slate-600 uppercase">
+                      {customerDetail.customer.customer_type === 'Empresa' ? 'Razón Social' : 'Nombre'}
+                    </label>
                     <p className="text-lg font-bold text-slate-900">{customerDetail.customer.name}</p>
                   </div>
                   
+                  {/* RUT */}
+                  {customerDetail.customer.rut && !customerDetail.customer.sin_rut && (
+                    <div>
+                      <label className="text-xs font-bold text-slate-600 uppercase">RUT</label>
+                      <p className="text-slate-900 font-mono font-semibold">{customerDetail.customer.rut}</p>
+                    </div>
+                  )}
+                  
+                  {customerDetail.customer.sin_rut && (
+                    <div>
+                      <label className="text-xs font-bold text-slate-600 uppercase">RUT</label>
+                      <p className="text-slate-500 italic">Sin RUT</p>
+                    </div>
+                  )}
+
+                  {/* Nombre de Fantasía (solo Empresa) */}
+                  {customerDetail.customer.customer_type === 'Empresa' && customerDetail.customer.nombre_fantasia && (
+                    <div>
+                      <label className="text-xs font-bold text-slate-600 uppercase">Nombre de Fantasía</label>
+                      <p className="text-slate-900">{customerDetail.customer.nombre_fantasia}</p>
+                    </div>
+                  )}
+
+                  {/* Giro (solo Empresa) */}
+                  {customerDetail.customer.customer_type === 'Empresa' && customerDetail.customer.giro && (
+                    <div>
+                      <label className="text-xs font-bold text-slate-600 uppercase">Giro</label>
+                      <p className="text-slate-900">{customerDetail.customer.giro}</p>
+                    </div>
+                  )}
+                  
+                  {/* Teléfono */}
                   {customerDetail.customer.phone && (
                     <div>
                       <label className="text-xs font-bold text-slate-600 uppercase">Teléfono</label>
@@ -126,6 +169,7 @@ const CustomerDetailPanel = ({ customerId, isOpen, onClose }) => {
                     </div>
                   )}
                   
+                  {/* Email */}
                   {customerDetail.customer.email && (
                     <div>
                       <label className="text-xs font-bold text-slate-600 uppercase">Email</label>
@@ -133,16 +177,26 @@ const CustomerDetailPanel = ({ customerId, isOpen, onClose }) => {
                     </div>
                   )}
                   
-                  {customerDetail.customer.address && (
+                  {/* Dirección */}
+                  {(customerDetail.customer.direccion || customerDetail.customer.address) && (
                     <div>
                       <label className="text-xs font-bold text-slate-600 uppercase">Dirección</label>
                       <div className="flex items-start gap-2 text-slate-900">
                         <MapPin className="w-4 h-4 mt-1" />
-                        <p>{customerDetail.customer.address}</p>
+                        <p>{customerDetail.customer.direccion || customerDetail.customer.address}</p>
                       </div>
                     </div>
                   )}
+
+                  {/* Ciudad */}
+                  {customerDetail.customer.ciudad && (
+                    <div>
+                      <label className="text-xs font-bold text-slate-600 uppercase">Ciudad</label>
+                      <p className="text-slate-900">{customerDetail.customer.ciudad}</p>
+                    </div>
+                  )}
                   
+                  {/* Tienda */}
                   <div>
                     <label className="text-xs font-bold text-slate-600 uppercase">Tienda/Caja Principal</label>
                     <p className="inline-block mt-1 px-3 py-1 bg-white border-2 border-slate-900 rounded-full text-sm font-bold">
@@ -150,6 +204,7 @@ const CustomerDetailPanel = ({ customerId, isOpen, onClose }) => {
                     </p>
                   </div>
                   
+                  {/* Cliente desde */}
                   <div>
                     <label className="text-xs font-bold text-slate-600 uppercase">Cliente desde</label>
                     <div className="flex items-center gap-2 text-slate-900">

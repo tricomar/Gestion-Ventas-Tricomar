@@ -16,6 +16,7 @@ const ProductForm = ({ product, onClose }) => {
   const [costPrice, setCostPrice] = useState('');
   const [salePrice, setSalePrice] = useState('');
   const [sku, setSku] = useState('');
+  const [brand, setBrand] = useState('');
   const [category, setCategory] = useState('');
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState([]);
@@ -31,6 +32,7 @@ const ProductForm = ({ product, onClose }) => {
       setCostPrice(product.cost_price ? product.cost_price.toString() : '');
       setSalePrice(product.sale_price ? product.sale_price.toString() : '');
       setSku(product.sku || '');
+      setBrand(product.brand || '');
       setCategory(product.category || '');
     } else if (stores && stores.length > 0) {
       // Para nuevo producto, usar la primera tienda disponible
@@ -75,6 +77,7 @@ const ProductForm = ({ product, onClose }) => {
         cost_price: costPrice ? parseFloat(costPrice) : 0,
         sale_price: salePrice ? parseFloat(salePrice) : 0,
         sku: sku || null,
+        brand: brand || null,
         category: category || null
       };
 
@@ -160,8 +163,8 @@ const ProductForm = ({ product, onClose }) => {
             </select>
           </div>
 
-          {/* SKU and Category Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* SKU, Brand and Category Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-bold tracking-widest uppercase text-slate-500 mb-2">
                 SKU (Código)
@@ -182,6 +185,19 @@ const ProductForm = ({ product, onClose }) => {
               <p className={`text-xs mt-1 ${sku.length > 15 ? 'text-red-600 font-bold' : 'text-slate-500'}`}>
                 {sku.length}/15 caracteres {sku.length > 15 && '⚠️ Excede el límite'}
               </p>
+            </div>
+            <div>
+              <label className="block text-xs font-bold tracking-widest uppercase text-slate-500 mb-2">
+                Marca
+              </label>
+              <input
+                type="text"
+                value={brand}
+                onChange={(e) => setBrand(e.target.value)}
+                className="w-full bg-white border-2 border-slate-900 rounded-xl px-4 py-3 font-medium text-slate-900 focus:ring-0 focus:outline-none focus:border-indigo-500"
+                placeholder="Ej: Nike, Apple, etc."
+                data-testid="product-brand-input"
+              />
             </div>
             <div>
               <label className="block text-xs font-bold tracking-widest uppercase text-slate-500 mb-2">

@@ -297,23 +297,6 @@ const IntegrationsTab = () => {
         </p>
       </div>
 
-      {/* Nota sobre Preview vs Producción */}
-      <div className="bg-amber-50 border-2 border-amber-600 rounded-lg p-4 mb-6">
-        <div className="flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 text-amber-700 flex-shrink-0 mt-0.5" />
-          <div className="text-sm text-amber-900">
-            <strong>⚠️ Importante: Webhooks en Preview</strong>
-            <p className="mt-1">
-              La URL del preview de Emergent <strong>no es accesible públicamente</strong> desde internet. 
-              Para recibir webhooks reales desde PrestaShop, necesitas desplegar en producción con un dominio público.
-            </p>
-            <p className="mt-2">
-              <strong>Mientras usas preview:</strong> Usa el botón <span className="inline-flex items-center px-2 py-0.5 bg-amber-100 border border-amber-700 rounded text-xs">🧪 Probar Webhook</span> para simular eventos localmente y validar que todo funciona correctamente.
-            </p>
-          </div>
-        </div>
-      </div>
-
       {/* Integraciones Activas */}
       {integrations.length > 0 && (
         <div className="mb-8">
