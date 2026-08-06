@@ -91,10 +91,18 @@ const NotesPage = () => {
     }
   };
 
-  const filteredNotes = notes.filter(note =>
-    (note.title && note.title.toLowerCase().includes(searchQuery.toLowerCase())) ||
-    (note.content && note.content.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const filteredNotes = notes.filter(note => {
+    // Si no hay búsqueda, mostrar todas las notas
+    if (!searchQuery.trim()) {
+      return true;
+    }
+    
+    // Con búsqueda, filtrar por título o contenido
+    return (
+      (note.title && note.title.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (note.content && note.content.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
+  });
 
   if (loading) {
     return (
