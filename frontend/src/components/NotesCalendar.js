@@ -85,12 +85,13 @@ const NotesCalendar = ({ onDateSelect, selectedDate }) => {
     if (!dayData) return null;
 
     // Priority: unread > pending > read > completed
+    // Colores neobrutalistas más vibrantes
     const { statuses } = dayData;
     
-    if (statuses.unread > 0) return '#FFE5B4'; // Amarillo claro
-    if (statuses.pending > 0) return '#FADBB0'; // Naranja claro
-    if (statuses.read > 0) return '#E0E7FF'; // Azul claro
-    if (statuses.completed > 0) return '#D1FAE5'; // Verde claro
+    if (statuses.unread > 0) return '#FDE047'; // Amarillo vibrante
+    if (statuses.pending > 0) return '#FB923C'; // Naranja vibrante
+    if (statuses.read > 0) return '#A78BFA'; // Púrpura vibrante
+    if (statuses.completed > 0) return '#4ADE80'; // Verde vibrante
     
     return null;
   };
@@ -164,22 +165,22 @@ const NotesCalendar = ({ onDateSelect, selectedDate }) => {
               onClick={() => handleDayClick(day)}
               disabled={!day}
               className={`
-                aspect-square flex items-center justify-center rounded text-[10px] font-bold
-                border transition-all relative
+                aspect-square flex items-center justify-center rounded-lg text-[11px] font-bold
+                border-2 transition-all relative
                 ${!day ? 'invisible' : ''}
-                ${isToday(day) ? 'border-blue-500 border-2' : 'border-slate-900'}
-                ${isSelected(day) ? 'ring-2 ring-slate-900' : ''}
+                ${isToday(day) ? 'border-blue-600 ring-2 ring-blue-400' : 'border-slate-900'}
+                ${isSelected(day) ? 'ring-2 ring-indigo-500 scale-105' : ''}
                 ${day && !hasNotes ? 'bg-white hover:bg-slate-50' : ''}
-                ${hasNotes ? 'hover:scale-105' : ''}
+                ${hasNotes ? 'hover:scale-110 hover:shadow-[2px_2px_0px_0px_rgba(15,23,42,1)]' : ''}
               `}
               style={{
                 backgroundColor: dayColor || 'white',
-                boxShadow: hasNotes ? '1px 1px 0px 0px rgba(15,23,42,1)' : 'none'
+                boxShadow: hasNotes ? '2px 2px 0px 0px rgba(15,23,42,1)' : '1px 1px 0px 0px rgba(15,23,42,0.3)'
               }}
             >
               {day}
               {hasNotes && (
-                <span className="absolute top-0 right-0 w-1 h-1 bg-slate-900 rounded-full"></span>
+                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-slate-900 rounded-full border border-white"></span>
               )}
             </button>
           );
@@ -187,23 +188,23 @@ const NotesCalendar = ({ onDateSelect, selectedDate }) => {
       </div>
 
       {/* Legend - Compact */}
-      <div className="mt-3 pt-2 border-t border-slate-200">
+      <div className="mt-3 pt-2 border-t-2 border-slate-900">
         <div className="grid grid-cols-2 gap-1 text-[10px]">
           <div className="flex items-center gap-1">
-            <div className="w-2 h-2 rounded border border-slate-900" style={{ backgroundColor: '#FFE5B4' }}></div>
-            <span>Sin leer</span>
+            <div className="w-3 h-3 rounded border-2 border-slate-900" style={{ backgroundColor: '#FDE047' }}></div>
+            <span className="font-bold">Sin leer</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-2 h-2 rounded border border-slate-900" style={{ backgroundColor: '#FADBB0' }}></div>
-            <span>Pendiente</span>
+            <div className="w-3 h-3 rounded border-2 border-slate-900" style={{ backgroundColor: '#FB923C' }}></div>
+            <span className="font-bold">Pendiente</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-2 h-2 rounded border border-slate-900" style={{ backgroundColor: '#E0E7FF' }}></div>
-            <span>Leída</span>
+            <div className="w-3 h-3 rounded border-2 border-slate-900" style={{ backgroundColor: '#A78BFA' }}></div>
+            <span className="font-bold">Leída</span>
           </div>
           <div className="flex items-center gap-1">
-            <div className="w-2 h-2 rounded border border-slate-900" style={{ backgroundColor: '#D1FAE5' }}></div>
-            <span>Completada</span>
+            <div className="w-3 h-3 rounded border-2 border-slate-900" style={{ backgroundColor: '#4ADE80' }}></div>
+            <span className="font-bold">Completada</span>
           </div>
         </div>
       </div>

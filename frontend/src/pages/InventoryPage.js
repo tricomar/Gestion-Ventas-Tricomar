@@ -28,6 +28,9 @@ const InventoryPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedStore, setSelectedStore] = useState('all');
+  const [expiryDateFilter, setExpiryDateFilter] = useState('all'); // all, expired, expiring_soon, expiring_month, valid
+  const [customExpiryStart, setCustomExpiryStart] = useState('');
+  const [customExpiryEnd, setCustomExpiryEnd] = useState('');
   
   // Sorting
   const [sortBy, setSortBy] = useState(null); // 'name', 'price'
@@ -53,7 +56,7 @@ const InventoryPage = () => {
   
   useEffect(() => {
     filterProducts();
-  }, [products, searchQuery, selectedCategory, selectedStore, sortBy, sortOrder]);
+  }, [products, searchQuery, selectedCategory, selectedStore, sortBy, sortOrder, expiryDateFilter, customExpiryStart, customExpiryEnd]);
 
   useEffect(() => {
     // Filtrar categorías según la tienda seleccionada
@@ -142,6 +145,45 @@ const InventoryPage = () => {
       if (storeKey) {
         filtered = filtered.filter(product => product.store === storeKey);
       }
+    }
+    
+    // Filter by expiry date
+    if (expiryDateFilter !== 'all') {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      filtered = filtered.filter(product => {
+        if (!product.expiry_date) return false;
+        
+        const expiryDate = new Date(product.expiry_date);
+        expiryDate.setHours(0, 0, 0, 0);
+        
+        switch (expiryDateFilter) {
+          case 'expired':
+            return expiryDate < today;
+          case 'expiring_soon': // Próximos 7 días
+            const sevenDaysFromNow = new Date(today);
+            sevenDaysFromNow.setDate(today.getDate() + 7);
+            return expiryDate >= today && expiryDate <= sevenDaysFromNow;
+          case 'expiring_month': // Próximos 30 días
+            const thirtyDaysFromNow = new Date(today);
+            thirtyDaysFromNow.setDate(today.getDate() + 30);
+            return expiryDate >= today && expiryDate <= thirtyDaysFromNow;
+          case 'valid': // Vigentes (no vencidos)
+            return expiryDate >= today;
+          case 'custom': // Rango personalizado
+            if (customExpiryStart && customExpiryEnd) {
+              const startDate = new Date(customExpiryStart);
+              const endDate = new Date(customExpiryEnd);
+              startDate.setHours(0, 0, 0, 0);
+              endDate.setHours(23, 59, 59, 999);
+              return expiryDate >= startDate && expiryDate <= endDate;
+            }
+            return true;
+          default:
+            return true;
+        }
+      });
     }
     
     // Apply sorting
@@ -610,6 +652,47 @@ const InventoryPage = () => {
             </div>
           </div>
         </div>
+
+        {/* Filter by Expiry Date */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <select
+              value={expiryDateFilter}
+              onChange={(e) => setExpiryDateFilter(e.target.value)}
+              className="w-full px-4 py-3 bg-white border-2 border-slate-900 rounded-xl font-medium text-slate-900 cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-900"
+            >
+              <option value="all">📅 Todas las fechas</option>
+              <option value="expired">🔴 Vencidos</option>
+              <option value="expiring_soon">🟡 Por vencer (7 días)</option>
+              <option value="expiring_month">🟠 Por vencer (30 días)</option>
+              <option value="valid">🟢 Vigentes</option>
+              <option value="custom">🔵 Rango personalizado</option>
+            </select>
+          </div>
+          
+          {expiryDateFilter === 'custom' && (
+            <>
+              <div>
+                <input
+                  type="date"
+                  value={customExpiryStart}
+                  onChange={(e) => setCustomExpiryStart(e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-slate-900 rounded-xl font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                  placeholder="Fecha inicio"
+                />
+              </div>
+              <div>
+                <input
+                  type="date"
+                  value={customExpiryEnd}
+                  onChange={(e) => setCustomExpiryEnd(e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-slate-900 rounded-xl font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                  placeholder="Fecha fin"
+                />
+              </div>
+            </>
+          )}
+        </div>
       </div>
       
       {/* Results count and Pagination controls */}
@@ -706,6 +789,9 @@ const InventoryPage = () => {
                   <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider">
                     Categoría
                   </th>
+                  <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider">
+                    Fecha Vencimiento
+                  </th>
                   <th 
                     className="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider cursor-pointer hover:bg-slate-800 transition-colors"
                     onClick={() => handleSortToggle('price')}
@@ -769,6 +855,51 @@ const InventoryPage = () => {
                         <span className="px-2 py-1 bg-slate-100 border border-slate-900 rounded text-xs font-medium">
                           {product.category}
                         </span>
+                      ) : (
+                        <span className="text-slate-400">-</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      {product.expiry_date ? (
+                        (() => {
+                          const today = new Date();
+                          today.setHours(0, 0, 0, 0);
+                          const expiryDate = new Date(product.expiry_date);
+                          expiryDate.setHours(0, 0, 0, 0);
+                          const daysUntilExpiry = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
+                          
+                          let badgeColor = 'bg-green-200 border-green-600 text-green-900';
+                          let emoji = '🟢';
+                          
+                          if (daysUntilExpiry < 0) {
+                            badgeColor = 'bg-red-200 border-red-600 text-red-900';
+                            emoji = '🔴';
+                          } else if (daysUntilExpiry <= 7) {
+                            badgeColor = 'bg-yellow-200 border-yellow-600 text-yellow-900';
+                            emoji = '🟡';
+                          } else if (daysUntilExpiry <= 30) {
+                            badgeColor = 'bg-orange-200 border-orange-600 text-orange-900';
+                            emoji = '🟠';
+                          }
+                          
+                          return (
+                            <div className="flex flex-col gap-1">
+                              <span className={`px-2 py-1 border-2 border-slate-900 rounded text-xs font-bold ${badgeColor}`}>
+                                {emoji} {new Date(product.expiry_date).toLocaleDateString('es-CL')}
+                              </span>
+                              {daysUntilExpiry < 0 && (
+                                <span className="text-xs text-red-600 font-bold">
+                                  Vencido hace {Math.abs(daysUntilExpiry)} días
+                                </span>
+                              )}
+                              {daysUntilExpiry >= 0 && daysUntilExpiry <= 30 && (
+                                <span className="text-xs text-slate-600 font-medium">
+                                  {daysUntilExpiry === 0 ? 'Vence hoy' : `${daysUntilExpiry} días`}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()
                       ) : (
                         <span className="text-slate-400">-</span>
                       )}
