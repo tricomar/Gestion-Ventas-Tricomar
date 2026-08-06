@@ -457,6 +457,8 @@ const InventoryPage = () => {
       setLoading(false);
     }
   };
+
+  const handleSort = (field) => {
     if (sortBy === field) {
       // Ya estamos ordenando por este campo, alternar dirección
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
