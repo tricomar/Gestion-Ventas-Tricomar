@@ -79,17 +79,23 @@ const InventoryPage = () => {
       categoriesToShow = [...new Set([...dbCategories, ...productCategories])];
     } else {
       // Filtrar categorías solo de la tienda seleccionada
-      const dbCategoriesForStore = allCategories
-        .filter(c => c.store === stores.find(s => s.id === selectedStore)?.name)
-        .map(c => c.name);
-      const productCategoriesForStore = [
-        ...new Set(
-          products
-            .filter(p => p.store === selectedStore && p.category)
-            .map(p => p.category)
-        )
-      ];
-      categoriesToShow = [...new Set([...dbCategoriesForStore, ...productCategoriesForStore])];
+      const selectedStoreObj = stores.find(s => s.id === selectedStore);
+      const storeName = selectedStoreObj?.name;
+      const storeKey = selectedStoreObj?.key;
+      
+      if (storeName && storeKey) {
+        const dbCategoriesForStore = allCategories
+          .filter(c => c.store === storeName)
+          .map(c => c.name);
+        const productCategoriesForStore = [
+          ...new Set(
+            products
+              .filter(p => p.store === storeKey && p.category)
+              .map(p => p.category)
+          )
+        ];
+        categoriesToShow = [...new Set([...dbCategoriesForStore, ...productCategoriesForStore])];
+      }
     }
     
     setAvailableCategories(categoriesToShow.sort());
@@ -129,9 +135,13 @@ const InventoryPage = () => {
       filtered = filtered.filter(product => product.category === selectedCategory);
     }
     
-    // Filter by store
+    // Filter by store - Comparar usando el código de tienda (key)
     if (selectedStore !== 'all') {
-      filtered = filtered.filter(product => product.store === selectedStore);
+      const selectedStoreObj = stores.find(s => s.id === selectedStore);
+      const storeKey = selectedStoreObj?.key; // Obtener el código (PS, GS, etc.)
+      if (storeKey) {
+        filtered = filtered.filter(product => product.store === storeKey);
+      }
     }
     
     // Apply sorting
