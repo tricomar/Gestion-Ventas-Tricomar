@@ -243,3 +243,77 @@ async def send_message(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error al enviar mensaje: {str(e)}"
         )
+
+@router.get("/carts/abandoned")
+async def get_abandoned_carts(
+    limit: int = 50,
+    integration_id: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """Obtener carritos abandonados"""
+    try:
+        tenant_filter = get_tenant_filter(current_user.dict(), {})
+        
+        # Filtrar por integración si se especifica
+        if integration_id:
+            tenant_filter["integration_id"] = integration_id
+        
+        # Buscar carritos abandonados (no finalizados)
+        abandoned_filter = {
+            **tenant_filter,
+            "$or": [
+                {"id_order": {"$exists": False}},
+                {"id_order": None},
+                {"id_order": "0"}
+            ]
+        }
+        
+        carts_cursor = db.ecommerce_carts.find(
+            abandoned_filter,
+            {"_id": 0}
+        ).sort("date_add", -1).limit(limit)
+        
+        carts = await carts_cursor.to_list(limit)
+        
+        return carts
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al obtener carritos abandonados: {str(e)}"
+        )
+
+@router.get("/carts/finalized")
+async def get_finalized_carts(
+    limit: int = 50,
+    integration_id: Optional[str] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """Obtener carritos finalizados (con orden de compra)"""
+    try:
+        tenant_filter = get_tenant_filter(current_user.dict(), {})
+        
+        # Filtrar por integración si se especifica
+        if integration_id:
+            tenant_filter["integration_id"] = integration_id
+        
+        # Buscar carritos finalizados (con orden asociada)
+        finalized_filter = {
+            **tenant_filter,
+            "id_order": {"$exists": True, "$nin": [None, "0"]}
+        }
+        
+        carts_cursor = db.ecommerce_carts.find(
+            finalized_filter,
+            {"_id": 0}
+        ).sort("date_add", -1).limit(limit)
+        
+        carts = await carts_cursor.to_list(limit)
+        
+        return carts
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al obtener carritos finalizados: {str(e)}"
+        )

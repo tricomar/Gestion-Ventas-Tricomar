@@ -5,14 +5,15 @@ import {
   Package, 
   TrendingUp, 
   Users, 
-  Mail, 
-  MessageSquare, 
   ShoppingBag,
+  ShoppingCart,
   CheckCircle,
   Clock,
   XCircle,
   Truck,
-  RefreshCw
+  RefreshCw,
+  ExternalLink,
+  AlertCircle
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -28,87 +29,58 @@ const EcommercePage = () => {
     monthly_sales: 0,
     new_customers: 0
   });
-  const [customers, setCustomers] = useState([]);
-  const [guestEmails, setGuestEmails] = useState([]);
+  const [abandonedCarts, setAbandonedCarts] = useState([]);
+  const [finalizedCarts, setFinalizedCarts] = useState([]);
+  const [integrations, setIntegrations] = useState([]);
+  const [selectedIntegration, setSelectedIntegration] = useState('all');
+  const [activeTab, setActiveTab] = useState('orders'); // 'orders', 'abandoned', 'finalized'
   const [loading, setLoading] = useState(true);
-  const [selectedOrder, setSelectedOrder] = useState(null);
-  const [messageText, setMessageText] = useState('');
 
   useEffect(() => {
-    fetchEcommerceData();
-    // Polling cada 30 segundos para nuevos pedidos
-    const interval = setInterval(fetchEcommerceData, 30000);
-    return () => clearInterval(interval);
+    fetchIntegrations();
   }, []);
+
+  useEffect(() => {
+    if (integrations.length > 0 || selectedIntegration === 'all') {
+      fetchEcommerceData();
+    }
+  }, [selectedIntegration]);
+
+  const fetchIntegrations = async () => {
+    try {
+      const response = await axios.get(`${API}/integrations/prestashop`);
+      setIntegrations(response.data);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching integrations:', error);
+      setLoading(false);
+    }
+  };
 
   const fetchEcommerceData = async () => {
     try {
+      const integrationParam = selectedIntegration !== 'all' 
+        ? `?integration_id=${selectedIntegration}` 
+        : '';
+
       // Obtener órdenes
-      const ordersRes = await axios.get(`${API}/ecommerce/orders?limit=50`);
+      const ordersRes = await axios.get(`${API}/ecommerce/orders${integrationParam}&limit=50`);
       setOrders(ordersRes.data);
 
       // Obtener estadísticas
       const statsRes = await axios.get(`${API}/ecommerce/stats`);
       setStats(statsRes.data);
 
-      // Obtener últimos clientes
-      const customersRes = await axios.get(`${API}/ecommerce/customers?limit=10`);
-      setCustomers(customersRes.data);
+      // Obtener carritos abandonados
+      const abandonedRes = await axios.get(`${API}/ecommerce/carts/abandoned${integrationParam}&limit=50`);
+      setAbandonedCarts(abandonedRes.data);
 
-      // Obtener correos de invitados
-      const guestsRes = await axios.get(`${API}/ecommerce/guest-emails?limit=20`);
-      setGuestEmails(guestsRes.data);
+      // Obtener carritos finalizados
+      const finalizedRes = await axios.get(`${API}/ecommerce/carts/finalized${integrationParam}&limit=50`);
+      setFinalizedCarts(finalizedRes.data);
 
     } catch (error) {
       console.error('Error fetching ecommerce data:', error);
-      // No mostrar toast para evitar spam en polling
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const updateOrderStatus = async (orderId, newStatus) => {
-    try {
-      await axios.patch(`${API}/ecommerce/orders/${orderId}/status`, {
-        status: newStatus
-      });
-      
-      toast.success('Estado actualizado correctamente', {
-        style: {
-          background: '#D4F0A5',
-          color: '#0f172a',
-          border: '2px solid #0f172a',
-          fontWeight: 'bold',
-        }
-      });
-      
-      fetchEcommerceData();
-    } catch (error) {
-      console.error('Error updating order status:', error);
-      toast.error('Error al actualizar el estado');
-    }
-  };
-
-  const sendMessage = async (customerId, customerEmail) => {
-    if (!messageText.trim()) {
-      toast.error('Escribe un mensaje');
-      return;
-    }
-
-    try {
-      await axios.post(`${API}/ecommerce/messages`, {
-        customer_id: customerId,
-        customer_email: customerEmail,
-        message: messageText,
-        order_id: selectedOrder?.id
-      });
-      
-      toast.success('Mensaje enviado correctamente');
-      setMessageText('');
-      setSelectedOrder(null);
-    } catch (error) {
-      console.error('Error sending message:', error);
-      toast.error('Error al enviar el mensaje');
     }
   };
 
@@ -135,17 +107,30 @@ const EcommercePage = () => {
     return <Icon className="w-4 h-4" />;
   };
 
+  const getIntegrationName = (integrationId) => {
+    const integration = integrations.find(i => i.id === integrationId);
+    return integration ? integration.store_name : 'Desconocido';
+  };
+
+  const getPrestashopOrderUrl = (cart) => {
+    const integration = integrations.find(i => i.id === cart.integration_id);
+    if (!integration || !cart.id_order) return null;
+    
+    // Construir URL de la orden en PrestaShop
+    return `${integration.api_url.replace('/api', '')}/index.php?controller=AdminOrders&id_order=${cart.id_order}&vieworder&token=${integration.api_key}`;
+  };
+
   const StatCard = ({ title, value, icon: Icon, gradient }) => (
     <div 
-      className={`bg-gradient-to-br ${gradient} border-2 border-slate-900 rounded-xl p-6`}
-      style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
+      className={`bg-gradient-to-br ${gradient} border-4 border-slate-900 rounded-xl p-6`}
+      style={{ boxShadow: '8px 8px 0px 0px rgba(15,23,42,1)' }}
     >
       <div className="flex items-start justify-between mb-4">
-        <div className="p-3 bg-white/90 border-2 border-slate-900 rounded-lg">
+        <div className="p-3 bg-white border-2 border-slate-900 rounded-lg">
           <Icon className="w-6 h-6 text-slate-900" />
         </div>
       </div>
-      <h3 className="text-sm font-bold text-slate-900 mb-2">{title}</h3>
+      <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide mb-2">{title}</h3>
       <p className="text-3xl font-black text-slate-900">{value}</p>
     </div>
   );
@@ -156,6 +141,20 @@ const EcommercePage = () => {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-500 border-t-transparent mx-auto mb-4"></div>
           <p className="text-slate-600 font-medium">Cargando datos de ecommerce...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (integrations.length === 0) {
+    return (
+      <div className="p-8">
+        <div className="max-w-2xl mx-auto text-center mt-20">
+          <div className="text-8xl mb-6">🛍️</div>
+          <h2 className="text-3xl font-black text-slate-900 mb-4">No hay integraciones de ecommerce</h2>
+          <p className="text-slate-600 mb-8">
+            Ve a <strong>Configuración → Integraciones</strong> para conectar tu tienda PrestaShop
+          </p>
         </div>
       </div>
     );
@@ -174,6 +173,33 @@ const EcommercePage = () => {
         <p className="text-lg text-slate-600 font-medium">
           Gestiona tus ventas online en tiempo real
         </p>
+      </div>
+
+      {/* Store Filter Buttons */}
+      <div className="mb-8 flex flex-wrap gap-3">
+        <button
+          onClick={() => setSelectedIntegration('all')}
+          className={`px-6 py-3 border-2 border-slate-900 rounded-xl font-bold transition-all ${
+            selectedIntegration === 'all'
+              ? 'bg-indigo-400 text-white shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]'
+              : 'bg-white text-slate-900 hover:bg-slate-50'
+          }`}
+        >
+          🏪 Todas las Tiendas
+        </button>
+        {integrations.map((integration) => (
+          <button
+            key={integration.id}
+            onClick={() => setSelectedIntegration(integration.id)}
+            className={`px-6 py-3 border-2 border-slate-900 rounded-xl font-bold transition-all ${
+              selectedIntegration === integration.id
+                ? 'bg-purple-400 text-white shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]'
+                : 'bg-white text-slate-900 hover:bg-slate-50'
+            }`}
+          >
+            🛒 {integration.store_name}
+          </button>
+        ))}
       </div>
 
       {/* Stats Grid */}
@@ -200,177 +226,212 @@ const EcommercePage = () => {
           title="Nuevos Clientes"
           value={stats.new_customers}
           icon={Users}
-          gradient="from-pink-400 to-purple-400"
+          gradient="from-green-400 to-teal-400"
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Orders List */}
-        <div className="lg:col-span-2">
-          <div 
-            className="bg-white border-2 border-slate-900 rounded-xl p-6"
-            style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
-          >
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-black text-slate-900 flex items-center gap-2">
-                <Package className="w-5 h-5" />
-                Últimos Pedidos
-              </h2>
-              <button
-                onClick={fetchEcommerceData}
-                className="px-3 py-2 bg-gradient-to-r from-purple-500 to-pink-500 border-2 border-slate-900 rounded-lg text-white font-bold hover:scale-105 transition-all"
-              >
-                <RefreshCw className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="space-y-3 max-h-[600px] overflow-y-auto">
-              {orders.length > 0 ? (
-                orders.map((order) => (
-                  <div 
-                    key={order.id}
-                    className="bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-slate-900 rounded-xl p-4"
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <p className="font-black text-slate-900">Pedido #{order.reference || order.id}</p>
-                        <p className="text-xs text-slate-600">
-                          {new Date(order.date_add || order.created_at).toLocaleString('es-CL')}
-                        </p>
-                        <p className="text-sm text-slate-700 mt-1">
-                          Cliente: <span className="font-bold">{order.customer_name || order.customer_email}</span>
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-2xl font-black text-slate-900">
-                          ${order.total_paid?.toLocaleString('es-CL') || order.total?.toLocaleString('es-CL')}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className={`px-3 py-1 border-2 rounded-lg text-xs font-bold flex items-center gap-1 ${getStatusColor(order.current_state || order.status)}`}>
-                        {getStatusIcon(order.current_state || order.status)}
-                        {order.current_state || order.status}
-                      </span>
-
-                      <select
-                        value={order.current_state || order.status}
-                        onChange={(e) => updateOrderStatus(order.id, e.target.value)}
-                        className="px-3 py-1 bg-white border-2 border-slate-900 rounded-lg text-xs font-bold"
-                      >
-                        <option value="pending">Pendiente</option>
-                        <option value="processing">Procesando</option>
-                        <option value="shipped">Enviado</option>
-                        <option value="completed">Completado</option>
-                        <option value="cancelled">Cancelado</option>
-                      </select>
-
-                      <button
-                        onClick={() => setSelectedOrder(order)}
-                        className="px-3 py-1 bg-blue-500 border-2 border-slate-900 rounded-lg text-white text-xs font-bold hover:bg-blue-600"
-                      >
-                        <MessageSquare className="w-3 h-3 inline mr-1" />
-                        Mensaje
-                      </button>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-center text-slate-500 py-12">No hay pedidos recientes</p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Sidebar - Customers & Guests */}
-        <div className="space-y-6">
-          {/* Recent Customers */}
-          <div 
-            className="bg-white border-2 border-slate-900 rounded-xl p-6"
-            style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
-          >
-            <h3 className="text-lg font-black text-slate-900 mb-4 flex items-center gap-2">
-              <Users className="w-5 h-5" />
-              Últimos Clientes
-            </h3>
-            <div className="space-y-2">
-              {customers.length > 0 ? (
-                customers.map((customer) => (
-                  <div key={customer.id} className="p-3 bg-gradient-to-r from-purple-50 to-pink-50 border border-slate-900 rounded-lg">
-                    <p className="font-bold text-sm text-slate-900">{customer.firstname} {customer.lastname}</p>
-                    <p className="text-xs text-slate-600">{customer.email}</p>
-                  </div>
-                ))
-              ) : (
-                <p className="text-xs text-slate-500 text-center py-4">Sin clientes recientes</p>
-              )}
-            </div>
-          </div>
-
-          {/* Guest Emails */}
-          <div 
-            className="bg-white border-2 border-slate-900 rounded-xl p-6"
-            style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
-          >
-            <h3 className="text-lg font-black text-slate-900 mb-4 flex items-center gap-2">
-              <Mail className="w-5 h-5" />
-              Correos Invitados
-            </h3>
-            <div className="space-y-2 max-h-60 overflow-y-auto">
-              {guestEmails.length > 0 ? (
-                guestEmails.map((email, index) => (
-                  <div key={index} className="p-2 bg-yellow-50 border border-slate-900 rounded text-xs font-mono">
-                    {email}
-                  </div>
-                ))
-              ) : (
-                <p className="text-xs text-slate-500 text-center py-4">Sin correos de invitados</p>
-              )}
-            </div>
-          </div>
-        </div>
+      {/* Tab Navigation */}
+      <div className="flex gap-3 mb-6">
+        <button
+          onClick={() => setActiveTab('orders')}
+          className={`px-6 py-3 border-2 border-slate-900 rounded-xl font-bold transition-all ${
+            activeTab === 'orders'
+              ? 'bg-blue-400 text-white shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]'
+              : 'bg-white text-slate-900 hover:bg-slate-50'
+          }`}
+        >
+          📦 Órdenes ({orders.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('abandoned')}
+          className={`px-6 py-3 border-2 border-slate-900 rounded-xl font-bold transition-all ${
+            activeTab === 'abandoned'
+              ? 'bg-yellow-400 text-slate-900 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]'
+              : 'bg-white text-slate-900 hover:bg-slate-50'
+          }`}
+        >
+          🛒 Carritos Abandonados ({abandonedCarts.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('finalized')}
+          className={`px-6 py-3 border-2 border-slate-900 rounded-xl font-bold transition-all ${
+            activeTab === 'finalized'
+              ? 'bg-green-400 text-white shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]'
+              : 'bg-white text-slate-900 hover:bg-slate-50'
+          }`}
+        >
+          ✅ Carritos Finalizados ({finalizedCarts.length})
+        </button>
       </div>
 
-      {/* Message Modal */}
-      {selectedOrder && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div 
-            className="bg-white border-4 border-slate-900 rounded-xl p-8 max-w-md w-full"
-            style={{ boxShadow: '8px 8px 0px 0px rgba(15,23,42,1)' }}
-          >
-            <h3 className="text-2xl font-black text-slate-900 mb-4">Enviar Mensaje</h3>
-            <p className="text-sm text-slate-600 mb-4">
-              Para: <span className="font-bold">{selectedOrder.customer_email}</span><br />
-              Pedido: <span className="font-bold">#{selectedOrder.reference || selectedOrder.id}</span>
-            </p>
-            
-            <textarea
-              value={messageText}
-              onChange={(e) => setMessageText(e.target.value)}
-              placeholder="Escribe tu mensaje aquí..."
-              rows={5}
-              className="w-full px-4 py-3 border-2 border-slate-900 rounded-xl font-medium resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 mb-4"
-            />
-            
-            <div className="flex gap-3">
-              <button
-                onClick={() => sendMessage(selectedOrder.customer_id, selectedOrder.customer_email)}
-                className="flex-1 py-3 bg-gradient-to-r from-purple-500 to-pink-500 border-2 border-slate-900 rounded-xl font-bold text-white hover:scale-105 transition-all"
-              >
-                Enviar
-              </button>
-              <button
-                onClick={() => {
-                  setSelectedOrder(null);
-                  setMessageText('');
-                }}
-                className="flex-1 py-3 bg-white border-2 border-slate-900 rounded-xl font-bold text-slate-900 hover:bg-slate-50 transition-all"
-              >
-                Cancelar
-              </button>
+      {/* Content Based on Active Tab */}
+      {activeTab === 'orders' && (
+        <div className="bg-white border-4 border-slate-900 rounded-xl p-6"
+             style={{ boxShadow: '8px_8px_0px_0px_rgba(15,23,42,1)' }}>
+          <h2 className="text-2xl font-black text-slate-900 mb-6">📦 Órdenes de Compra</h2>
+          
+          {orders.length === 0 ? (
+            <div className="text-center py-12">
+              <Package className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+              <p className="text-slate-500 font-medium">No hay órdenes para mostrar</p>
+            </div>
+          ) : (
+            <div className="space-y-3 max-h-[600px] overflow-y-auto">
+              {orders.map((order) => (
+                <div 
+                  key={order.id}
+                  className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-slate-900 rounded-xl"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <h3 className="font-bold text-slate-900">Orden #{order.reference || order.id}</h3>
+                      <p className="text-sm text-slate-600">{order.customer_name || 'Cliente'}</p>
+                      <p className="text-xs text-slate-500">
+                        🏪 {getIntegrationName(order.integration_id)}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-mono font-bold text-lg text-slate-900">
+                        ${parseFloat(order.total_paid || 0).toLocaleString('es-CL')}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {new Date(order.date_add).toLocaleDateString('es-CL')}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <span className={`px-3 py-1 border-2 rounded-lg text-xs font-bold flex items-center gap-1 ${getStatusColor(order.current_state || order.status)}`}>
+                      {getStatusIcon(order.current_state || order.status)}
+                      {order.current_state || order.status}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'abandoned' && (
+        <div className="bg-white border-4 border-slate-900 rounded-xl p-6"
+             style={{ boxShadow: '8px_8px_0px_0px_rgba(15,23,42,1)' }}>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-black text-slate-900">🛒 Carritos Abandonados</h2>
+            <div className="flex items-center gap-2 px-4 py-2 bg-yellow-100 border-2 border-yellow-600 rounded-lg">
+              <AlertCircle className="w-5 h-5 text-yellow-700" />
+              <span className="text-sm font-bold text-yellow-900">
+                {abandonedCarts.length} carritos sin completar
+              </span>
             </div>
           </div>
+          
+          {abandonedCarts.length === 0 ? (
+            <div className="text-center py-12">
+              <ShoppingCart className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+              <p className="text-slate-500 font-medium">No hay carritos abandonados</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {abandonedCarts.map((cart) => (
+                <div 
+                  key={cart.id}
+                  className="p-4 bg-gradient-to-br from-yellow-50 to-orange-50 border-2 border-slate-900 rounded-xl"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <h3 className="font-bold text-slate-900">Carrito #{cart.id}</h3>
+                      <p className="text-sm text-slate-600">Cliente ID: {cart.id_customer}</p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        🏪 {getIntegrationName(cart.integration_id)}
+                      </p>
+                    </div>
+                    <ShoppingCart className="w-8 h-8 text-yellow-600" />
+                  </div>
+                  
+                  <div className="text-xs text-slate-600 mb-2">
+                    <p>📅 {new Date(cart.date_add).toLocaleString('es-CL')}</p>
+                    {cart.date_upd && (
+                      <p>🔄 Actualizado: {new Date(cart.date_upd).toLocaleString('es-CL')}</p>
+                    )}
+                  </div>
+                  
+                  <div className="pt-3 border-t-2 border-slate-200">
+                    <span className="px-3 py-1 bg-yellow-200 border-2 border-yellow-600 rounded-lg text-xs font-bold">
+                      ⏳ Abandonado
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === 'finalized' && (
+        <div className="bg-white border-4 border-slate-900 rounded-xl p-6"
+             style={{ boxShadow: '8px_8px_0px_0px_rgba(15,23,42,1)' }}>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-black text-slate-900">✅ Carritos Finalizados</h2>
+            <div className="flex items-center gap-2 px-4 py-2 bg-green-100 border-2 border-green-600 rounded-lg">
+              <CheckCircle className="w-5 h-5 text-green-700" />
+              <span className="text-sm font-bold text-green-900">
+                {finalizedCarts.length} compras completadas
+              </span>
+            </div>
+          </div>
+          
+          {finalizedCarts.length === 0 ? (
+            <div className="text-center py-12">
+              <CheckCircle className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+              <p className="text-slate-500 font-medium">No hay carritos finalizados</p>
+            </div>
+          ) : (
+            <div className="space-y-3 max-h-[600px] overflow-y-auto">
+              {finalizedCarts.map((cart) => {
+                const prestashopUrl = getPrestashopOrderUrl(cart);
+                return (
+                  <div 
+                    key={cart.id}
+                    className="p-4 bg-gradient-to-r from-green-50 to-teal-50 border-2 border-slate-900 rounded-xl"
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-bold text-slate-900">Carrito #{cart.id}</h3>
+                          <span className="px-2 py-0.5 bg-green-200 border border-green-600 rounded text-xs font-bold text-green-900">
+                            ✅ Finalizado
+                          </span>
+                        </div>
+                        <p className="text-sm text-slate-600">Orden: #{cart.id_order}</p>
+                        <p className="text-xs text-slate-500">Cliente ID: {cart.id_customer}</p>
+                        <p className="text-xs text-slate-500">
+                          🏪 {getIntegrationName(cart.integration_id)}
+                        </p>
+                      </div>
+                      <CheckCircle className="w-8 h-8 text-green-600" />
+                    </div>
+                    
+                    <div className="text-xs text-slate-600 mb-3">
+                      <p>📅 {new Date(cart.date_add).toLocaleString('es-CL')}</p>
+                    </div>
+                    
+                    {prestashopUrl && (
+                      <a
+                        href={prestashopUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500 text-white border-2 border-slate-900 rounded-lg font-bold hover:bg-blue-600 transition-colors"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                        Ver en PrestaShop
+                      </a>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>
