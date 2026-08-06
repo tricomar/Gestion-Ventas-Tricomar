@@ -92,8 +92,8 @@ const NotesPage = () => {
   };
 
   const filteredNotes = notes.filter(note =>
-    note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    note.content.toLowerCase().includes(searchQuery.toLowerCase())
+    (note.title && note.title.toLowerCase().includes(searchQuery.toLowerCase())) ||
+    (note.content && note.content.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   if (loading) {
