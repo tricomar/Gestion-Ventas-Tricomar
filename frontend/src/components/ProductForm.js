@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { X } from 'lucide-react';
+import { X, Info } from 'lucide-react';
 import { useSettings } from '../context/SettingsContext';
 import { useStores } from '../hooks/useStores';
 
@@ -10,7 +10,7 @@ const API = `${BACKEND_URL}/api`;
 
 const ProductForm = ({ product, onClose }) => {
   const { settings } = useSettings();
-  const { storeOptions } = useStores();
+  const { storeOptions, stores } = useStores();
   const [name, setName] = useState('');
   const [store, setStore] = useState('A');
   const [costPrice, setCostPrice] = useState('');
@@ -18,17 +18,42 @@ const ProductForm = ({ product, onClose }) => {
   const [sku, setSku] = useState('');
   const [category, setCategory] = useState('');
   const [loading, setLoading] = useState(false);
+  const [categories, setCategories] = useState([]);
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
 
   useEffect(() => {
     if (product) {
       setName(product.name);
       setStore(product.store);
-      setCostPrice(product.cost_price.toString());
-      setSalePrice(product.sale_price.toString());
+      setCostPrice(product.cost_price ? product.cost_price.toString() : '');
+      setSalePrice(product.sale_price ? product.sale_price.toString() : '');
       setSku(product.sku || '');
       setCategory(product.category || '');
     }
   }, [product]);
+
+  const fetchCategories = async () => {
+    try {
+      const response = await axios.get(`${API}/categories`);
+      setCategories(response.data);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+    }
+  };
+
+  // Filtrar categorías por tienda seleccionada
+  const availableCategories = React.useMemo(() => {
+    const selectedStoreName = stores?.find(s => s.id === store)?.name;
+    if (!selectedStoreName) return [];
+    
+    return categories
+      .filter(c => c.store === selectedStoreName)
+      .map(c => c.name)
+      .sort();
+  }, [categories, store, stores]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -38,8 +63,8 @@ const ProductForm = ({ product, onClose }) => {
       const data = {
         name,
         store,
-        cost_price: parseFloat(costPrice),
-        sale_price: parseFloat(salePrice),
+        cost_price: costPrice ? parseFloat(costPrice) : 0,
+        sale_price: salePrice ? parseFloat(salePrice) : 0,
         sku: sku || null,
         category: category || null
       };
@@ -160,7 +185,7 @@ const ProductForm = ({ product, onClose }) => {
                 data-testid="product-category-select"
               >
                 <option value="">Sin categoría</option>
-                {settings?.product_categories?.map((cat, idx) => (
+                {availableCategories.map((cat, idx) => (
                   <option key={idx} value={cat}>
                     {cat}
                   </option>
@@ -172,8 +197,22 @@ const ProductForm = ({ product, onClose }) => {
           {/* Prices Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold tracking-widest uppercase text-slate-500 mb-2">
-                Precio Costo *
+              <label className="flex items-center gap-2 text-xs font-bold tracking-widest uppercase text-slate-500 mb-2">
+                Precio Costo
+                <div className="relative group">
+                  <Info className="w-4 h-4 text-slate-400 cursor-help" />
+                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block w-64 z-50">
+                    <div className="bg-slate-900 text-white text-xs rounded-lg p-3 shadow-xl border-2 border-slate-700">
+                      <p className="font-normal leading-relaxed">
+                        Si no ingresas el precio de costo, no podremos calcular cuánto ganas en cada venta. 
+                        Es importante para mejorar tu negocio.
+                      </p>
+                      <div className="absolute top-full left-1/2 transform -translate-x-1/2 -mt-1">
+                        <div className="border-8 border-transparent border-t-slate-900"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </label>
               <input
                 type="number"
@@ -181,7 +220,7 @@ const ProductForm = ({ product, onClose }) => {
                 value={costPrice}
                 onChange={(e) => setCostPrice(e.target.value)}
                 className="w-full bg-white border-2 border-slate-900 rounded-xl px-4 py-3 font-medium text-slate-900 focus:ring-0 focus:outline-none focus:border-indigo-500 transition-all"
-                required
+                placeholder="Opcional"
                 data-testid="product-cost-input"
               />
             </div>
@@ -196,6 +235,7 @@ const ProductForm = ({ product, onClose }) => {
                 onChange={(e) => setSalePrice(e.target.value)}
                 className="w-full bg-white border-2 border-slate-900 rounded-xl px-4 py-3 font-medium text-slate-900 focus:ring-0 focus:outline-none focus:border-indigo-500 transition-all"
                 required
+                placeholder="0"
                 data-testid="product-sale-price-input"
               />
             </div>

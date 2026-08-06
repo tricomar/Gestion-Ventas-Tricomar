@@ -44,9 +44,11 @@ const InventoryPage = () => {
   
   // Available categories (from settings + unique from products)
   const [availableCategories, setAvailableCategories] = useState([]);
+  const [allCategories, setAllCategories] = useState([]); // Todas las categorías de DB
 
   useEffect(() => {
     fetchProducts();
+    fetchCategories();
   }, []);
   
   useEffect(() => {
@@ -54,12 +56,49 @@ const InventoryPage = () => {
   }, [products, searchQuery, selectedCategory, selectedStore, sortBy, sortOrder]);
 
   useEffect(() => {
-    // Extraer categorías únicas de productos + categorías de settings
-    const productCategories = [...new Set(products.map(p => p.category).filter(Boolean))];
-    const settingsCategories = settings?.product_categories || [];
-    const allCategories = [...new Set([...productCategories, ...settingsCategories])];
-    setAvailableCategories(allCategories.sort());
-  }, [products, settings]);
+    // Filtrar categorías según la tienda seleccionada
+    filterCategoriesByStore();
+  }, [selectedStore, allCategories, products]);
+
+  const fetchCategories = async () => {
+    try {
+      const response = await axios.get(`${API}/categories`);
+      setAllCategories(response.data);
+    } catch (error) {
+      console.error('Error fetching categories:', error);
+    }
+  };
+
+  const filterCategoriesByStore = () => {
+    let categoriesToShow = [];
+    
+    if (selectedStore === 'all') {
+      // Mostrar todas las categorías de la DB + las de productos
+      const dbCategories = allCategories.map(c => c.name);
+      const productCategories = [...new Set(products.map(p => p.category).filter(Boolean))];
+      categoriesToShow = [...new Set([...dbCategories, ...productCategories])];
+    } else {
+      // Filtrar categorías solo de la tienda seleccionada
+      const dbCategoriesForStore = allCategories
+        .filter(c => c.store === stores.find(s => s.id === selectedStore)?.name)
+        .map(c => c.name);
+      const productCategoriesForStore = [
+        ...new Set(
+          products
+            .filter(p => p.store === selectedStore && p.category)
+            .map(p => p.category)
+        )
+      ];
+      categoriesToShow = [...new Set([...dbCategoriesForStore, ...productCategoriesForStore])];
+    }
+    
+    setAvailableCategories(categoriesToShow.sort());
+    
+    // Si la categoría seleccionada no está disponible en la nueva tienda, resetear
+    if (selectedCategory !== 'all' && !categoriesToShow.includes(selectedCategory)) {
+      setSelectedCategory('all');
+    }
+  };
 
   const fetchProducts = async () => {
     try {
@@ -505,42 +544,9 @@ const InventoryPage = () => {
       `}</style>
 
       {/* Search and Filter Bar */}
-      <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Search by Name or SKU */}
-        <div className="md:col-span-2">
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Buscar por nombre o SKU..."
-              className="w-full pl-12 pr-4 py-3 bg-white border-2 border-slate-900 rounded-xl font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
-              data-testid="search-products-input"
-            />
-          </div>
-        </div>
-        
-        {/* Filter by Category */}
-        <div>
-          <div className="relative">
-            <Filter className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full pl-12 pr-4 py-3 bg-white border-2 border-slate-900 rounded-xl font-medium text-slate-900 cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-900"
-              data-testid="filter-category-select"
-            >
-              <option value="all">Todas las categorías</option>
-              {availableCategories.map((cat, idx) => (
-                <option key={idx} value={cat}>{cat}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-        
-        {/* Filter by Store */}
-        <div>
+      <div className="mb-6 space-y-4">
+        {/* Filter by Store - Alone on top */}
+        <div className="w-full md:w-1/3">
           <div className="relative">
             <Package className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
             <select
@@ -550,8 +556,8 @@ const InventoryPage = () => {
               data-testid="filter-store-select"
             >
               <option value="all">Todas las tiendas</option>
-              {stores.map((store) => (
-                <option key={store.code} value={store.code}>
+              {stores && stores.map((store) => (
+                <option key={store.id} value={store.id}>
                   {store.name}
                 </option>
               ))}
@@ -559,6 +565,41 @@ const InventoryPage = () => {
           </div>
         </div>
 
+        {/* Search and Category Filter - Side by side */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Search by Name or SKU */}
+          <div className="md:col-span-2">
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Buscar por nombre o SKU..."
+                className="w-full pl-12 pr-4 py-3 bg-white border-2 border-slate-900 rounded-xl font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900"
+                data-testid="search-products-input"
+              />
+            </div>
+          </div>
+          
+          {/* Filter by Category */}
+          <div>
+            <div className="relative">
+              <Filter className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="w-full pl-12 pr-4 py-3 bg-white border-2 border-slate-900 rounded-xl font-medium text-slate-900 cursor-pointer focus:outline-none focus:ring-2 focus:ring-slate-900"
+                data-testid="filter-category-select"
+              >
+                <option value="all">Todas las categorías</option>
+                {availableCategories.map((cat, idx) => (
+                  <option key={idx} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
       </div>
       
       {/* Results count and Pagination controls */}

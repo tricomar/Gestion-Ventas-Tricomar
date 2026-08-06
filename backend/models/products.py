@@ -6,7 +6,7 @@ import uuid
 class ProductBase(BaseModel):
     name: str
     store: str = "A"  # Default A
-    cost_price: float = 0
+    cost_price: Optional[float] = 0  # Opcional - sin esto no se puede calcular utilidad
     sale_price: float = 0
     sku: Optional[str] = None
     brand: Optional[str] = None  # Marca del producto
