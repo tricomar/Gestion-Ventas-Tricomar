@@ -436,7 +436,27 @@ const InventoryPage = () => {
     setShowDeleteModal(false);
   };
 
-  const handleSortToggle = (field) => {
+  const handleSyncStock = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.post(`${API}/products/sync-stock`);
+      
+      toast.success('Stock sincronizado', {
+        description: `${response.data.synced_count} productos actualizados desde PrestaShop`,
+        duration: 5000
+      });
+      
+      // Recargar productos
+      fetchProducts();
+    } catch (error) {
+      console.error('Error syncing stock:', error);
+      toast.error('Error al sincronizar stock', {
+        description: error.response?.data?.detail || 'Intenta nuevamente'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
     if (sortBy === field) {
       // Ya estamos ordenando por este campo, alternar dirección
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
@@ -509,6 +529,21 @@ const InventoryPage = () => {
             <Calculator className="w-5 h-5" />
             <span className="hidden sm:inline">Calculadora</span>
           </button>
+          <button
+            onClick={handleSyncStock}
+            disabled={loading}
+            className="flex items-center gap-2 text-white border-2 border-slate-900 rounded-xl px-6 py-3 font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:bg-purple-600"
+            style={{
+              backgroundColor: '#A78BFA',
+              boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)'
+            }}
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            <span className="hidden sm:inline">Sync Stock</span>
+          </button>
+
           <button
             onClick={handleExportToExcel}
             className="flex items-center gap-2 text-slate-900 border-2 border-slate-900 rounded-xl px-6 py-3 font-bold transition-all hover:bg-slate-50"

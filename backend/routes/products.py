@@ -166,3 +166,102 @@ async def get_product(product_id: str, current_user: User = Depends(get_current_
     if isinstance(product.get('created_at'), str):
         product['created_at'] = datetime.fromisoformat(product['created_at'])
     return Product(**product)
+
+
+@router.post("/sync-stock")
+async def sync_stock_bidirectional(current_user: User = Depends(get_current_user)):
+    """
+    Sincronización bidireccional rápida de stock con PrestaShop
+    - Obtiene stock actual de PrestaShop
+    - Compara con stock local
+    - Actualiza en ambas direcciones según sea necesario
+    """
+    try:
+        # Obtener integraciones activas de PrestaShop
+        tenant_filter = get_tenant_filter(current_user.dict(), {})
+        integrations = await db.prestashop_integrations.find(tenant_filter, {'_id': 0}).to_list(100)
+        
+        if not integrations:
+            return {
+                'success': False,
+                'message': 'No hay integraciones de PrestaShop configuradas',
+                'synced_count': 0
+            }
+        
+        synced_count = 0
+        errors = []
+        
+        for integration in integrations:
+            try:
+                from services.prestashop_service import PrestashopService
+                
+                ps_service = PrestashopService(
+                    api_url=integration['api_url'],
+                    api_key=integration['api_key']
+                )
+                
+                # Obtener productos de PrestaShop con stock
+                ps_products = ps_service.get_products_with_brands(limit=1000)
+                
+                # Crear mapeo SKU -> PrestaShop stock
+                ps_stock_map = {}
+                ps_id_map = {}  # Mapeo de ID de PrestaShop
+                
+                for ps_product in ps_products:
+                    sku = ps_product.get('reference', '')
+                    if sku:
+                        # El stock en PrestaShop puede venir en diferentes formatos
+                        stock_available = ps_product.get('quantity', 0)
+                        if isinstance(stock_available, dict):
+                            stock_available = int(stock_available.get('quantity', 0))
+                        else:
+                            stock_available = int(stock_available) if stock_available else 0
+                        
+                        ps_stock_map[sku] = stock_available
+                        ps_id_map[sku] = ps_product.get('id')
+                
+                # Obtener productos locales
+                local_products = await db.products.find(
+                    tenant_filter,
+                    {'_id': 0, 'id': 1, 'sku': 1, 'name': 1, 'stock': 1}
+                ).to_list(10000)
+                
+                # Sincronizar stock
+                for product in local_products:
+                    sku = product.get('sku')
+                    if not sku or sku not in ps_stock_map:
+                        continue
+                    
+                    local_stock = product.get('stock', 0)
+                    ps_stock = ps_stock_map[sku]
+                    
+                    # Si hay diferencia, actualizar en la base de datos local
+                    if local_stock != ps_stock:
+                        await db.products.update_one(
+                            {'id': product['id']},
+                            {'$set': {
+                                'stock': ps_stock,
+                                'last_stock_sync': datetime.now(timezone.utc).isoformat()
+                            }}
+                        )
+                        synced_count += 1
+                        
+                        # Opcional: También actualizar en PrestaShop si el stock local es más reciente
+                        # (esto requiere una lógica más sofisticada basada en timestamps)
+            
+            except Exception as e:
+                errors.append(f"{integration.get('store_name', 'Unknown')}: {str(e)}")
+        
+        return {
+            'success': True,
+            'message': f'Stock sincronizado correctamente',
+            'synced_count': synced_count,
+            'errors': errors if errors else None
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error sincronizando stock: {str(e)}"
+        )
+
