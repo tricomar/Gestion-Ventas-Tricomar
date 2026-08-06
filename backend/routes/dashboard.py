@@ -326,6 +326,181 @@ async def get_historic_data(
         "store_info": store_info
     }
 
+@router.get("/stats")
+async def get_dashboard_stats(current_user: User = Depends(get_current_user)):
+    """
+    Get comprehensive dashboard statistics including sales, products, transactions, etc.
+    Uses both POS sales_records and ecommerce_orders data
+    """
+    try:
+        # Date ranges
+        now_chile = datetime.now(CHILE_TZ)
+        today_start = now_chile.replace(hour=0, minute=0, second=0, microsecond=0).astimezone(timezone.utc)
+        tomorrow_start = today_start + timedelta(days=1)
+        month_start = now_chile.replace(day=1, hour=0, minute=0, second=0, microsecond=0).astimezone(timezone.utc)
+        
+        if month_start.month == 12:
+            next_month_start = month_start.replace(year=month_start.year + 1, month=1)
+        else:
+            next_month_start = month_start.replace(month=month_start.month + 1)
+        
+        # Get sales_records (POS sales)
+        today_sales = await db.sales_records.find({
+            'account_id': current_user.account_id,
+            'created_at': {'$gte': today_start.isoformat(), '$lt': tomorrow_start.isoformat()}
+        }, {'_id': 0}).to_list(10000)
+        
+        month_sales = await db.sales_records.find({
+            'account_id': current_user.account_id,
+            'created_at': {'$gte': month_start.isoformat(), '$lt': next_month_start.isoformat()}
+        }, {'_id': 0}).to_list(100000)
+        
+        # Get ecommerce orders to supplement data
+        today_ecommerce = await db.ecommerce_orders.find({
+            'account_id': current_user.account_id,
+            'date_add': {'$gte': today_start.isoformat(), '$lt': tomorrow_start.isoformat()}
+        }, {'_id': 0}).to_list(10000)
+        
+        month_ecommerce = await db.ecommerce_orders.find({
+            'account_id': current_user.account_id,
+            'date_add': {'$gte': month_start.isoformat(), '$lt': next_month_start.isoformat()}
+        }, {'_id': 0}).to_list(100000)
+        
+        # Calculate totals from POS
+        today_sales_total = sum(s.get('total', 0) for s in today_sales)
+        month_sales_total = sum(s.get('total', 0) for s in month_sales)
+        
+        # Add ecommerce sales
+        today_ecommerce_total = sum(float(o.get('total_paid', 0)) for o in today_ecommerce)
+        month_ecommerce_total = sum(float(o.get('total_paid', 0)) for o in month_ecommerce)
+        
+        total_today = today_sales_total + today_ecommerce_total
+        total_month = month_sales_total + month_ecommerce_total
+        
+        # Get expenses
+        today_expenses = await db.expenses_records.find({
+            'account_id': current_user.account_id,
+            'created_at': {'$gte': today_start.isoformat(), '$lt': tomorrow_start.isoformat()}
+        }, {'_id': 0}).to_list(10000)
+        
+        today_expenses_total = sum(e.get('amount', 0) for e in today_expenses)
+        
+        # Get products count
+        products_count = await db.products.count_documents({'account_id': current_user.account_id})
+        
+        # Sales by payment method (from POS)
+        payment_methods = {}
+        for sale in month_sales:
+            method = sale.get('payment_method', 'Efectivo')
+            if method not in payment_methods:
+                payment_methods[method] = 0
+            payment_methods[method] += sale.get('total', 0)
+        
+        # Add ecommerce payment methods
+        for order in month_ecommerce:
+            method = order.get('payment_method', 'PrestaShop')
+            if method not in payment_methods:
+                payment_methods[method] = 0
+            payment_methods[method] += float(order.get('total_paid', 0))
+        
+        # Recent sales (last 10 from both POS and ecommerce)
+        recent_pos_sales = await db.sales_records.find({
+            'account_id': current_user.account_id
+        }, {'_id': 0}).sort('created_at', -1).limit(5).to_list(5)
+        
+        recent_ecommerce = await db.ecommerce_orders.find({
+            'account_id': current_user.account_id
+        }, {'_id': 0}).sort('date_add', -1).limit(5).to_list(5)
+        
+        # Format recent sales
+        recent_sales = []
+        for sale in recent_pos_sales:
+            recent_sales.append({
+                'date': sale.get('created_at'),
+                'product': sale.get('product_name', 'Venta POS'),
+                'total': sale.get('total', 0),
+                'type': 'POS'
+            })
+        
+        for order in recent_ecommerce:
+            recent_sales.append({
+                'date': order.get('date_add'),
+                'product': f"Orden #{order.get('reference', order.get('id', 'N/A'))}",
+                'total': float(order.get('total_paid', 0)),
+                'type': 'Ecommerce'
+            })
+        
+        # Sort by date
+        recent_sales.sort(key=lambda x: x.get('date', ''), reverse=True)
+        recent_sales = recent_sales[:10]
+        
+        # Sales by store
+        sales_by_store = {}
+        for sale in month_sales:
+            store = sale.get('store', 'A')
+            if store not in sales_by_store:
+                sales_by_store[store] = []
+            sales_by_store[store].append(sale)
+        
+        # Daily sales for last 30 days
+        thirty_days_ago = now_chile - timedelta(days=30)
+        thirty_days_sales = await db.sales_records.find({
+            'account_id': current_user.account_id,
+            'created_at': {'$gte': thirty_days_ago.astimezone(timezone.utc).isoformat()}
+        }, {'_id': 0}).to_list(100000)
+        
+        thirty_days_ecommerce = await db.ecommerce_orders.find({
+            'account_id': current_user.account_id,
+            'date_add': {'$gte': thirty_days_ago.astimezone(timezone.utc).isoformat()}
+        }, {'_id': 0}).to_list(100000)
+        
+        daily_sales_map = {}
+        
+        # Add POS sales
+        for sale in thirty_days_sales:
+            try:
+                date_str = sale.get('created_at', '')[:10]
+                if date_str not in daily_sales_map:
+                    daily_sales_map[date_str] = 0
+                daily_sales_map[date_str] += sale.get('total', 0)
+            except (KeyError, ValueError, TypeError):
+                continue
+        
+        # Add ecommerce sales
+        for order in thirty_days_ecommerce:
+            try:
+                date_str = order.get('date_add', '')[:10]
+                if date_str not in daily_sales_map:
+                    daily_sales_map[date_str] = 0
+                daily_sales_map[date_str] += float(order.get('total_paid', 0))
+            except (KeyError, ValueError, TypeError):
+                continue
+        
+        daily_sales_chart = [
+            {'date': date, 'total': total}
+            for date, total in sorted(daily_sales_map.items())[-30:]
+        ]
+        
+        return {
+            'today_sales': total_today,
+            'today_transactions': len(today_sales) + len(today_ecommerce),
+            'today_expenses': today_expenses_total,
+            'monthly_sales': total_month,
+            'monthly_transactions': len(month_sales) + len(month_ecommerce),
+            'total_products': products_count,
+            'sales_by_payment_method': payment_methods,
+            'recent_sales': recent_sales,
+            'sales_by_store': {k: len(v) for k, v in sales_by_store.items()},
+            'daily_sales_chart': daily_sales_chart,
+            'ecommerce_orders_count': len(month_ecommerce)
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error fetching dashboard stats: {str(e)}"
+        )
+
 @router.get("/historic-daily-data")
 async def get_historic_daily_data(
     year: int, 
