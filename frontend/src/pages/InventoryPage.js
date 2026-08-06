@@ -797,7 +797,7 @@ const InventoryPage = () => {
                   </th>
                   <th 
                     className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider cursor-pointer hover:bg-slate-800 transition-colors"
-                    onClick={() => handleSortToggle('name')}
+                    onClick={() => handleSort('name')}
                   >
                     <div className="flex items-center gap-2">
                       Nombre Producto
@@ -810,7 +810,7 @@ const InventoryPage = () => {
                   </th>
                   <th 
                     className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider cursor-pointer hover:bg-slate-800 transition-colors"
-                    onClick={() => handleSortToggle('brand')}
+                    onClick={() => handleSort('brand')}
                   >
                     <div className="flex items-center gap-2">
                       Marca
@@ -829,7 +829,7 @@ const InventoryPage = () => {
                   </th>
                   <th 
                     className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider cursor-pointer hover:bg-slate-800 transition-colors"
-                    onClick={() => handleSortToggle('expiry_date')}
+                    onClick={() => handleSort('expiry_date')}
                   >
                     <div className="flex items-center gap-2">
                       Fecha Vencimiento
@@ -845,7 +845,7 @@ const InventoryPage = () => {
                   </th>
                   <th 
                     className="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider cursor-pointer hover:bg-slate-800 transition-colors"
-                    onClick={() => handleSortToggle('price')}
+                    onClick={() => handleSort('price')}
                   >
                     <div className="flex items-center justify-end gap-2">
                       Precio Venta
