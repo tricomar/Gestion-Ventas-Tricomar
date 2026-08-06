@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { CheckCircle, XCircle, Trash2, Settings, ShoppingCart, Package, Download } from 'lucide-react';
+import { CheckCircle, XCircle, Trash2, Settings, ShoppingCart, Package, Download, Webhook } from 'lucide-react';
 import PrestashopModal from './PrestashopModal';
 import { useStores } from '../../hooks/useStores';
 
@@ -70,6 +70,33 @@ const IntegrationsTab = () => {
     
     toast.success('Descargando módulo de PrestaShop...', {
       description: 'Instálalo en tu tienda para sincronización en tiempo real'
+    });
+  };
+
+  const handleCopyWebhookUrl = (integrationId) => {
+    const webhookUrl = `${BACKEND_URL}/api/integrations/webhooks/prestashop/${integrationId}`;
+    
+    // Copiar al portapapeles
+    navigator.clipboard.writeText(webhookUrl).then(() => {
+      toast.success('URL de Webhook copiada', {
+        description: 'Pégala en la configuración del módulo PrestaShop',
+        duration: 4000
+      });
+    }).catch(() => {
+      // Fallback para navegadores que no soportan clipboard API
+      const textArea = document.createElement('textarea');
+      textArea.value = webhookUrl;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        toast.success('URL de Webhook copiada');
+      } catch (err) {
+        toast.error('No se pudo copiar la URL');
+      }
+      document.body.removeChild(textArea);
     });
   };
 
@@ -191,6 +218,15 @@ const IntegrationsTab = () => {
                     >
                       <Settings className="w-5 h-5" />
                     </button>
+                    
+                    <button
+                      onClick={() => handleCopyWebhookUrl(integration.id)}
+                      className="p-2 bg-purple-100 border-2 border-slate-900 rounded-lg hover:bg-purple-200 transition-colors"
+                      title="Copiar URL de Webhook"
+                    >
+                      <Webhook className="w-5 h-5 text-purple-700" />
+                    </button>
+                    
                     <button
                       onClick={() => handleDeleteIntegration(integration.id)}
                       className="p-2 bg-red-100 border-2 border-slate-900 rounded-lg hover:bg-red-200 transition-colors"
