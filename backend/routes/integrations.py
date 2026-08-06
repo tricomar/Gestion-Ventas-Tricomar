@@ -1026,36 +1026,38 @@ async def sync_orders_resource(ps_service, integration_id: str, account_id: str,
             continue
         
         # Verificar si ya existe
-        existing = await db.prestashop_orders.find_one({
+        existing = await db.ecommerce_orders.find_one({
             'account_id': account_id,
             'integration_id': integration_id,
-            'prestashop_id': order_id
+            'id': str(order_id)
         }, {'_id': 0})
         
         # Extraer datos de la orden
         order_data = {
             'account_id': account_id,
             'integration_id': integration_id,
-            'prestashop_id': order_id,
+            'id': str(order_id),
             'reference': ps_order.get('reference', f'PS-{order_id}'),
             'customer_id': int(ps_order.get('id_customer', 0)),
+            'customer_name': ps_order.get('customer', {}).get('firstname', '') + ' ' + ps_order.get('customer', {}).get('lastname', ''),
             'total_paid': float(ps_order.get('total_paid', 0)),
             'total_products': float(ps_order.get('total_products', 0)),
-            'current_state': int(ps_order.get('current_state', 0)),
+            'current_state': ps_order.get('current_state', 'pending'),
+            'status': ps_order.get('current_state', 'pending'),
             'payment_method': ps_order.get('payment', 'Unknown'),
             'date_add': ps_order.get('date_add'),
-            'date_upd': ps_order.get('date_upd')
+            'date_upd': ps_order.get('date_upd'),
+            'synced_at': datetime.now(timezone.utc).isoformat()
         }
         
         if existing:
-            await db.prestashop_orders.update_one(
-                {'account_id': account_id, 'integration_id': integration_id, 'prestashop_id': order_id},
+            await db.ecommerce_orders.update_one(
+                {'account_id': account_id, 'integration_id': integration_id, 'id': str(order_id)},
                 {'$set': order_data}
             )
         else:
-            order_data['id'] = str(uuid4())
             order_data['created_at'] = datetime.now(timezone.utc).isoformat()
-            await db.prestashop_orders.insert_one(order_data)
+            await db.ecommerce_orders.insert_one(order_data)
         
         synced_count += 1
     
@@ -1174,37 +1176,33 @@ async def sync_abandoned_carts_resource(ps_service, integration_id: str, account
         if cart_id in converted_cart_ids:
             continue
         
-        # Verificar si tiene productos (no está vacío)
-        # associations = ps_cart.get('associations', {})
-        # if not associations or not associations.get('cart_rows'):
-        #     continue
-        
         # Verificar si ya existe
-        existing = await db.abandoned_carts.find_one({
+        existing = await db.ecommerce_carts.find_one({
             'account_id': account_id,
             'integration_id': integration_id,
-            'prestashop_id': cart_id
+            'id': str(cart_id)
         }, {'_id': 0})
         
         cart_data = {
             'account_id': account_id,
             'integration_id': integration_id,
-            'prestashop_id': cart_id,
-            'customer_id': int(ps_cart.get('id_customer', 0)),
+            'id': str(cart_id),
+            'id_customer': int(ps_cart.get('id_customer', 0)),
             'date_add': ps_cart.get('date_add'),
             'date_upd': ps_cart.get('date_upd'),
-            'status': 'abandoned'
+            'id_order': None,  # Carrito abandonado sin orden
+            'status': 'abandoned',
+            'synced_at': datetime.now(timezone.utc).isoformat()
         }
         
         if existing:
-            await db.abandoned_carts.update_one(
-                {'account_id': account_id, 'integration_id': integration_id, 'prestashop_id': cart_id},
+            await db.ecommerce_carts.update_one(
+                {'account_id': account_id, 'integration_id': integration_id, 'id': str(cart_id)},
                 {'$set': cart_data}
             )
         else:
-            cart_data['id'] = str(uuid4())
             cart_data['created_at'] = datetime.now(timezone.utc).isoformat()
-            await db.abandoned_carts.insert_one(cart_data)
+            await db.ecommerce_carts.insert_one(cart_data)
         
         synced_count += 1
     
@@ -1217,7 +1215,7 @@ async def sync_completed_carts_resource(ps_service, integration_id: str, account
     ps_carts = ps_service.get_carts(limit=500)
     ps_orders = ps_service.get_orders(limit=500)
     
-    # Crear mapeo cart_id -> order_id
+    # Crear mapeo cart_id -> order
     cart_to_order = {int(order.get('id_cart', 0)): order for order in ps_orders if order.get('id_cart')}
     
     synced_count = 0
@@ -1231,36 +1229,37 @@ async def sync_completed_carts_resource(ps_service, integration_id: str, account
             continue
         
         related_order = cart_to_order[cart_id]
+        order_id = int(related_order.get('id', 0))
         
         # Verificar si ya existe
-        existing = await db.completed_carts.find_one({
+        existing = await db.ecommerce_carts.find_one({
             'account_id': account_id,
             'integration_id': integration_id,
-            'prestashop_id': cart_id
+            'id': str(cart_id)
         }, {'_id': 0})
         
         cart_data = {
             'account_id': account_id,
             'integration_id': integration_id,
-            'prestashop_id': cart_id,
-            'customer_id': int(ps_cart.get('id_customer', 0)),
-            'order_id': int(related_order.get('id', 0)),
+            'id': str(cart_id),
+            'id_customer': int(ps_cart.get('id_customer', 0)),
+            'id_order': str(order_id),  # Orden asociada
             'order_reference': related_order.get('reference', ''),
             'total_paid': float(related_order.get('total_paid', 0)),
             'date_add': ps_cart.get('date_add'),
             'date_completed': related_order.get('date_add'),
-            'status': 'completed'
+            'status': 'completed',
+            'synced_at': datetime.now(timezone.utc).isoformat()
         }
         
         if existing:
-            await db.completed_carts.update_one(
-                {'account_id': account_id, 'integration_id': integration_id, 'prestashop_id': cart_id},
+            await db.ecommerce_carts.update_one(
+                {'account_id': account_id, 'integration_id': integration_id, 'id': str(cart_id)},
                 {'$set': cart_data}
             )
         else:
-            cart_data['id'] = str(uuid4())
             cart_data['created_at'] = datetime.now(timezone.utc).isoformat()
-            await db.completed_carts.insert_one(cart_data)
+            await db.ecommerce_carts.insert_one(cart_data)
         
         synced_count += 1
     
