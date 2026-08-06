@@ -180,7 +180,7 @@ const NotesPage = () => {
           <div className="lg:col-span-1">
             <NotesCalendar
               selectedDate={selectedDate}
-              onDateChange={setSelectedDate}
+              onDateSelect={setSelectedDate}
               notesData={notes}
             />
           </div>
