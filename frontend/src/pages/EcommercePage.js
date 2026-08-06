@@ -60,11 +60,11 @@ const EcommercePage = () => {
   const fetchEcommerceData = async () => {
     try {
       const integrationParam = selectedIntegration !== 'all' 
-        ? `?integration_id=${selectedIntegration}` 
+        ? `integration_id=${selectedIntegration}&` 
         : '';
 
       // Obtener órdenes
-      const ordersRes = await axios.get(`${API}/ecommerce/orders${integrationParam}&limit=50`);
+      const ordersRes = await axios.get(`${API}/ecommerce/orders?${integrationParam}limit=50`);
       setOrders(ordersRes.data);
 
       // Obtener estadísticas
@@ -72,11 +72,11 @@ const EcommercePage = () => {
       setStats(statsRes.data);
 
       // Obtener carritos abandonados
-      const abandonedRes = await axios.get(`${API}/ecommerce/carts/abandoned${integrationParam}&limit=50`);
+      const abandonedRes = await axios.get(`${API}/ecommerce/carts/abandoned?${integrationParam}limit=50`);
       setAbandonedCarts(abandonedRes.data);
 
       // Obtener carritos finalizados
-      const finalizedRes = await axios.get(`${API}/ecommerce/carts/finalized${integrationParam}&limit=50`);
+      const finalizedRes = await axios.get(`${API}/ecommerce/carts/finalized?${integrationParam}limit=50`);
       setFinalizedCarts(finalizedRes.data);
 
     } catch (error) {
@@ -112,12 +112,22 @@ const EcommercePage = () => {
     return integration ? integration.store_name : 'Desconocido';
   };
 
-  const getPrestashopOrderUrl = (cart) => {
-    const integration = integrations.find(i => i.id === cart.integration_id);
-    if (!integration || !cart.id_order) return null;
+  const getPrestashopOrderUrl = (integrationId, orderId) => {
+    const integration = integrations.find(i => i.id === integrationId);
+    if (!integration || !orderId || !integration.api_url) return '#';
     
-    // Construir URL de la orden en PrestaShop
-    return `${integration.api_url.replace('/api', '')}/index.php?controller=AdminOrders&id_order=${cart.id_order}&vieworder&token=${integration.api_key}`;
+    // Construir URL del admin de PrestaShop para ver la orden
+    // Formato típico: https://tienda.com/admin123/index.php?controller=AdminOrders&id_order=123&vieworder
+    const baseUrl = integration.api_url.replace('/api', '');
+    return `${baseUrl}/index.php?controller=AdminOrders&id_order=${orderId}&vieworder`;
+  };
+
+  const getPrestashopCartUrl = (cart) => {
+    const integration = integrations.find(i => i.id === cart.integration_id);
+    if (!integration || !cart.id_order || !integration.api_url) return null;
+    
+    // Si el carrito está finalizado y tiene orden, enlazar a la orden
+    return `${integration.api_url.replace('/api', '')}/index.php?controller=AdminOrders&id_order=${cart.id_order}&vieworder`;
   };
 
   const StatCard = ({ title, value, icon: Icon, gradient }) => (
@@ -300,11 +310,27 @@ const EcommercePage = () => {
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-2">
-                    <span className={`px-3 py-1 border-2 rounded-lg text-xs font-bold flex items-center gap-1 ${getStatusColor(order.current_state || order.status)}`}>
-                      {getStatusIcon(order.current_state || order.status)}
-                      {order.current_state || order.status}
-                    </span>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className={`px-3 py-1 border-2 rounded-lg text-xs font-bold flex items-center gap-1 ${getStatusColor(order.current_state || order.status)}`}>
+                        {getStatusIcon(order.current_state || order.status)}
+                        {order.current_state || order.status}
+                      </span>
+                      <span className="text-xs text-slate-600 font-medium">
+                        💳 {order.payment_method || 'Sin método'}
+                      </span>
+                    </div>
+                    {order.integration_id && (
+                      <a
+                        href={getPrestashopOrderUrl(order.integration_id, order.id)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 px-3 py-1 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-slate-800 transition-colors"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        Ver en PrestaShop
+                      </a>
+                    )}
                   </div>
                 </div>
               ))}
@@ -389,7 +415,7 @@ const EcommercePage = () => {
           ) : (
             <div className="space-y-3 max-h-[600px] overflow-y-auto">
               {finalizedCarts.map((cart) => {
-                const prestashopUrl = getPrestashopOrderUrl(cart);
+                const prestashopUrl = getPrestashopCartUrl(cart);
                 return (
                   <div 
                     key={cart.id}
