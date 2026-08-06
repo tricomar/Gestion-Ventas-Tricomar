@@ -48,7 +48,7 @@ const EcommercePage = () => {
 
   const fetchIntegrations = async () => {
     try {
-      const response = await axios.get(`${API}/integrations/prestashop`);
+      const response = await axios.get(`${API}/integrations/prestashop/list`);
       setIntegrations(response.data);
       setLoading(false);
     } catch (error) {
