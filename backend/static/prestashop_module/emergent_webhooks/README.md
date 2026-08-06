@@ -1,4 +1,4 @@
-# Emergent Webhooks - Módulo para PrestaShop
+# Negocio Feliz Webhooks - Módulo para PrestaShop
 
 ## 📦 Instalación
 
@@ -39,9 +39,9 @@ El módulo enviará notificaciones automáticamente cuando:
 
 ## 📝 Soporte
 
-Para soporte o preguntas:
-- Email: support@emergentlabs.com
-- Documentación: https://docs.emergentlabs.com
+Para soporte o preguntas contacta a través de:
+- Tu panel de Negocio Feliz
+- Soporte técnico de Negocio Feliz
 
 ## 🔐 Seguridad
 
@@ -49,4 +49,4 @@ Este módulo envía datos a través de HTTPS. Asegúrate de que tu dominio de Ne
 
 ## 📄 Licencia
 
-Copyright © 2026 Emergent Labs. Todos los derechos reservados.
+Copyright © 2026 Negocio Feliz. Todos los derechos reservados.

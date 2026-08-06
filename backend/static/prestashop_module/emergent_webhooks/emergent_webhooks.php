@@ -1,11 +1,11 @@
 <?php
 /**
- * Emergent Webhooks Module for PrestaShop
+ * Negocio Feliz Webhooks Module for PrestaShop
  * 
  * Envía webhooks en tiempo real a Negocio Feliz ERP
  * cuando ocurren eventos importantes en la tienda
  *
- * @author Emergent Labs
+ * @author Negocio Feliz
  * @version 1.0.0
  */
 
@@ -20,14 +20,14 @@ class Emergent_Webhooks extends Module
         $this->name = 'emergent_webhooks';
         $this->tab = 'administration';
         $this->version = '1.0.0';
-        $this->author = 'Emergent Labs';
+        $this->author = 'Negocio Feliz';
         $this->need_instance = 0;
         $this->ps_versions_compliancy = array('min' => '1.6', 'max' => _PS_VERSION_);
         $this->bootstrap = true;
 
         parent::__construct();
 
-        $this->displayName = $this->l('Emergent Webhooks');
+        $this->displayName = $this->l('Negocio Feliz Webhooks');
         $this->description = $this->l('Sincronización en tiempo real con Negocio Feliz ERP mediante webhooks');
         $this->confirmUninstall = $this->l('¿Estás seguro de desinstalar este módulo?');
     }
@@ -202,7 +202,7 @@ class Emergent_Webhooks extends Module
 
         // Log para debug (opcional)
         if ($http_code != 200) {
-            error_log("Emergent Webhook Error: HTTP $http_code - Event: $event - Resource: $resource - ID: $resource_id");
+            error_log("Negocio Feliz Webhook Error: HTTP $http_code - Event: $event - Resource: $resource - ID: $resource_id");
         }
     }
 
