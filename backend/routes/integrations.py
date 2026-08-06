@@ -1625,6 +1625,68 @@ async def sync_incremental_background(job_id: str, integration_id: str, integrat
         )
 
 
+@router.get("/webhooks/prestashop/{integration_id}/status")
+async def get_webhook_status(integration_id: str):
+    """
+    Verificar estado del webhook de una integración
+    No requiere autenticación - es un endpoint de verificación
+    """
+    try:
+        # Buscar últimos eventos de webhook
+        recent_events = await db.webhook_events.find(
+            {'integration_id': integration_id},
+            {'_id': 0}
+        ).sort('timestamp', -1).limit(10).to_list(10)
+        
+        if not recent_events:
+            return {
+                'status': 'inactive',
+                'message': 'No se han recibido webhooks',
+                'last_event': None,
+                'event_count': 0
+            }
+        
+        # Verificar si hay eventos recientes (últimas 24 horas)
+        from datetime import datetime, timezone, timedelta
+        now = datetime.now(timezone.utc)
+        last_event = recent_events[0]
+        last_event_time = datetime.fromisoformat(last_event.get('timestamp', last_event.get('created_at')))
+        
+        time_diff = now - last_event_time
+        
+        # Verificar si hay errores en los últimos eventos
+        error_count = sum(1 for e in recent_events if e.get('error'))
+        
+        # Determinar estado
+        if error_count > 5:
+            status = 'error'
+            message = f'{error_count} webhooks con errores'
+        elif time_diff < timedelta(hours=24):
+            status = 'active'
+            message = f'Último webhook hace {int(time_diff.total_seconds() / 60)} minutos'
+        elif time_diff < timedelta(days=7):
+            status = 'inactive'
+            message = f'Último webhook hace {int(time_diff.total_seconds() / 3600)} horas'
+        else:
+            status = 'inactive'
+            message = f'Último webhook hace {int(time_diff.days)} días'
+        
+        return {
+            'status': status,
+            'message': message,
+            'last_event': last_event_time.isoformat(),
+            'event_count': len(recent_events),
+            'error_count': error_count
+        }
+        
+    except Exception as e:
+        return {
+            'status': 'unknown',
+            'message': 'No se pudo verificar el estado',
+            'error': str(e)
+        }
+
+
 @router.delete("/prestashop/{integration_id}")
 async def delete_integration(
     integration_id: str,

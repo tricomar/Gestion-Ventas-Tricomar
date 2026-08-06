@@ -14,21 +14,113 @@ const IntegrationsTab = () => {
   const [loading, setLoading] = useState(true);
   const [showPrestashopModal, setShowPrestashopModal] = useState(false);
   const [selectedIntegration, setSelectedIntegration] = useState(null);
+  const [webhookStatus, setWebhookStatus] = useState({}); // Estado de webhooks por integration_id
 
   useEffect(() => {
     fetchIntegrations();
   }, []);
+
+  useEffect(() => {
+    // Verificar estado de webhooks cada 30 segundos
+    const interval = setInterval(() => {
+      integrations.forEach(integration => {
+        checkWebhookStatus(integration.id);
+      });
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [integrations]);
 
   const fetchIntegrations = async () => {
     try {
       setLoading(true);
       const response = await axios.get(`${API}/integrations/prestashop/list`);
       setIntegrations(response.data);
+      
+      // Verificar estado de webhooks para cada integración
+      response.data.forEach(integration => {
+        checkWebhookStatus(integration.id);
+      });
     } catch (error) {
       console.error('Error fetching integrations:', error);
       toast.error('Error al cargar integraciones');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const checkWebhookStatus = async (integrationId) => {
+    try {
+      // Verificar últimos eventos de webhook
+      const response = await axios.get(`${API}/integrations/webhooks/prestashop/${integrationId}/status`);
+      
+      setWebhookStatus(prev => ({
+        ...prev,
+        [integrationId]: response.data
+      }));
+    } catch (error) {
+      // Si no hay endpoint de status, usar lógica por defecto
+      setWebhookStatus(prev => ({
+        ...prev,
+        [integrationId]: {
+          status: 'unknown',
+          message: 'No configurado'
+        }
+      }));
+    }
+  };
+
+  const getWebhookStatusBadge = (integrationId) => {
+    const status = webhookStatus[integrationId];
+    
+    if (!status) {
+      return {
+        color: 'gray',
+        bgColor: 'bg-slate-100',
+        borderColor: 'border-slate-400',
+        textColor: 'text-slate-700',
+        label: 'Sin verificar',
+        icon: '⚪'
+      };
+    }
+
+    // Determinar estado basado en última actividad
+    if (status.status === 'active') {
+      return {
+        color: 'green',
+        bgColor: 'bg-green-100',
+        borderColor: 'border-green-600',
+        textColor: 'text-green-800',
+        label: 'Webhook Activo',
+        icon: '🟢'
+      };
+    } else if (status.status === 'inactive') {
+      return {
+        color: 'yellow',
+        bgColor: 'bg-yellow-100',
+        borderColor: 'border-yellow-600',
+        textColor: 'text-yellow-800',
+        label: 'Webhook Inactivo',
+        icon: '🟡'
+      };
+    } else if (status.status === 'error') {
+      return {
+        color: 'red',
+        bgColor: 'bg-red-100',
+        borderColor: 'border-red-600',
+        textColor: 'text-red-800',
+        label: 'Webhook Error',
+        icon: '🔴'
+      };
+    } else {
+      return {
+        color: 'gray',
+        bgColor: 'bg-slate-100',
+        borderColor: 'border-slate-400',
+        textColor: 'text-slate-700',
+        label: 'No configurado',
+        icon: '⚪'
+      };
     }
   };
 
@@ -172,17 +264,33 @@ const IntegrationsTab = () => {
                         <h4 className="text-lg font-bold text-slate-900">{integration.store_name}</h4>
                         <p className="text-sm text-slate-600">{integration.shop_url}</p>
                       </div>
-                      {integration.is_active ? (
-                        <span className="px-3 py-1 bg-green-100 border-2 border-green-600 rounded-full text-xs font-bold text-green-800">
-                          <CheckCircle className="w-4 h-4 inline mr-1" />
-                          Conectado
-                        </span>
-                      ) : (
-                        <span className="px-3 py-1 bg-red-100 border-2 border-red-600 rounded-full text-xs font-bold text-red-800">
-                          <XCircle className="w-4 h-4 inline mr-1" />
-                          Desconectado
-                        </span>
-                      )}
+                      <div className="flex items-center gap-2 ml-auto">
+                        {integration.is_active ? (
+                          <span className="px-3 py-1 bg-green-100 border-2 border-green-600 rounded-full text-xs font-bold text-green-800 flex items-center gap-1">
+                            <CheckCircle className="w-4 h-4" />
+                            Conectado
+                          </span>
+                        ) : (
+                          <span className="px-3 py-1 bg-red-100 border-2 border-red-600 rounded-full text-xs font-bold text-red-800 flex items-center gap-1">
+                            <XCircle className="w-4 h-4" />
+                            Desconectado
+                          </span>
+                        )}
+                        
+                        {/* Badge de estado del webhook */}
+                        {(() => {
+                          const webhookBadge = getWebhookStatusBadge(integration.id);
+                          return (
+                            <span 
+                              className={`px-3 py-1 ${webhookBadge.bgColor} border-2 ${webhookBadge.borderColor} rounded-full text-xs font-bold ${webhookBadge.textColor} flex items-center gap-1`}
+                              title={webhookBadge.label}
+                            >
+                              <span>{webhookBadge.icon}</span>
+                              {webhookBadge.label}
+                            </span>
+                          );
+                        })()}
+                      </div>
                     </div>
                     
                     <div className="grid grid-cols-3 gap-4 mt-4 text-sm">
