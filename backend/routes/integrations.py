@@ -879,9 +879,6 @@ async def sync_categories_resource(ps_service, integration_id: str, account_id: 
         
         synced_count += 1
     
-    # Sincronizar a la colección de categorías locales
-    await category_sync.sync_to_local_categories()
-    
     return synced_count
 
 
