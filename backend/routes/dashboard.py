@@ -344,16 +344,30 @@ async def get_dashboard_stats(current_user: User = Depends(get_current_user)):
         else:
             next_month_start = month_start.replace(month=month_start.month + 1)
         
-        # Get sales_records (POS sales)
-        today_sales = await db.sales_records.find({
+        # Get sales_records and sales (POS sales) - check both collections
+        today_sales_records = await db.sales_records.find({
             'account_id': current_user.account_id,
             'created_at': {'$gte': today_start.isoformat(), '$lt': tomorrow_start.isoformat()}
         }, {'_id': 0}).to_list(10000)
         
-        month_sales = await db.sales_records.find({
+        today_sales = await db.sales.find({
+            'account_id': current_user.account_id,
+            'created_at': {'$gte': today_start.isoformat(), '$lt': tomorrow_start.isoformat()}
+        }, {'_id': 0}).to_list(10000)
+        
+        month_sales_records = await db.sales_records.find({
             'account_id': current_user.account_id,
             'created_at': {'$gte': month_start.isoformat(), '$lt': next_month_start.isoformat()}
         }, {'_id': 0}).to_list(100000)
+        
+        month_sales = await db.sales.find({
+            'account_id': current_user.account_id,
+            'created_at': {'$gte': month_start.isoformat(), '$lt': next_month_start.isoformat()}
+        }, {'_id': 0}).to_list(100000)
+        
+        # Combine both
+        all_today_sales = today_sales_records + today_sales
+        all_month_sales = month_sales_records + month_sales
         
         # Get ecommerce orders to supplement data
         today_ecommerce = await db.ecommerce_orders.find({
@@ -366,9 +380,9 @@ async def get_dashboard_stats(current_user: User = Depends(get_current_user)):
             'date_add': {'$gte': month_start.isoformat(), '$lt': next_month_start.isoformat()}
         }, {'_id': 0}).to_list(100000)
         
-        # Calculate totals from POS
-        today_sales_total = sum(s.get('total', 0) for s in today_sales)
-        month_sales_total = sum(s.get('total', 0) for s in month_sales)
+        # Calculate totals from POS (both sales and sales_records)
+        today_sales_total = sum(s.get('total', 0) for s in all_today_sales)
+        month_sales_total = sum(s.get('total', 0) for s in all_month_sales)
         
         # Add ecommerce sales
         today_ecommerce_total = sum(float(o.get('total_paid', 0)) for o in today_ecommerce)
@@ -388,9 +402,9 @@ async def get_dashboard_stats(current_user: User = Depends(get_current_user)):
         # Get products count
         products_count = await db.products.count_documents({'account_id': current_user.account_id})
         
-        # Sales by payment method (from POS)
+        # Sales by payment method (from POS - both collections)
         payment_methods = {}
-        for sale in month_sales:
+        for sale in all_month_sales:
             method = sale.get('payment_method', 'Efectivo')
             if method not in payment_methods:
                 payment_methods[method] = 0
@@ -403,10 +417,16 @@ async def get_dashboard_stats(current_user: User = Depends(get_current_user)):
                 payment_methods[method] = 0
             payment_methods[method] += float(order.get('total_paid', 0))
         
-        # Recent sales (last 10 from both POS and ecommerce)
-        recent_pos_sales = await db.sales_records.find({
+        # Recent sales (last 10 from both POS collections and ecommerce)
+        recent_sales_records = await db.sales_records.find({
             'account_id': current_user.account_id
         }, {'_id': 0}).sort('created_at', -1).limit(5).to_list(5)
+        
+        recent_sales = await db.sales.find({
+            'account_id': current_user.account_id
+        }, {'_id': 0}).sort('created_at', -1).limit(5).to_list(5)
+        
+        recent_pos_sales = recent_sales_records + recent_sales
         
         recent_ecommerce = await db.ecommerce_orders.find({
             'account_id': current_user.account_id
@@ -436,18 +456,25 @@ async def get_dashboard_stats(current_user: User = Depends(get_current_user)):
         
         # Sales by store
         sales_by_store = {}
-        for sale in month_sales:
+        for sale in all_month_sales:
             store = sale.get('store', 'A')
             if store not in sales_by_store:
                 sales_by_store[store] = []
             sales_by_store[store].append(sale)
         
-        # Daily sales for last 30 days
+        # Daily sales for last 30 days (from both collections)
         thirty_days_ago = now_chile - timedelta(days=30)
-        thirty_days_sales = await db.sales_records.find({
+        thirty_days_sales_records = await db.sales_records.find({
             'account_id': current_user.account_id,
             'created_at': {'$gte': thirty_days_ago.astimezone(timezone.utc).isoformat()}
         }, {'_id': 0}).to_list(100000)
+        
+        thirty_days_sales = await db.sales.find({
+            'account_id': current_user.account_id,
+            'created_at': {'$gte': thirty_days_ago.astimezone(timezone.utc).isoformat()}
+        }, {'_id': 0}).to_list(100000)
+        
+        all_thirty_days = thirty_days_sales_records + thirty_days_sales
         
         thirty_days_ecommerce = await db.ecommerce_orders.find({
             'account_id': current_user.account_id,
@@ -456,8 +483,8 @@ async def get_dashboard_stats(current_user: User = Depends(get_current_user)):
         
         daily_sales_map = {}
         
-        # Add POS sales
-        for sale in thirty_days_sales:
+        # Add POS sales from both collections
+        for sale in all_thirty_days:
             try:
                 date_str = sale.get('created_at', '')[:10]
                 if date_str not in daily_sales_map:
@@ -483,10 +510,10 @@ async def get_dashboard_stats(current_user: User = Depends(get_current_user)):
         
         return {
             'today_sales': total_today,
-            'today_transactions': len(today_sales) + len(today_ecommerce),
+            'today_transactions': len(all_today_sales) + len(today_ecommerce),
             'today_expenses': today_expenses_total,
             'monthly_sales': total_month,
-            'monthly_transactions': len(month_sales) + len(month_ecommerce),
+            'monthly_transactions': len(all_month_sales) + len(month_ecommerce),
             'total_products': products_count,
             'sales_by_payment_method': payment_methods,
             'recent_sales': recent_sales,
