@@ -17,9 +17,14 @@ const DashboardHomePage = () => {
   });
   const [realtimeMetrics, setRealtimeMetrics] = useState({
     today_total: 0,
+    today_pos_sales: 0,
+    today_ecommerce_sales: 0,
     today_sales_count: 0,
     today_expenses_total: 0,
-    today_income_total: 0
+    today_income_total: 0,
+    monthly_sales: 0,
+    monthly_pos_sales: 0,
+    monthly_ecommerce_sales: 0
   });
   const [recentSales, setRecentSales] = useState([]);
   const [chartData, setChartData] = useState([]);
@@ -148,7 +153,7 @@ const DashboardHomePage = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <MetricCard 
           title="Ventas Hoy"
-          value={`${metrics.currency_symbol || '$'}${Math.round(realtimeMetrics.today_total).toLocaleString('es-CL')}`}
+          value={`${metrics.currency_symbol || '$'}${Math.round(realtimeMetrics.today_total || 0).toLocaleString('es-CL')}`}
           subtitle={`POS: ${metrics.currency_symbol || '$'}${Math.round(realtimeMetrics.today_pos_sales || 0).toLocaleString('es-CL')} | Ecommerce: ${metrics.currency_symbol || '$'}${Math.round(realtimeMetrics.today_ecommerce_sales || 0).toLocaleString('es-CL')}`}
           icon={DollarSign}
           gradient="from-green-400 to-emerald-400"
