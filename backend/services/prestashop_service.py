@@ -698,3 +698,41 @@ class PrestashopAPIService:
         except Exception as e:
             print(f"Error updating stock for product {product_id}: {str(e)}")
             return False
+
+
+    
+    async def update_product_active(self, product_id: int, active: bool) -> Dict[str, Any]:
+        """
+        Actualizar el estado activo/inactivo de un producto en PrestaShop
+        
+        Args:
+            product_id: ID del producto en PrestaShop
+            active: True para activar, False para desactivar
+            
+        Returns:
+            Respuesta de PrestaShop
+        """
+        try:
+            # PrestaShop usa 1 para activo, 0 para inactivo
+            active_value = "1" if active else "0"
+            
+            # Crear XML para actualización parcial (PATCH)
+            xml_data = f'''<?xml version="1.0" encoding="UTF-8"?>
+            <prestashop xmlns:xlink="http://www.w3.org/1999/xlink">
+                <product>
+                    <id><![CDATA[{product_id}]]></id>
+                    <active><![CDATA[{active_value}]]></active>
+                </product>
+            </prestashop>'''
+            
+            # Usar PUT para actualización (PrestaShop requiere PUT para modificaciones)
+            response = self._make_request(
+                f'products/{product_id}',
+                method='PUT',
+                data=xml_data
+            )
+            
+            return response
+            
+        except Exception as e:
+            raise Exception(f"Error al actualizar estado de producto {product_id}: {str(e)}")

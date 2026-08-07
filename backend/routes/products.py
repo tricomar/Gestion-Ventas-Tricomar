@@ -15,6 +15,20 @@ from models.users import User
 
 router = APIRouter(prefix="/products", tags=["products"])
 
+# Mapeo de estados de PrestaShop (1 = activo, 0 = inactivo)
+PRESTASHOP_STATE_MAP = {
+    "1": "Esperando pago con cheque",
+    "2": "Pago aceptado",
+    "3": "Preparación en curso",
+    "4": "Enviado",
+    "5": "Entregado",
+    "6": "Cancelado",
+    "7": "Reembolsado",
+    "8": "Error de pago",
+    "10": "Esperando transferencia bancaria",
+    "12": "Pago remoto aceptado",
+}
+
 @router.get("", response_model=List[Product])
 async def get_products(current_user: User = Depends(get_current_user)):
     # Filtro de tenant
@@ -303,5 +317,101 @@ async def sync_stock_bidirectional(current_user: User = Depends(get_current_user
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error sincronizando stock: {str(e)}"
+        )
+
+
+
+@router.patch("/{product_id}/ecommerce-publication")
+async def toggle_ecommerce_publication(
+    product_id: str,
+    active: bool,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Activar/desactivar publicación de producto en ecommerce (PrestaShop)
+    """
+    try:
+        tenant_filter = get_tenant_filter(current_user.dict(), {"id": product_id})
+        
+        # Obtener producto
+        product = await db.products.find_one(tenant_filter, {"_id": 0})
+        
+        if not product:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Producto no encontrado"
+            )
+        
+        # Verificar si hay integraciones PrestaShop activas
+        integrations_cursor = db.prestashop_integrations.find({
+            "account_id": current_user.account_id,
+            "is_active": True
+        }, {"_id": 0})
+        integrations = await integrations_cursor.to_list(100)
+        
+        if not integrations:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No hay integraciones de ecommerce activas"
+            )
+        
+        # Actualizar estado en MongoDB
+        now = datetime.now(timezone.utc)
+        update_data = {
+            "ecommerce_active": active,
+            "ecommerce_last_updated": now.isoformat(),
+            "updated_at": now.isoformat()
+        }
+        
+        await db.products.update_one(
+            tenant_filter,
+            {"$set": update_data}
+        )
+        
+        # Sincronizar con PrestaShop si el producto tiene prestashop_product_id
+        sync_errors = []
+        sync_success = []
+        
+        for integration in integrations:
+            try:
+                # Verificar si el producto está vinculado a esta integración
+                prestashop_key = f"prestashop_product_id_{integration.get('id')}"
+                prestashop_product_id = product.get(prestashop_key) or product.get('prestashop_product_id')
+                
+                if prestashop_product_id:
+                    from services.prestashop_service import PrestashopAPIService
+                    
+                    # Crear servicio de PrestaShop
+                    ps_service = PrestashopAPIService(
+                        shop_url=integration['shop_url'],
+                        api_key=integration['api_key']
+                    )
+                    
+                    # Actualizar estado en PrestaShop
+                    await ps_service.update_product_active(
+                        product_id=int(prestashop_product_id),
+                        active=active
+                    )
+                    
+                    sync_success.append(integration.get('store_name', 'Unknown'))
+            
+            except Exception as e:
+                sync_errors.append(f"{integration.get('store_name', 'Unknown')}: {str(e)}")
+        
+        return {
+            "success": True,
+            "product_id": product_id,
+            "ecommerce_active": active,
+            "synchronized_stores": sync_success,
+            "errors": sync_errors if sync_errors else None,
+            "message": f"Producto {'activado' if active else 'desactivado'} en ecommerce"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al actualizar publicación: {str(e)}"
         )
 

@@ -23,6 +23,8 @@ const InventoryPage = () => {
   const [showForm, setShowForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [showPriceCalculator, setShowPriceCalculator] = useState(false);
+  const [hasActiveEcommerce, setHasActiveEcommerce] = useState(false);
+  const [togglingProduct, setTogglingProduct] = useState(null);
   
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -52,6 +54,7 @@ const InventoryPage = () => {
   useEffect(() => {
     fetchProducts();
     fetchCategories();
+    checkEcommerceIntegrations();
   }, []);
   
   useEffect(() => {
@@ -120,6 +123,42 @@ const InventoryPage = () => {
       setLoading(false);
     }
   };
+
+
+  const checkEcommerceIntegrations = async () => {
+    try {
+      const response = await axios.get(`${API}/integrations/prestashop/list`);
+      const activeIntegrations = response.data.filter(i => i.is_active);
+      setHasActiveEcommerce(activeIntegrations.length > 0);
+    } catch (error) {
+      console.error('Error checking integrations:', error);
+      setHasActiveEcommerce(false);
+    }
+  };
+
+  const handleToggleEcommercePublication = async (productId, currentState) => {
+    try {
+      setTogglingProduct(productId);
+      const newState = !currentState;
+      
+      await axios.patch(`${API}/products/${productId}/ecommerce-publication?active=${newState}`);
+      
+      // Actualizar el producto local
+      setProducts(prev => prev.map(p => 
+        p.id === productId 
+          ? { ...p, ecommerce_active: newState }
+          : p
+      ));
+      
+      toast.success(`Producto ${newState ? 'activado' : 'desactivado'} en ecommerce`);
+    } catch (error) {
+      console.error('Error toggling publication:', error);
+      toast.error(error.response?.data?.detail || 'Error al actualizar publicación');
+    } finally {
+      setTogglingProduct(null);
+    }
+  };
+
   
   const filterProducts = () => {
     let filtered = [...products];
@@ -843,6 +882,11 @@ const InventoryPage = () => {
                   <th className="px-6 py-4 text-center text-xs font-bold uppercase tracking-wider">
                     Stock Disponible
                   </th>
+                  {hasActiveEcommerce && (
+                    <th className="px-6 py-4 text-center text-xs font-bold uppercase tracking-wider">
+                      Publicado Ecommerce
+                    </th>
+                  )}
                   <th 
                     className="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider cursor-pointer hover:bg-slate-800 transition-colors"
                     onClick={() => handleSort('price')}
@@ -966,6 +1010,23 @@ const InventoryPage = () => {
                         {product.stock || 0}
                       </span>
                     </td>
+                    {hasActiveEcommerce && (
+                      <td className="px-6 py-4 text-center">
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={product.ecommerce_active || false}
+                            disabled={togglingProduct === product.id}
+                            onChange={() => handleToggleEcommercePublication(product.id, product.ecommerce_active)}
+                            className="sr-only peer"
+                          />
+                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600 border-2 border-slate-900"></div>
+                          <span className="ms-3 text-sm font-medium text-gray-900">
+                            {togglingProduct === product.id ? '...' : (product.ecommerce_active ? '✓' : '✗')}
+                          </span>
+                        </label>
+                      </td>
+                    )}
                     <td className="px-6 py-4 text-right font-mono font-bold text-lg text-slate-900">
                       ${(product.sale_price || 0).toLocaleString('es-CL')}
                     </td>
