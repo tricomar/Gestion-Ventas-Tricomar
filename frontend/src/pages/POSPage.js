@@ -231,6 +231,9 @@ const POSPage = () => {
       
       // Limpiar carrito
       clearCart();
+      
+      // Refrescar estadísticas del día
+      fetchTodayStats();
     } catch (error) {
       console.error('Error processing payment:', error);
       toast.error('Error al procesar el pago');
