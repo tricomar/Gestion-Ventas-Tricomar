@@ -13,9 +13,11 @@ import {
   Truck,
   RefreshCw,
   ExternalLink,
-  AlertCircle
+  AlertCircle,
+  Eye
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import OrderDetailModal from '../components/ecommerce/OrderDetailModal';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -23,6 +25,7 @@ const API = `${BACKEND_URL}/api`;
 const EcommercePage = () => {
   const { user } = useAuth();
   const [orders, setOrders] = useState([]);
+  const [selectedOrderId, setSelectedOrderId] = useState(null);
   const [stats, setStats] = useState({
     total_orders: 0,
     pending_orders: 0,
@@ -321,23 +324,32 @@ const EcommercePage = () => {
                     <div className="flex items-center gap-2">
                       <span className={`px-3 py-1 border-2 rounded-lg text-xs font-bold flex items-center gap-1 ${getStatusColor(order.current_state || order.status)}`}>
                         {getStatusIcon(order.current_state || order.status)}
-                        {order.current_state || order.status}
+                        {order.state_name || `Estado ${order.current_state || order.status}`}
                       </span>
                       <span className="text-xs text-slate-600 font-medium">
                         💳 {order.payment_method || 'Sin método'}
                       </span>
                     </div>
-                    {order.integration_id && (
-                      <a
-                        href={getPrestashopOrderUrl(order.integration_id, order.id)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1 px-3 py-1 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-slate-800 transition-colors"
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setSelectedOrderId(order.id)}
+                        className="flex items-center gap-1 px-3 py-1 bg-blue-400 text-white rounded-lg text-xs font-bold hover:bg-blue-500 transition-colors border-2 border-slate-900"
                       >
-                        <ExternalLink className="w-3 h-3" />
-                        Ver en PrestaShop
-                      </a>
-                    )}
+                        <Eye className="w-3 h-3" />
+                        Ver Detalle
+                      </button>
+                      {order.integration_id && (
+                        <a
+                          href={getPrestashopOrderUrl(order.integration_id, order.id)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-1 px-3 py-1 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-slate-800 transition-colors"
+                        >
+                          <ExternalLink className="w-3 h-3" />
+                          PrestaShop
+                        </a>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -466,6 +478,18 @@ const EcommercePage = () => {
             </div>
           )}
         </div>
+      )}
+
+      {/* Order Detail Modal */}
+      {selectedOrderId && (
+        <OrderDetailModal
+          orderId={selectedOrderId}
+          onClose={() => setSelectedOrderId(null)}
+          onUpdate={() => {
+            fetchOrders();
+            fetchStats();
+          }}
+        />
       )}
     </div>
   );

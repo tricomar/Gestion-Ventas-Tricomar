@@ -117,11 +117,19 @@ async def get_ecommerce_stats(current_user: User = Depends(get_current_user)):
 @router.get("/orders")
 async def get_orders(
     limit: int = 50,
+    state: str = None,
+    store_code: str = None,
     current_user: User = Depends(get_current_user)
 ):
-    """Obtener últimas órdenes de ecommerce"""
+    """Obtener últimas órdenes de ecommerce con filtros opcionales"""
     try:
         tenant_filter = get_tenant_filter(current_user.dict(), {})
+        
+        # Agregar filtros opcionales
+        if state:
+            tenant_filter["current_state"] = state
+        if store_code:
+            tenant_filter["store_code"] = store_code
         
         # Obtener órdenes ordenadas por fecha descendente
         orders_cursor = db.ecommerce_orders.find(
@@ -139,6 +147,36 @@ async def get_orders(
             detail=f"Error al obtener órdenes: {str(e)}"
         )
 
+@router.get("/orders/{order_id}")
+async def get_order_detail(
+    order_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Obtener detalle completo de un pedido"""
+    try:
+        tenant_filter = get_tenant_filter(current_user.dict(), {"id": order_id})
+        
+        order = await db.ecommerce_orders.find_one(
+            tenant_filter,
+            {"_id": 0}
+        )
+        
+        if not order:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Orden no encontrada"
+            )
+        
+        return order
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al obtener orden: {str(e)}"
+        )
+
 @router.patch("/orders/{order_id}/status")
 async def update_order_status(
     order_id: str,
@@ -150,6 +188,8 @@ async def update_order_status(
         tenant_filter = get_tenant_filter(current_user.dict(), {"id": order_id})
         
         new_status = update_data.get("status")
+        state_name = update_data.get("state_name", "")
+        
         if not new_status:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -157,15 +197,19 @@ async def update_order_status(
             )
         
         # Actualizar estado
+        update_fields = {
+            "current_state": new_status,
+            "status": new_status,
+            "date_upd": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        if state_name:
+            update_fields["state_name"] = state_name
+        
         result = await db.ecommerce_orders.update_one(
             tenant_filter,
-            {
-                "$set": {
-                    "current_state": new_status,
-                    "status": new_status,
-                    "updated_at": datetime.now(timezone.utc).isoformat()
-                }
-            }
+            {"$set": update_fields}
         )
         
         if result.modified_count == 0:
@@ -186,6 +230,28 @@ async def update_order_status(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error al actualizar estado: {str(e)}"
         )
+
+@router.get("/order-states")
+async def get_order_states(
+    current_user: User = Depends(get_current_user)
+):
+    """Obtener lista de estados de pedidos disponibles"""
+    # Estados típicos de PrestaShop (pueden ser configurables en el futuro)
+    states = [
+        {"id": "1", "name": "Esperando pago"},
+        {"id": "2", "name": "Pago aceptado"},
+        {"id": "3", "name": "Preparación en curso"},
+        {"id": "4", "name": "Enviado"},
+        {"id": "5", "name": "Entregado"},
+        {"id": "6", "name": "Cancelado"},
+        {"id": "7", "name": "Reembolsado"},
+        {"id": "8", "name": "Error de pago"},
+        {"id": "9", "name": "En espera de reabastecimiento"},
+        {"id": "10", "name": "Esperando pago por transferencia"},
+        {"id": "11", "name": "Pago remoto aceptado"},
+        {"id": "12", "name": "Pago remoto aceptado"}
+    ]
+    return states
 
 @router.get("/customers")
 async def get_customers(
