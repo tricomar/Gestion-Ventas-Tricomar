@@ -372,14 +372,15 @@ async def get_dashboard_stats(current_user: User = Depends(get_current_user)):
         }, {'_id': 0}).to_list(100000)
         
         # === ECOMMERCE SALES (collection: ecommerce_orders) ===
+        # Usar date_add (fecha real del pedido) en lugar de created_at (fecha de sincronización)
         today_ecommerce = await db.ecommerce_orders.find({
             'account_id': current_user.account_id,
-            'created_at': {'$gte': today_start_utc, '$lte': today_end_utc}
+            'date_add': {'$gte': today_start_utc, '$lte': today_end_utc}
         }, {'_id': 0}).to_list(10000)
         
         month_ecommerce = await db.ecommerce_orders.find({
             'account_id': current_user.account_id,
-            'created_at': {'$gte': month_start_utc, '$lte': month_end_utc}
+            'date_add': {'$gte': month_start_utc, '$lte': month_end_utc}
         }, {'_id': 0}).to_list(100000)
         
         # === EXPENSES ===
@@ -630,12 +631,25 @@ async def get_sales_by_store(
     """
     Obtener ventas por tienda para gráfico de líneas
     Retorna datos agregados por día y tienda para los últimos N días
+    Solo incluye tiendas configuradas por el usuario
     """
     try:
         from utils.timezone_utils import get_account_timezone, now_local
         
         # Get user's configured timezone
         user_tz_str = await get_account_timezone(current_user.account_id)
+        
+        # Obtener tiendas configuradas del usuario
+        account = await db.accounts.find_one({"id": current_user.account_id}, {"_id": 0})
+        
+        if not account or not account.get("stores"):
+            return []
+        
+        configured_stores = account.get("stores", [])
+        configured_store_codes = {store.get("code") for store in configured_stores if store.get("code")}
+        
+        if not configured_store_codes:
+            return []
         
         # Calcular rango de fechas en timezone local
         local_now = now_local(user_tz_str)
@@ -650,13 +664,6 @@ async def get_sales_by_store(
         
         sales = await sales_cursor.to_list(10000)
         
-        # Detectar todas las tiendas que aparecen en las ventas
-        store_codes = set()
-        for sale in sales:
-            store_code = sale.get("store", sale.get("product_store", None))
-            if store_code:
-                store_codes.add(store_code)
-        
         # Agrupar ventas por fecha y tienda
         sales_by_date = defaultdict(lambda: defaultdict(float))
         
@@ -669,11 +676,13 @@ async def get_sales_by_store(
                 continue
             
             # Determinar tienda
-            store_code = sale.get("store", sale.get("product_store", "general"))
+            store_code = sale.get("store", sale.get("product_store", None))
             
-            # Sumar total
-            total = sale.get("total", 0)
-            sales_by_date[sale_date][store_code] += total
+            # Solo incluir si la tienda está configurada
+            if store_code and store_code in configured_store_codes:
+                # Sumar total
+                total = sale.get("total", 0)
+                sales_by_date[sale_date][store_code] += total
         
         # Formatear datos para el gráfico
         chart_data = []
@@ -685,8 +694,8 @@ async def get_sales_by_store(
             
             row = {"date": date_label}
             
-            # Agregar ventas de cada tienda detectada
-            for store_code in sorted(store_codes):
+            # Agregar ventas de cada tienda configurada
+            for store_code in sorted(configured_store_codes):
                 row[store_code] = round(sales_by_date[date_str].get(store_code, 0), 0)
             
             chart_data.append(row)
