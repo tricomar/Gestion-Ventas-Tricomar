@@ -26,40 +26,85 @@ class MessageCreate(BaseModel):
 
 @router.get("/stats")
 async def get_ecommerce_stats(current_user: User = Depends(get_current_user)):
-    """Obtener estadísticas de ecommerce"""
+    """Obtener estadísticas de ecommerce con timezone configurado"""
     try:
+        from utils.timezone_utils import (
+            get_day_boundaries_utc,
+            get_month_boundaries_utc,
+            now_local,
+            get_account_currency
+        )
+        from routes.dashboard import get_account_timezone
+        
+        # Get timezone and currency
+        user_tz_str = await get_account_timezone(current_user.account_id)
+        currency_config = await get_account_currency(current_user.account_id)
+        local_now = now_local(user_tz_str)
+        
+        # Get boundaries for today
+        today_str = local_now.strftime("%Y-%m-%d")
+        today_start, today_end = get_day_boundaries_utc(today_str, user_tz_str)
+        
+        # Get boundaries for current month
+        month_start, month_end = get_month_boundaries_utc(
+            local_now.year,
+            local_now.month,
+            user_tz_str
+        )
+        
         tenant_filter = get_tenant_filter(current_user.dict(), {})
         
-        # Contar órdenes totales
+        # Total orders
         total_orders = await db.ecommerce_orders.count_documents(tenant_filter)
         
-        # Contar órdenes pendientes
-        pending_filter = {**tenant_filter, "current_state": {"$in": ["pending", "processing"]}}
+        # Pending orders (estados que requieren acción)
+        pending_filter = {
+            **tenant_filter,
+            "current_state": {"$in": ["1", "2", "3", "10"]}  # Payment accepted, Processing, Prepared, Awaiting payment
+        }
         pending_orders = await db.ecommerce_orders.count_documents(pending_filter)
         
-        # Ventas mensuales
-        first_day_month = datetime.now(CHILE_TZ).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        monthly_filter = {
+        # Today's sales
+        today_filter = {
             **tenant_filter,
-            "date_add": {"$gte": first_day_month.isoformat()}
+            "created_at": {"$gte": today_start, "$lte": today_end}
         }
+        today_orders = await db.ecommerce_orders.find(today_filter, {"_id": 0, "total_paid": 1}).to_list(10000)
+        today_sales = sum(float(o.get("total_paid", 0)) for o in today_orders)
         
-        monthly_orders_cursor = db.ecommerce_orders.find(monthly_filter, {"_id": 0, "total_paid": 1})
-        monthly_orders = await monthly_orders_cursor.to_list(10000)
-        monthly_sales = sum(order.get("total_paid", 0) for order in monthly_orders)
-        
-        # Nuevos clientes (último mes)
-        customers_filter = {
+        # Monthly sales
+        month_filter = {
             **tenant_filter,
-            "date_add": {"$gte": first_day_month.isoformat()}
+            "created_at": {"$gte": month_start, "$lte": month_end}
         }
-        new_customers = await db.ecommerce_customers.count_documents(customers_filter)
+        month_orders = await db.ecommerce_orders.find(month_filter, {"_id": 0, "total_paid": 1}).to_list(10000)
+        monthly_sales = sum(float(o.get("total_paid", 0)) for o in month_orders)
+        
+        # New customers (this month)
+        new_customers_filter = {
+            **tenant_filter,
+            "created_at": {"$gte": month_start, "$lte": month_end}
+        }
+        new_customers = await db.ecommerce_customers.count_documents(new_customers_filter)
+        
+        # Abandoned carts
+        abandoned_carts = await db.ecommerce_carts.count_documents({
+            **tenant_filter,
+            "id_order": {"$exists": False}
+        })
         
         return {
             "total_orders": total_orders,
             "pending_orders": pending_orders,
+            "today_sales": today_sales,
+            "today_orders": len(today_orders),
             "monthly_sales": monthly_sales,
-            "new_customers": new_customers
+            "monthly_orders": len(month_orders),
+            "new_customers": new_customers,
+            "abandoned_carts": abandoned_carts,
+            "currency_symbol": currency_config['symbol'],
+            "currency_code": currency_config['code'],
+            "timezone": user_tz_str
         }
         
     except Exception as e:

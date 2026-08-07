@@ -26,8 +26,15 @@ const EcommercePage = () => {
   const [stats, setStats] = useState({
     total_orders: 0,
     pending_orders: 0,
+    today_sales: 0,
+    today_orders: 0,
     monthly_sales: 0,
-    new_customers: 0
+    monthly_orders: 0,
+    new_customers: 0,
+    abandoned_carts: 0,
+    currency_symbol: '$',
+    currency_code: 'CLP',
+    timezone: 'America/Santiago'
   });
   const [abandonedCarts, setAbandonedCarts] = useState([]);
   const [finalizedCarts, setFinalizedCarts] = useState([]);
@@ -215,10 +222,10 @@ const EcommercePage = () => {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatCard 
-          title="Total Pedidos"
-          value={stats.total_orders}
-          icon={ShoppingBag}
-          gradient="from-purple-400 to-pink-400"
+          title="Ventas Hoy"
+          value={`${stats.currency_symbol}${Math.round(stats.today_sales || 0).toLocaleString('es-CL')}`}
+          icon={TrendingUp}
+          gradient="from-green-400 to-emerald-400"
         />
         <StatCard 
           title="Pedidos Pendientes"
@@ -228,15 +235,15 @@ const EcommercePage = () => {
         />
         <StatCard 
           title="Ventas Mensuales"
-          value={`$${stats.monthly_sales?.toLocaleString('es-CL') || 0}`}
-          icon={TrendingUp}
-          gradient="from-yellow-400 to-orange-400"
+          value={`${stats.currency_symbol}${Math.round(stats.monthly_sales || 0).toLocaleString('es-CL')}`}
+          icon={ShoppingBag}
+          gradient="from-purple-400 to-pink-400"
         />
         <StatCard 
-          title="Nuevos Clientes"
-          value={stats.new_customers}
-          icon={Users}
-          gradient="from-green-400 to-teal-400"
+          title="Carritos Abandonados"
+          value={stats.abandoned_carts || 0}
+          icon={ShoppingCart}
+          gradient="from-yellow-400 to-orange-400"
         />
       </div>
 
