@@ -86,10 +86,32 @@ const DashboardHomePage = () => {
 
   const fetchRealtimeMetrics = async () => {
     try {
-      const response = await axios.get(`${API}/dashboard/realtime-metrics`);
-      setRealtimeMetrics(response.data);
+      const response = await axios.get(`${API}/dashboard/stats`);
+      const stats = response.data;
+      
+      // Actualizar solo si hay datos válidos, haciendo merge con estado anterior
+      setRealtimeMetrics(prev => ({
+        ...prev,
+        today_total: stats.today_sales ?? prev.today_total,
+        today_pos_sales: stats.today_pos_sales ?? prev.today_pos_sales,
+        today_ecommerce_sales: stats.today_ecommerce_sales ?? prev.today_ecommerce_sales,
+        today_sales_count: stats.today_transactions ?? prev.today_sales_count,
+        today_expenses_total: stats.today_expenses ?? prev.today_expenses_total,
+        monthly_sales: stats.monthly_sales ?? prev.monthly_sales,
+        monthly_pos_sales: stats.monthly_pos_sales ?? prev.monthly_pos_sales,
+        monthly_ecommerce_sales: stats.monthly_ecommerce_sales ?? prev.monthly_ecommerce_sales
+      }));
+      
+      // Actualizar currency symbol si viene en la respuesta
+      if (stats.currency_symbol) {
+        setMetrics(prev => ({
+          ...prev,
+          currency_symbol: stats.currency_symbol
+        }));
+      }
     } catch (error) {
       console.error('Error fetching realtime metrics:', error);
+      // No hacemos nada con el estado en caso de error - mantenemos valores anteriores
     }
   };
 
