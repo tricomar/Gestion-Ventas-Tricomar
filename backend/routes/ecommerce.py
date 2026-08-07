@@ -65,18 +65,18 @@ async def get_ecommerce_stats(current_user: User = Depends(get_current_user)):
         }
         pending_orders = await db.ecommerce_orders.count_documents(pending_filter)
         
-        # Today's sales
+        # Today's sales - usar date_add (fecha real del pedido)
         today_filter = {
             **tenant_filter,
-            "created_at": {"$gte": today_start, "$lte": today_end}
+            "date_add": {"$gte": today_start, "$lte": today_end}
         }
         today_orders = await db.ecommerce_orders.find(today_filter, {"_id": 0, "total_paid": 1}).to_list(10000)
         today_sales = sum(float(o.get("total_paid", 0)) for o in today_orders)
         
-        # Monthly sales
+        # Monthly sales - usar date_add (fecha real del pedido)
         month_filter = {
             **tenant_filter,
-            "created_at": {"$gte": month_start, "$lte": month_end}
+            "date_add": {"$gte": month_start, "$lte": month_end}
         }
         month_orders = await db.ecommerce_orders.find(month_filter, {"_id": 0, "total_paid": 1}).to_list(10000)
         monthly_sales = sum(float(o.get("total_paid", 0)) for o in month_orders)
@@ -167,6 +167,39 @@ async def get_order_detail(
                 detail="Orden no encontrada"
             )
         
+        # Mapeo de estados de PrestaShop
+        state_names = {
+            "1": "Esperando pago con cheque",
+            "2": "Pago aceptado",
+            "3": "Preparación en curso",
+            "4": "Enviado",
+            "5": "Entregado",
+            "6": "Cancelado",
+            "7": "Reembolsado",
+            "8": "Error de pago",
+            "10": "Esperando transferencia bancaria",
+            "12": "Pago remoto aceptado",
+            "13": "En espera de reabastecimiento",
+            "35": "Esperando confirmación"
+        }
+        
+        # Asegurar que state_name existe
+        if not order.get('state_name'):
+            state_id = str(order.get('current_state', ''))
+            order['state_name'] = state_names.get(state_id, f"Estado {state_id}")
+        
+        # Asegurar que items existe (aunque esté vacío)
+        if 'items' not in order:
+            order['items'] = []
+        
+        # Asegurar que customer_email existe
+        if not order.get('customer_email'):
+            order['customer_email'] = 'No disponible'
+        
+        # Si customer_name está vacío, poner placeholder
+        if not order.get('customer_name') or order.get('customer_name').strip() == '':
+            order['customer_name'] = f'Cliente #{order.get("customer_id", "N/A")}'
+        
         return order
         
     except HTTPException:
@@ -235,23 +268,68 @@ async def update_order_status(
 async def get_order_states(
     current_user: User = Depends(get_current_user)
 ):
-    """Obtener lista de estados de pedidos disponibles"""
-    # Estados típicos de PrestaShop (pueden ser configurables en el futuro)
-    states = [
-        {"id": "1", "name": "Esperando pago"},
-        {"id": "2", "name": "Pago aceptado"},
-        {"id": "3", "name": "Preparación en curso"},
-        {"id": "4", "name": "Enviado"},
-        {"id": "5", "name": "Entregado"},
-        {"id": "6", "name": "Cancelado"},
-        {"id": "7", "name": "Reembolsado"},
-        {"id": "8", "name": "Error de pago"},
-        {"id": "9", "name": "En espera de reabastecimiento"},
-        {"id": "10", "name": "Esperando pago por transferencia"},
-        {"id": "11", "name": "Pago remoto aceptado"},
-        {"id": "12", "name": "Pago remoto aceptado"}
-    ]
-    return states
+    """Obtener lista de estados de pedidos disponibles basados en pedidos existentes y PrestaShop"""
+    try:
+        # Mapeo de estados comunes de PrestaShop
+        default_state_names = {
+            "1": "Esperando pago con cheque",
+            "2": "Pago aceptado",
+            "3": "Preparación en curso",
+            "4": "Enviado",
+            "5": "Entregado",
+            "6": "Cancelado",
+            "7": "Reembolsado",
+            "8": "Error de pago",
+            "9": "En espera de reabastecimiento",
+            "10": "Esperando transferencia bancaria",
+            "11": "Pago remoto aceptado",
+            "12": "Pago remoto aceptado",
+            "13": "En espera de reabastecimiento",
+            "35": "Esperando confirmación"
+        }
+        
+        # Obtener estados únicos de los pedidos del usuario
+        tenant_filter = get_tenant_filter(current_user.dict(), {})
+        
+        pipeline = [
+            {"$match": tenant_filter},
+            {"$group": {
+                "_id": "$current_state",
+                "state_name": {"$first": "$state_name"}
+            }},
+            {"$sort": {"_id": 1}}
+        ]
+        
+        states_from_orders = await db.ecommerce_orders.aggregate(pipeline).to_list(100)
+        
+        # Convertir a formato esperado
+        states = []
+        for state in states_from_orders:
+            if state['_id']:  # Ignorar nulls
+                state_id = str(state['_id'])
+                # Usar state_name del pedido si existe, sino usar el mapeo por defecto
+                state_name = state.get('state_name') or default_state_names.get(state_id, f"Estado {state_id}")
+                
+                states.append({
+                    "id": state_id,
+                    "name": state_name
+                })
+        
+        # Si no hay pedidos, devolver estados por defecto de PrestaShop
+        if not states:
+            for state_id, state_name in default_state_names.items():
+                states.append({
+                    "id": state_id,
+                    "name": state_name
+                })
+        
+        return states
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al obtener estados: {str(e)}"
+        )
 
 @router.get("/customers")
 async def get_customers(
