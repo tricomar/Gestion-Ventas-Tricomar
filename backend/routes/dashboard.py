@@ -632,17 +632,14 @@ async def get_sales_by_store(
     Retorna datos agregados por día y tienda para los últimos N días
     """
     try:
-        # Obtener tiendas de la cuenta
-        account = await db.accounts.find_one({"id": current_user.account_id}, {"_id": 0})
+        from utils.timezone_utils import get_account_timezone, now_local
         
-        if not account or not account.get("stores"):
-            return []
+        # Get user's configured timezone
+        user_tz_str = await get_account_timezone(current_user.account_id)
         
-        stores = account.get("stores", [])
-        
-        # Calcular rango de fechas
-        now_chile = datetime.now(CHILE_TZ)
-        start_date = (now_chile - timedelta(days=days)).replace(hour=0, minute=0, second=0, microsecond=0)
+        # Calcular rango de fechas en timezone local
+        local_now = now_local(user_tz_str)
+        start_date = local_now - timedelta(days=days)
         
         # Obtener ventas en el rango de fechas
         tenant_filter = get_tenant_filter(current_user.dict(), {})
@@ -653,21 +650,26 @@ async def get_sales_by_store(
         
         sales = await sales_cursor.to_list(10000)
         
+        # Detectar todas las tiendas que aparecen en las ventas
+        store_codes = set()
+        for sale in sales:
+            store_code = sale.get("store", sale.get("product_store", None))
+            if store_code:
+                store_codes.add(store_code)
+        
         # Agrupar ventas por fecha y tienda
         sales_by_date = defaultdict(lambda: defaultdict(float))
         
         for sale in sales:
-            # Extraer fecha (solo YYYY-MM-DD)
-            sale_date = sale.get("date", sale.get("created_at", "")[:10])
+            # Extraer fecha local
+            from utils.timezone_utils import to_local_date
+            sale_date = to_local_date(sale.get("created_at"), user_tz_str)
+            
+            if not sale_date:
+                continue
             
             # Determinar tienda
-            if "store" in sale:
-                store_code = sale["store"]
-            elif "product_store" in sale:
-                store_code = sale["product_store"]
-            else:
-                # Si no hay tienda, intentar extraer del producto
-                store_code = "general"
+            store_code = sale.get("store", sale.get("product_store", "general"))
             
             # Sumar total
             total = sale.get("total", 0)
@@ -675,21 +677,19 @@ async def get_sales_by_store(
         
         # Formatear datos para el gráfico
         chart_data = []
-        current_date = start_date
         
         for i in range(days):
+            current_date = start_date + timedelta(days=i)
             date_str = current_date.strftime('%Y-%m-%d')
             date_label = current_date.strftime('%d/%m')
             
             row = {"date": date_label}
             
-            # Agregar ventas de cada tienda
-            for store in stores:
-                store_code = store.get("code", store.get("id", ""))
+            # Agregar ventas de cada tienda detectada
+            for store_code in sorted(store_codes):
                 row[store_code] = round(sales_by_date[date_str].get(store_code, 0), 0)
             
             chart_data.append(row)
-            current_date += timedelta(days=1)
         
         return chart_data
         

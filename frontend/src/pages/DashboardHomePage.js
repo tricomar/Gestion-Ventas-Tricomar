@@ -227,20 +227,25 @@ const DashboardHomePage = () => {
                 }}
               />
               <Legend />
-              {stores.map((store, index) => {
-                const colors = ['#8b5cf6', '#ec4899', '#f97316', '#eab308'];
-                return (
-                  <Line 
-                    key={store.code}
-                    type="monotone" 
-                    dataKey={store.code} 
-                    name={store.name}
-                    stroke={colors[index % colors.length]} 
-                    strokeWidth={3}
-                    dot={{ fill: colors[index % colors.length], strokeWidth: 2, r: 4 }}
-                  />
-                );
-              })}
+              {chartData.length > 0 && Object.keys(chartData[0])
+                .filter(key => key !== 'date')
+                .map((storeCode, index) => {
+                  const colors = ['#8b5cf6', '#ec4899', '#f97316', '#eab308', '#10b981'];
+                  const store = stores.find(s => s.key === storeCode || s.code === storeCode);
+                  const storeName = store ? store.name : `Tienda ${storeCode}`;
+                  
+                  return (
+                    <Line 
+                      key={storeCode}
+                      type="monotone" 
+                      dataKey={storeCode} 
+                      name={storeName}
+                      stroke={colors[index % colors.length]} 
+                      strokeWidth={3}
+                      dot={{ fill: colors[index % colors.length], strokeWidth: 2, r: 4 }}
+                    />
+                  );
+                })}
             </LineChart>
           </ResponsiveContainer>
         </div>
