@@ -25,71 +25,103 @@ async def get_report_data(
     Get comprehensive report data using configured timezone
     """
     try:
-        # Get user's configured timezone
+        from utils.timezone_utils import (
+            get_day_boundaries_utc,
+            get_month_boundaries_utc,
+            now_local,
+            to_local_date,
+            get_account_currency
+        )
+        from collections import defaultdict
+        
+        # Get user's configured timezone and currency
         user_tz_str = await get_account_timezone(current_user.account_id)
-        user_tz = ZoneInfo(user_tz_str)
+        currency_config = await get_account_currency(current_user.account_id)
         
-        # Determine date range using user's timezone
-        end_dt = datetime.now(user_tz)
+        # Get current local time
+        local_now = now_local(user_tz_str)
         
+        # Determine date range using UTC boundaries
         if period == 'day':
-            start_dt = end_dt.replace(hour=0, minute=0, second=0, microsecond=0)
+            today_str = local_now.strftime("%Y-%m-%d")
+            start_utc, end_utc = get_day_boundaries_utc(today_str, user_tz_str)
         elif period == 'week':
-            start_dt = end_dt - timedelta(days=7)
+            # Last 7 days
+            start_local = local_now - timedelta(days=7)
+            start_str = start_local.strftime("%Y-%m-%d")
+            end_str = local_now.strftime("%Y-%m-%d")
+            start_utc, _ = get_day_boundaries_utc(start_str, user_tz_str)
+            _, end_utc = get_day_boundaries_utc(end_str, user_tz_str)
         elif period == 'month':
-            start_dt = end_dt - timedelta(days=30)
+            # Current month
+            start_utc, end_utc = get_month_boundaries_utc(
+                local_now.year,
+                local_now.month,
+                user_tz_str
+            )
         elif period == 'custom' and start_date and end_date:
-            start_dt = datetime.fromisoformat(start_date)
-            end_dt = datetime.fromisoformat(end_date)
+            # Custom range (dates in local timezone)
+            start_utc, _ = get_day_boundaries_utc(start_date, user_tz_str)
+            _, end_utc = get_day_boundaries_utc(end_date, user_tz_str)
         else:
-            start_dt = end_dt - timedelta(days=30)
+            # Default to last 30 days
+            start_local = local_now - timedelta(days=30)
+            start_str = start_local.strftime("%Y-%m-%d")
+            end_str = local_now.strftime("%Y-%m-%d")
+            start_utc, _ = get_day_boundaries_utc(start_str, user_tz_str)
+            _, end_utc = get_day_boundaries_utc(end_str, user_tz_str)
         
-        # Build query filter
-        tenant_filter = get_tenant_filter(current_user.dict(), {})
-        date_filter = {
-            'created_at': {
-                '$gte': start_dt.isoformat(),
-                '$lte': end_dt.isoformat()
-            }
+        # Build base query
+        base_query = {
+            'account_id': current_user.account_id,
+            'created_at': {'$gte': start_utc, '$lte': end_utc}
         }
         
-        query_filter = {**tenant_filter, **date_filter}
-        
-        # Add store filter if provided
+        # Fetch sales from POS (collection: sales)
+        sales_query = base_query.copy()
         if store and store != 'all':
-            query_filter['store'] = store
+            sales_query['store'] = store
         
-        # Fetch sales data
-        sales = await db.sales_records.find(query_filter, {'_id': 0}).to_list(10000)
+        sales = await db.sales.find(sales_query, {'_id': 0}).to_list(100000)
+        
+        # Fetch ecommerce orders
+        ecommerce_orders = await db.ecommerce_orders.find(base_query, {'_id': 0}).to_list(100000)
         
         # Fetch expenses
-        expenses = await db.expenses_records.find(query_filter, {'_id': 0}).to_list(10000)
+        expenses = await db.expenses.find(base_query, {'_id': 0}).to_list(10000)
         
         # Fetch other income
-        other_income = await db.income_records.find(query_filter, {'_id': 0}).to_list(10000)
+        income = await db.income.find(base_query, {'_id': 0}).to_list(10000)
         
-        # Calculate totals by store
-        store_a_sales = [s for s in sales if s.get('store') == 'A']
-        store_b_sales = [s for s in sales if s.get('store') == 'B']
+        # Calculate totals by store (POS only)
+        store_totals = defaultdict(lambda: {'sales': 0, 'cost': 0, 'profit': 0})
         
-        store_a_total = sum(s.get('total', 0) for s in store_a_sales)
-        store_b_total = sum(s.get('total', 0) for s in store_b_sales)
-        store_a_cost = sum(s.get('cost_price', 0) * s.get('quantity', 0) for s in store_a_sales)
-        store_b_cost = sum(s.get('cost_price', 0) * s.get('quantity', 0) for s in store_b_sales)
+        for sale in sales:
+            store_id = sale.get('store', 'A')
+            total = sale.get('total', 0)
+            cost = sale.get('cost_price', 0) * sale.get('quantity', 0)
+            
+            store_totals[store_id]['sales'] += total
+            store_totals[store_id]['cost'] += cost
+            store_totals[store_id]['profit'] += (total - cost)
         
-        total_expenses_amount = sum(e.get('amount', 0) for e in expenses)
-        total_other_income_amount = sum(i.get('amount', 0) for i in other_income)
+        # Add ecommerce as separate category
+        ecommerce_total = sum(float(o.get('total_paid', 0)) for o in ecommerce_orders)
         
-        # Group sales by product
-        products_sales = {}
+        # Calculate total sales (POS + Ecommerce)
+        pos_total = sum(s.get('total', 0) for s in sales)
+        total_sales = pos_total + ecommerce_total
+        
+        # Calculate expenses and income
+        total_expenses = sum(e.get('amount', 0) for e in expenses)
+        total_income = sum(i.get('amount', 0) for i in income)
+        
+        # Group sales by product (POS only)
+        products_sales = defaultdict(lambda: {'name': '', 'quantity': 0, 'total': 0})
+        
         for sale in sales:
             product_name = sale.get('product_name', 'Sin nombre')
-            if product_name not in products_sales:
-                products_sales[product_name] = {
-                    'name': product_name,
-                    'quantity': 0,
-                    'total': 0
-                }
+            products_sales[product_name]['name'] = product_name
             products_sales[product_name]['quantity'] += sale.get('quantity', 0)
             products_sales[product_name]['total'] += sale.get('total', 0)
         
@@ -99,80 +131,51 @@ async def get_report_data(
             reverse=True
         )[:10]
         
-        # Group sales by category
-        categories_sales = {}
+        # Group sales by day (local date)
+        daily_sales = defaultdict(lambda: {'pos': 0, 'ecommerce': 0, 'total': 0})
+        
         for sale in sales:
-            category = sale.get('category', 'Sin categoría')
-            if category not in categories_sales:
-                categories_sales[category] = {
-                    'name': category,
-                    'quantity': 0,
-                    'total': 0
-                }
-            categories_sales[category]['quantity'] += sale.get('quantity', 0)
-            categories_sales[category]['total'] += sale.get('total', 0)
+            local_date = to_local_date(sale.get('created_at'), user_tz_str)
+            if local_date:
+                daily_sales[local_date]['pos'] += sale.get('total', 0)
+                daily_sales[local_date]['total'] += sale.get('total', 0)
         
-        top_categories = sorted(
-            categories_sales.values(),
-            key=lambda x: x['total'],
-            reverse=True
-        )[:5]
+        for order in ecommerce_orders:
+            local_date = to_local_date(order.get('created_at'), user_tz_str)
+            if local_date:
+                daily_sales[local_date]['ecommerce'] += float(order.get('total_paid', 0))
+                daily_sales[local_date]['total'] += float(order.get('total_paid', 0))
         
-        # Group sales by payment method
-        payment_methods = {}
-        for sale in sales:
-            method = sale.get('payment_method', 'Efectivo')
-            if method not in payment_methods:
-                payment_methods[method] = {'count': 0, 'total': 0}
-            payment_methods[method]['count'] += 1
-            payment_methods[method]['total'] += sale.get('total', 0)
-        
-        # Daily sales for chart
-        daily_sales = {}
-        for sale in sales:
-            date_str = sale.get('created_at', '')[:10]  # YYYY-MM-DD
-            if date_str not in daily_sales:
-                daily_sales[date_str] = 0
-            daily_sales[date_str] += sale.get('total', 0)
-        
-        daily_sales_chart = [
-            {'date': date, 'total': total}
-            for date, total in sorted(daily_sales.items())
+        # Convert to list and sort
+        daily_chart = [
+            {'date': date, **values}
+            for date, values in sorted(daily_sales.items())
         ]
         
         return {
             'period': period,
-            'start_date': start_dt.isoformat(),
-            'end_date': end_dt.isoformat(),
-            'store_a': {
-                'sales_count': len(store_a_sales),
-                'total_sales': store_a_total,
-                'total_cost': store_a_cost,
-                'profit': store_a_total - store_a_cost
+            'start_date': start_date or start_utc[:10],
+            'end_date': end_date or end_utc[:10],
+            'timezone': user_tz_str,
+            'currency_symbol': currency_config['symbol'],
+            'currency_code': currency_config['code'],
+            'summary': {
+                'total_sales': total_sales,
+                'pos_sales': pos_total,
+                'ecommerce_sales': ecommerce_total,
+                'total_expenses': total_expenses,
+                'total_income': total_income,
+                'net_profit': total_sales - total_expenses + total_income
             },
-            'store_b': {
-                'sales_count': len(store_b_sales),
-                'total_sales': store_b_total,
-                'total_cost': store_b_cost,
-                'profit': store_b_total - store_b_cost
-            },
-            'total_sales': store_a_total + store_b_total,
-            'total_profit': (store_a_total - store_a_cost) + (store_b_total - store_b_cost),
-            'total_expenses': total_expenses_amount,
-            'total_other_income': total_other_income_amount,
-            'net_profit': (store_a_total + store_b_total - store_a_cost - store_b_cost - total_expenses_amount + total_other_income_amount),
-            'sales': sales[:100],  # Limit to 100 for detail
-            'expenses': expenses[:100],
-            'other_income': other_income[:100],
+            'by_store': dict(store_totals),
             'top_products': top_products,
-            'top_categories': top_categories,
-            'payment_methods': payment_methods,
-            'daily_sales_chart': daily_sales_chart
+            'daily_chart': daily_chart,
+            'transactions_count': len(sales) + len(ecommerce_orders)
         }
         
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=500,
             detail=f"Error generating report: {str(e)}"
         )
 

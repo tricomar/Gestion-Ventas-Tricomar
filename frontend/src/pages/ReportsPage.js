@@ -65,6 +65,7 @@ const ReportsPage = () => {
     if (!reportData) return;
 
     const doc = new jsPDF();
+    const currencySymbol = reportData.currency_symbol || '$';
     
     // Title
     doc.setFontSize(18);
@@ -73,23 +74,27 @@ const ReportsPage = () => {
     // Period info
     doc.setFontSize(11);
     doc.text(`Período: ${reportData.period}`, 14, 32);
-    doc.text(`Desde: ${new Date(reportData.start_date).toLocaleDateString('es-CL')}`, 14, 38);
-    doc.text(`Hasta: ${new Date(reportData.end_date).toLocaleDateString('es-CL')}`, 14, 44);
+    doc.text(`Fecha inicio: ${reportData.start_date}`, 14, 38);
+    doc.text(`Fecha fin: ${reportData.end_date}`, 14, 44);
+    doc.text(`Timezone: ${reportData.timezone}`, 14, 50);
     
     // Summary
     doc.setFontSize(14);
-    doc.text('Resumen por Tienda/Caja', 14, 54);
+    doc.text('Resumen General', 14, 60);
     
+    const summary = reportData.summary || {};
     const summaryData = [
-      ['Tienda/Caja', 'Ventas', 'Total', 'Costo'],
-      [getStoreName('A'), reportData.store_a.sales_count, `$${reportData.store_a.total_sales.toLocaleString('es-CL')}`, `$${reportData.store_a.total_cost.toLocaleString('es-CL')}`],
-      [getStoreName('B'), reportData.store_b.sales_count, `$${reportData.store_b.total_sales.toLocaleString('es-CL')}`, `$${reportData.store_b.total_cost.toLocaleString('es-CL')}`],
-      ['Total Egresos', '', `$${reportData.total_expenses.toLocaleString('es-CL')}`, ''],
-      ['Total Otros Ingresos', '', `$${reportData.total_other_income.toLocaleString('es-CL')}`, ''],
+      ['Concepto', 'Monto'],
+      ['Ventas POS', `${currencySymbol}${Math.round(summary.pos_sales || 0).toLocaleString('es-CL')}`],
+      ['Ventas Ecommerce', `${currencySymbol}${Math.round(summary.ecommerce_sales || 0).toLocaleString('es-CL')}`],
+      ['Total Ventas', `${currencySymbol}${Math.round(summary.total_sales || 0).toLocaleString('es-CL')}`],
+      ['Total Gastos', `${currencySymbol}${Math.round(summary.total_expenses || 0).toLocaleString('es-CL')}`],
+      ['Otros Ingresos', `${currencySymbol}${Math.round(summary.total_income || 0).toLocaleString('es-CL')}`],
+      ['Utilidad Neta', `${currencySymbol}${Math.round(summary.net_profit || 0).toLocaleString('es-CL')}`],
     ];
     
     doc.autoTable({
-      startY: 58,
+      startY: 64,
       head: [summaryData[0]],
       body: summaryData.slice(1),
     });
@@ -127,21 +132,26 @@ const ReportsPage = () => {
     if (!reportData) return;
 
     const wb = XLSX.utils.book_new();
+    const currencySymbol = reportData.currency_symbol || '$';
+    const summary = reportData.summary || {};
     
     // Summary sheet
     const summaryData = [
       ['REPORTE DE VENTAS'],
       ['Período', reportData.period],
-      ['Desde', new Date(reportData.start_date).toLocaleDateString('es-CL')],
-      ['Hasta', new Date(reportData.end_date).toLocaleDateString('es-CL')],
+      ['Fecha Inicio', reportData.start_date],
+      ['Fecha Fin', reportData.end_date],
+      ['Timezone', reportData.timezone],
+      ['Moneda', reportData.currency_code],
       [],
-      ['RESUMEN POR TIENDA/CAJA'],
-      ['Tienda/Caja', 'Cant. Ventas', 'Total Ventas', 'Total Costo'],
-      [getStoreName('A'), reportData.store_a.sales_count, reportData.store_a.total_sales, reportData.store_a.total_cost],
-      [getStoreName('B'), reportData.store_b.sales_count, reportData.store_b.total_sales, reportData.store_b.total_cost],
-      [],
-      ['Total Egresos', '', reportData.total_expenses, ''],
-      ['Total Otros Ingresos', '', reportData.total_other_income, '']
+      ['RESUMEN GENERAL'],
+      ['Concepto', 'Monto'],
+      ['Ventas POS', summary.pos_sales || 0],
+      ['Ventas Ecommerce', summary.ecommerce_sales || 0],
+      ['Total Ventas', summary.total_sales || 0],
+      ['Total Gastos', summary.total_expenses || 0],
+      ['Otros Ingresos', summary.total_income || 0],
+      ['Utilidad Neta', summary.net_profit || 0],
     ];
     
     const summaryWS = XLSX.utils.aoa_to_sheet(summaryData);
@@ -335,8 +345,16 @@ const ReportsPage = () => {
               </div>
               <h3 className="text-xs font-bold tracking-widest uppercase text-slate-500">Ventas Totales</h3>
               <p className="text-3xl font-black font-mono text-slate-900">
-                ${reportData.total_sales?.toLocaleString('es-CL') || '0'}
+                {reportData.currency_symbol}{Math.round(reportData.summary?.total_sales || 0).toLocaleString('es-CL')}
               </p>
+              <div className="mt-2 pt-2 border-t border-slate-200">
+                <p className="text-xs text-slate-600">
+                  POS: {reportData.currency_symbol}{Math.round(reportData.summary?.pos_sales || 0).toLocaleString('es-CL')}
+                </p>
+                <p className="text-xs text-slate-600">
+                  Ecommerce: {reportData.currency_symbol}{Math.round(reportData.summary?.ecommerce_sales || 0).toLocaleString('es-CL')}
+                </p>
+              </div>
             </div>
 
             <div 
@@ -346,9 +364,9 @@ const ReportsPage = () => {
               <div className="flex items-center justify-between mb-2">
                 <TrendingUp className="w-8 h-8 text-blue-600" />
               </div>
-              <h3 className="text-xs font-bold tracking-widest uppercase text-slate-500">Utilidad Bruta</h3>
+              <h3 className="text-xs font-bold tracking-widest uppercase text-slate-500">Gastos</h3>
               <p className="text-3xl font-black font-mono text-slate-900">
-                ${reportData.total_profit?.toLocaleString('es-CL') || '0'}
+                {reportData.currency_symbol}{Math.round(reportData.summary?.total_expenses || 0).toLocaleString('es-CL')}
               </p>
             </div>
 
@@ -359,9 +377,9 @@ const ReportsPage = () => {
               <div className="flex items-center justify-between mb-2">
                 <Package className="w-8 h-8 text-purple-600" />
               </div>
-              <h3 className="text-xs font-bold tracking-widest uppercase text-slate-500">Ganancia Neta</h3>
+              <h3 className="text-xs font-bold tracking-widest uppercase text-slate-500">Utilidad Neta</h3>
               <p className="text-3xl font-black font-mono text-slate-900">
-                ${reportData.net_profit?.toLocaleString('es-CL') || '0'}
+                {reportData.currency_symbol}{Math.round(reportData.summary?.net_profit || 0).toLocaleString('es-CL')}
               </p>
             </div>
 
@@ -374,12 +392,7 @@ const ReportsPage = () => {
               </div>
               <h3 className="text-xs font-bold tracking-widest uppercase text-slate-500">Transacciones</h3>
               <p className="text-3xl font-black font-mono text-slate-900">
-                {stores.reduce((total, store) => {
-                  const storeKey = store.key.toLowerCase() === 'a' ? 'store_a' : 
-                                   store.key.toLowerCase() === 'b' ? 'store_b' : 
-                                   `store_${store.key.toLowerCase()}`;
-                  return total + (reportData[storeKey]?.sales_count || 0);
-                }, 0)}
+                {reportData.transactions_count || 0}
               </p>
             </div>
           </div>
