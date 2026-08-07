@@ -3,6 +3,7 @@ import axios from 'axios';
 import { toast } from 'sonner';
 import { Upload, Image as ImageIcon, X, Save } from 'lucide-react';
 import { useSettings } from '../../context/SettingsContext';
+import PersonalizationSettings from './PersonalizationSettings';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -87,6 +88,9 @@ const PersonalizationTab = () => {
         <h2 className="text-2xl font-black text-slate-900 mb-2">🎨 Personalización</h2>
         <p className="text-slate-600">Personaliza la identidad visual de tu negocio</p>
       </div>
+
+      {/* Timezone and Currency Settings */}
+      <PersonalizationSettings />
 
       {/* Company Name */}
       <div 

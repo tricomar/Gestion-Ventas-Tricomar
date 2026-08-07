@@ -14,8 +14,9 @@ from models.dashboard import RealtimeMetrics, DashboardStats
 from middleware.tenant import get_tenant_filter, add_account_id_to_document
 from models.users import User
 from utils import db, get_current_user
+from utils.timezone_utils import get_account_timezone
 
-# Zona horaria de Chile
+# Zona horaria de Chile (fallback)
 CHILE_TZ = ZoneInfo('America/Santiago')
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
@@ -331,13 +332,18 @@ async def get_dashboard_stats(current_user: User = Depends(get_current_user)):
     """
     Get comprehensive dashboard statistics including sales, products, transactions, etc.
     Uses both POS sales_records and ecommerce_orders data
+    Uses configured timezone for date filtering
     """
     try:
-        # Date ranges - Use Chile timezone consistently
-        now_chile = datetime.now(CHILE_TZ)
-        today_start = now_chile.replace(hour=0, minute=0, second=0, microsecond=0).astimezone(timezone.utc)
+        # Get user's configured timezone
+        user_tz_str = await get_account_timezone(current_user.account_id)
+        user_tz = ZoneInfo(user_tz_str)
+        
+        # Date ranges - Use configured timezone
+        now_user_tz = datetime.now(user_tz)
+        today_start = now_user_tz.replace(hour=0, minute=0, second=0, microsecond=0).astimezone(timezone.utc)
         tomorrow_start = today_start + timedelta(days=1)
-        month_start = now_chile.replace(day=1, hour=0, minute=0, second=0, microsecond=0).astimezone(timezone.utc)
+        month_start = now_user_tz.replace(day=1, hour=0, minute=0, second=0, microsecond=0).astimezone(timezone.utc)
         
         if month_start.month == 12:
             next_month_start = month_start.replace(year=month_start.year + 1, month=1)
@@ -463,7 +469,7 @@ async def get_dashboard_stats(current_user: User = Depends(get_current_user)):
             sales_by_store[store].append(sale)
         
         # Daily sales for last 30 days (from both collections)
-        thirty_days_ago = now_chile - timedelta(days=30)
+        thirty_days_ago = now_user_tz - timedelta(days=30)
         thirty_days_sales_records = await db.sales_records.find({
             'account_id': current_user.account_id,
             'created_at': {'$gte': thirty_days_ago.astimezone(timezone.utc).isoformat()}

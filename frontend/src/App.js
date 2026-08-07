@@ -24,6 +24,7 @@ import AppLayout from './components/layout/AppLayout';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AccountProvider } from './context/AccountContext';
 import { SettingsProvider } from './context/SettingsContext';
+import { AppSettingsProvider } from './hooks/useAppSettings';
 import { setupAxiosInterceptor } from './utils/axiosInterceptor';
 import './App.css';
 
@@ -52,8 +53,12 @@ const ProtectedRoute = ({ children }) => {
     return <Navigate to="/login" replace />;
   }
   
-  // Envolver páginas protegidas con AppLayout
-  return <AppLayout>{children}</AppLayout>;
+  // Envolver páginas protegidas con AppLayout y AppSettingsProvider
+  return (
+    <AppSettingsProvider>
+      <AppLayout>{children}</AppLayout>
+    </AppSettingsProvider>
+  );
 };
 
 const SuperAdminRoute = ({ children }) => {

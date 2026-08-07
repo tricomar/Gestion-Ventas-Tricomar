@@ -4,10 +4,12 @@ Routes for reports and analytics
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from typing import Optional, List
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 from models.users import User
 from utils.auth import get_current_user
 from utils.database import db
 from middleware.tenant import get_tenant_filter
+from utils.timezone_utils import get_account_timezone
 
 router = APIRouter(prefix="/reports", tags=["reports"])
 
@@ -20,11 +22,15 @@ async def get_report_data(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Get comprehensive report data
+    Get comprehensive report data using configured timezone
     """
     try:
-        # Determine date range
-        end_dt = datetime.now(timezone.utc)
+        # Get user's configured timezone
+        user_tz_str = await get_account_timezone(current_user.account_id)
+        user_tz = ZoneInfo(user_tz_str)
+        
+        # Determine date range using user's timezone
+        end_dt = datetime.now(user_tz)
         
         if period == 'day':
             start_dt = end_dt.replace(hour=0, minute=0, second=0, microsecond=0)
