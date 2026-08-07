@@ -32,9 +32,9 @@ const TopBar = () => {
       setHasEcommerceIntegrations(activeIntegrations.length > 0);
 
       if (activeIntegrations.length > 0) {
-        // Obtener pedidos pendientes
-        const statsRes = await axios.get(`${API}/ecommerce/stats`);
-        setPendingOrders(statsRes.data.pending_orders || 0);
+        // Obtener contador de badge configurado
+        const badgeRes = await axios.get(`${API}/ecommerce/badge-count`);
+        setPendingOrders(badgeRes.data.count || 0);
       }
     } catch (error) {
       console.error('Error checking ecommerce integrations:', error);

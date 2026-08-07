@@ -10,6 +10,7 @@ import httpx
 
 from utils import db, get_current_user
 from models.users import User
+from models.ecommerce_settings import EcommerceSettings, BadgeResponse
 from middleware.tenant import get_tenant_filter
 from pydantic import BaseModel
 
@@ -361,4 +362,100 @@ async def get_finalized_carts(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error al obtener carritos finalizados: {str(e)}"
+        )
+
+
+
+@router.get("/badge-config")
+async def get_badge_config(current_user: User = Depends(get_current_user)):
+    """Obtener configuración del badge de ecommerce"""
+    try:
+        tenant_filter = get_tenant_filter(current_user.dict(), {})
+        
+        # Buscar configuración existente
+        config = await db.ecommerce_settings.find_one(tenant_filter, {"_id": 0})
+        
+        if not config:
+            # Crear configuración por defecto
+            default_config = EcommerceSettings(account_id=current_user.account_id)
+            await db.ecommerce_settings.insert_one(default_config.dict())
+            return default_config.dict()
+        
+        return config
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al obtener configuración: {str(e)}"
+        )
+
+
+@router.put("/badge-config")
+async def update_badge_config(
+    badge_states: List[str],
+    current_user: User = Depends(get_current_user)
+):
+    """Actualizar estados que activan el badge"""
+    try:
+        tenant_filter = get_tenant_filter(current_user.dict(), {})
+        
+        result = await db.ecommerce_settings.update_one(
+            tenant_filter,
+            {
+                "$set": {
+                    "badge_states": badge_states,
+                    "updated_at": datetime.now(timezone.utc).isoformat()
+                }
+            },
+            upsert=True
+        )
+        
+        return {"success": True, "badge_states": badge_states}
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al actualizar configuración: {str(e)}"
+        )
+
+
+@router.get("/badge-count", response_model=BadgeResponse)
+async def get_badge_count(current_user: User = Depends(get_current_user)):
+    """Obtener contador del badge (pedidos pendientes)"""
+    try:
+        tenant_filter = get_tenant_filter(current_user.dict(), {})
+        
+        # Obtener configuración
+        config = await db.ecommerce_settings.find_one(tenant_filter, {"_id": 0})
+        
+        if not config:
+            # Usar configuración por defecto
+            default_config = EcommerceSettings(account_id=current_user.account_id)
+            badge_states = default_config.badge_states
+        else:
+            badge_states = config.get('badge_states', ["1", "2", "3", "10", "12"])
+        
+        # Contar órdenes en estados pendientes
+        pending_filter = {
+            **tenant_filter,
+            "current_state": {"$in": badge_states}
+        }
+        
+        count = await db.ecommerce_orders.count_documents(pending_filter)
+        
+        # Obtener detalles de órdenes pendientes (últimas 10)
+        pending_orders = await db.ecommerce_orders.find(
+            pending_filter,
+            {"_id": 0, "order_id": 1, "reference": 1, "current_state": 1, "total_paid": 1, "created_at": 1}
+        ).sort("created_at", -1).limit(10).to_list(10)
+        
+        return BadgeResponse(
+            count=count,
+            pending_orders=pending_orders
+        )
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al obtener contador de badge: {str(e)}"
         )
