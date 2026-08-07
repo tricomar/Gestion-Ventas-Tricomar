@@ -309,8 +309,14 @@ const DashboardPage = () => {
           </div>
 
           {/* Métricas en Tiempo Real - Parte inferior */}
-          <div className="mt-6">
+          <div className="mt-6 space-y-6">
             <RealtimeMetrics refreshTrigger={refreshTrigger} />
+            
+            {/* Dashboard Stats - Nueva sección */}
+            <div className="mt-8">
+              <h2 className="text-2xl font-bold text-slate-900 mb-4">Estadísticas Generales</h2>
+              <DashboardStats />
+            </div>
           </div>
         </div>
       </div>
