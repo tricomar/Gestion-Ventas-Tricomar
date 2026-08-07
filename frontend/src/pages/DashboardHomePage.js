@@ -42,10 +42,22 @@ const DashboardHomePage = () => {
       const stats = metricsRes.data;
       
       setMetrics({
-        yearly_sales: stats.yearly_total || 0,
-        monthly_sales: stats.monthly_total || 0,
-        daily_sales: stats.today_total || 0,
-        total_products: stats.total_products || 0
+        yearly_sales: stats.yearly_sales || 0,
+        monthly_sales: stats.monthly_sales || 0,
+        daily_sales: stats.today_sales || 0,
+        total_products: stats.total_products || 0,
+        currency_symbol: stats.currency_symbol || '$'
+      });
+      
+      setRealtimeMetrics({
+        today_total: stats.today_sales || 0,
+        today_pos_sales: stats.today_pos_sales || 0,
+        today_ecommerce_sales: stats.today_ecommerce_sales || 0,
+        today_sales_count: stats.today_transactions || 0,
+        today_expenses_total: stats.today_expenses || 0,
+        monthly_sales: stats.monthly_sales || 0,
+        monthly_pos_sales: stats.monthly_pos_sales || 0,
+        monthly_ecommerce_sales: stats.monthly_ecommerce_sales || 0
       });
 
       // Fetch últimas ventas
@@ -76,7 +88,7 @@ const DashboardHomePage = () => {
     }
   };
 
-  const MetricCard = ({ title, value, icon: Icon, gradient, trend, realtime }) => (
+  const MetricCard = ({ title, value, subtitle, icon: Icon, gradient, trend, realtime }) => (
     <div 
       className={`bg-gradient-to-br ${gradient} border-2 border-slate-900 rounded-xl p-6`}
       style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
@@ -93,7 +105,10 @@ const DashboardHomePage = () => {
         )}
       </div>
       <h3 className="text-sm font-bold text-slate-900 mb-2">{title}</h3>
-      <p className="text-3xl font-black text-slate-900">{typeof value === 'number' ? `$${value.toLocaleString('es-CL')}` : value}</p>
+      <p className="text-3xl font-black text-slate-900">{value}</p>
+      {subtitle && (
+        <p className="text-xs text-slate-700 mt-2">{subtitle}</p>
+      )}
       {realtime && (
         <div className="mt-2 flex items-center gap-2">
           <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
@@ -133,7 +148,8 @@ const DashboardHomePage = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <MetricCard 
           title="Ventas Hoy"
-          value={realtimeMetrics.today_total}
+          value={`${metrics.currency_symbol || '$'}${Math.round(realtimeMetrics.today_total).toLocaleString('es-CL')}`}
+          subtitle={`POS: ${metrics.currency_symbol || '$'}${Math.round(realtimeMetrics.today_pos_sales || 0).toLocaleString('es-CL')} | Ecommerce: ${metrics.currency_symbol || '$'}${Math.round(realtimeMetrics.today_ecommerce_sales || 0).toLocaleString('es-CL')}`}
           icon={DollarSign}
           gradient="from-green-400 to-emerald-400"
           realtime={true}
@@ -147,7 +163,8 @@ const DashboardHomePage = () => {
         />
         <MetricCard 
           title="Ventas Mensuales"
-          value={metrics.monthly_sales}
+          value={`${metrics.currency_symbol || '$'}${Math.round(realtimeMetrics.monthly_sales || 0).toLocaleString('es-CL')}`}
+          subtitle={`POS: ${metrics.currency_symbol || '$'}${Math.round(realtimeMetrics.monthly_pos_sales || 0).toLocaleString('es-CL')} | Ecommerce: ${metrics.currency_symbol || '$'}${Math.round(realtimeMetrics.monthly_ecommerce_sales || 0).toLocaleString('es-CL')}`}
           icon={TrendingUp}
           gradient="from-purple-400 to-pink-400"
         />

@@ -39,6 +39,7 @@ const RealtimeMetrics = ({ refreshTrigger }) => {
   const { account } = useAccount();
   const { stores } = useStores();
   const [metrics, setMetrics] = useState(null);
+  const [stats, setStats] = useState(null); // Dashboard stats
   const [loading, setLoading] = useState(true);
   const [showPeriod, setShowPeriod] = useState('month'); // 'month' or 'historic'
   const [selectedHistoricMonth, setSelectedHistoricMonth] = useState(null);
@@ -51,6 +52,7 @@ const RealtimeMetrics = ({ refreshTrigger }) => {
 
   useEffect(() => {
     fetchMetrics();
+    fetchStats();
     fetchHistoricMonths();
   }, [refreshTrigger]);
 
@@ -64,6 +66,15 @@ const RealtimeMetrics = ({ refreshTrigger }) => {
       setError('Error al cargar métricas en tiempo real');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchStats = async () => {
+    try {
+      const response = await axios.get(`${API}/dashboard/stats`);
+      setStats(response.data);
+    } catch (error) {
+      console.error('Error fetching dashboard stats:', error);
     }
   };
 
@@ -434,6 +445,95 @@ const RealtimeMetrics = ({ refreshTrigger }) => {
           </button>
         </div>
       </div>
+
+      {/* Vista General - Cards Summary */}
+      {stats && stats.currency_symbol && (
+        <div className="mb-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* Ventas Hoy */}
+          <div 
+            className="border-2 border-slate-900 rounded-xl p-4"
+            style={{ boxShadow: '3px 3px 0px 0px rgba(15,23,42,1)', backgroundColor: '#D4F0A5' }}
+          >
+            <div className="flex items-center justify-between mb-1">
+              <DollarSign className="w-6 h-6" />
+              <span className="text-xs font-bold uppercase">Hoy</span>
+            </div>
+            <p className="text-2xl font-black font-mono">
+              {stats.currency_symbol}{Math.round(stats.today_sales || 0).toLocaleString('es-CL')}
+            </p>
+            <p className="text-xs font-medium text-slate-700 mt-1">
+              Ventas Totales
+            </p>
+            <div className="mt-2 pt-2 border-t border-slate-900/20">
+              <p className="text-xs text-slate-600">
+                POS: {stats.currency_symbol}{Math.round(stats.today_pos_sales || 0).toLocaleString('es-CL')}
+              </p>
+              <p className="text-xs text-slate-600">
+                Ecommerce: {stats.currency_symbol}{Math.round(stats.today_ecommerce_sales || 0).toLocaleString('es-CL')}
+              </p>
+            </div>
+          </div>
+
+          {/* Transacciones Hoy */}
+          <div 
+            className="border-2 border-slate-900 rounded-xl p-4"
+            style={{ boxShadow: '3px 3px 0px 0px rgba(15,23,42,1)', backgroundColor: '#A8E6FF' }}
+          >
+            <div className="flex items-center justify-between mb-1">
+              <TrendingUp className="w-6 h-6" />
+              <span className="text-xs font-bold uppercase">Hoy</span>
+            </div>
+            <p className="text-2xl font-black font-mono">
+              {stats.today_transactions || 0}
+            </p>
+            <p className="text-xs font-medium text-slate-700 mt-1">
+              Transacciones
+            </p>
+          </div>
+
+          {/* Ventas Mensuales */}
+          <div 
+            className="border-2 border-slate-900 rounded-xl p-4"
+            style={{ boxShadow: '3px 3px 0px 0px rgba(15,23,42,1)', backgroundColor: '#FADBB0' }}
+          >
+            <div className="flex items-center justify-between mb-1">
+              <TrendingUp className="w-6 h-6" />
+              <span className="text-xs font-bold uppercase">Mes</span>
+            </div>
+            <p className="text-2xl font-black font-mono">
+              {stats.currency_symbol}{Math.round(stats.monthly_sales || 0).toLocaleString('es-CL')}
+            </p>
+            <p className="text-xs font-medium text-slate-700 mt-1">
+              Ventas Totales
+            </p>
+            <div className="mt-2 pt-2 border-t border-slate-900/20">
+              <p className="text-xs text-slate-600">
+                POS: {stats.currency_symbol}{Math.round(stats.monthly_pos_sales || 0).toLocaleString('es-CL')}
+              </p>
+              <p className="text-xs text-slate-600">
+                Ecommerce: {stats.currency_symbol}{Math.round(stats.monthly_ecommerce_sales || 0).toLocaleString('es-CL')}
+              </p>
+            </div>
+          </div>
+
+          {/* Total Productos */}
+          <div 
+            className="border-2 border-slate-900 rounded-xl p-4"
+            style={{ boxShadow: '3px 3px 0px 0px rgba(15,23,42,1)', backgroundColor: '#FFD4A8' }}
+          >
+            <div className="flex items-center justify-between mb-1">
+              <Wallet className="w-6 h-6" />
+              <span className="text-xs font-bold uppercase">Total</span>
+            </div>
+            <p className="text-2xl font-black font-mono">
+              {stats.total_products || 0}
+            </p>
+            <p className="text-xs font-medium text-slate-700 mt-1">
+              Productos
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Content */}
       {showPeriod === 'month' ? (
