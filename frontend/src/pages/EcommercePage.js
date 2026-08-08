@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import OrderDetailModal from '../components/ecommerce/OrderDetailModal';
+import CartDetailModal from '../components/ecommerce/CartDetailModal';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -26,6 +27,14 @@ const EcommercePage = () => {
   const { user } = useAuth();
   const [orders, setOrders] = useState([]);
   const [selectedOrderId, setSelectedOrderId] = useState(null);
+  const [carts, setCarts] = useState([]);
+  const [selectedCartId, setSelectedCartId] = useState(null);
+  const [cartStats, setCartStats] = useState({
+    active: 0,
+    abandoned: 0,
+    converted: 0,
+    abandonment_rate: 0
+  });
   const [stats, setStats] = useState({
     total_orders: 0,
     pending_orders: 0,
@@ -43,11 +52,16 @@ const EcommercePage = () => {
   const [finalizedCarts, setFinalizedCarts] = useState([]);
   const [integrations, setIntegrations] = useState([]);
   const [selectedIntegration, setSelectedIntegration] = useState('all');
-  const [activeTab, setActiveTab] = useState('orders'); // 'orders', 'abandoned', 'finalized'
+  const [activeTab, setActiveTab] = useState('orders'); // 'orders', 'carts'
+  const [cartFilterStatus, setCartFilterStatus] = useState('abandoned'); // 'active', 'abandoned', 'converted'
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchIntegrations();
+    fetchStats();
+    fetchOrders();
+    fetchCarts();
+    fetchCartStats();
   }, []);
 
   useEffect(() => {
@@ -93,6 +107,33 @@ const EcommercePage = () => {
       console.error('Error fetching ecommerce data:', error);
     }
   };
+
+
+  const fetchCarts = async () => {
+    try {
+      const response = await axios.get(`${API}/ecommerce/carts?status=${cartFilterStatus}&limit=50`);
+      setCarts(response.data);
+    } catch (error) {
+      console.error('Error fetching carts:', error);
+      toast.error('Error al cargar carritos');
+    }
+  };
+
+  const fetchCartStats = async () => {
+    try {
+      const response = await axios.get(`${API}/ecommerce/carts/stats`);
+      setCartStats(response.data);
+    } catch (error) {
+      console.error('Error fetching cart stats:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'carts') {
+      fetchCarts();
+    }
+  }, [cartFilterStatus]);
+
 
   const getStatusColor = (status) => {
     const colors = {
@@ -263,24 +304,14 @@ const EcommercePage = () => {
           📦 Órdenes ({orders.length})
         </button>
         <button
-          onClick={() => setActiveTab('abandoned')}
+          onClick={() => setActiveTab('carts')}
           className={`px-6 py-3 border-2 border-slate-900 rounded-xl font-bold transition-all ${
-            activeTab === 'abandoned'
+            activeTab === 'carts'
               ? 'bg-yellow-400 text-slate-900 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]'
               : 'bg-white text-slate-900 hover:bg-slate-50'
           }`}
         >
-          🛒 Carritos Abandonados ({abandonedCarts.length})
-        </button>
-        <button
-          onClick={() => setActiveTab('finalized')}
-          className={`px-6 py-3 border-2 border-slate-900 rounded-xl font-bold transition-all ${
-            activeTab === 'finalized'
-              ? 'bg-green-400 text-white shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]'
-              : 'bg-white text-slate-900 hover:bg-slate-50'
-          }`}
-        >
-          ✅ Carritos Finalizados ({finalizedCarts.length})
+          🛒 Carritos ({cartStats.abandoned + cartStats.active})
         </button>
       </div>
 
@@ -358,123 +389,117 @@ const EcommercePage = () => {
         </div>
       )}
 
-      {activeTab === 'abandoned' && (
+      {activeTab === 'carts' && (
         <div className="bg-white border-4 border-slate-900 rounded-xl p-6"
              style={{ boxShadow: '8px_8px_0px_0px_rgba(15,23,42,1)' }}>
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-black text-slate-900">🛒 Carritos Abandonados</h2>
-            <div className="flex items-center gap-2 px-4 py-2 bg-yellow-100 border-2 border-yellow-600 rounded-lg">
-              <AlertCircle className="w-5 h-5 text-yellow-700" />
-              <span className="text-sm font-bold text-yellow-900">
-                {abandonedCarts.length} carritos sin completar
-              </span>
+            <h2 className="text-2xl font-black text-slate-900">🛒 Carritos de Compra</h2>
+            
+            {/* Stats Cards */}
+            <div className="flex gap-3">
+              <div className="px-4 py-2 bg-blue-100 border-2 border-blue-600 rounded-lg">
+                <span className="text-xs font-medium text-blue-900">Activos</span>
+                <p className="text-lg font-black text-blue-900">{cartStats.active}</p>
+              </div>
+              <div className="px-4 py-2 bg-yellow-100 border-2 border-yellow-600 rounded-lg">
+                <span className="text-xs font-medium text-yellow-900">Abandonados</span>
+                <p className="text-lg font-black text-yellow-900">{cartStats.abandoned}</p>
+              </div>
+              <div className="px-4 py-2 bg-green-100 border-2 border-green-600 rounded-lg">
+                <span className="text-xs font-medium text-green-900">Convertidos</span>
+                <p className="text-lg font-black text-green-900">{cartStats.converted}</p>
+              </div>
             </div>
           </div>
+
+          {/* Filter Buttons */}
+          <div className="flex gap-2 mb-6">
+            <button
+              onClick={() => setCartFilterStatus('abandoned')}
+              className={`px-4 py-2 border-2 border-slate-900 rounded-lg font-bold text-sm ${
+                cartFilterStatus === 'abandoned'
+                  ? 'bg-yellow-400 text-slate-900'
+                  : 'bg-white text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              Abandonados
+            </button>
+            <button
+              onClick={() => setCartFilterStatus('active')}
+              className={`px-4 py-2 border-2 border-slate-900 rounded-lg font-bold text-sm ${
+                cartFilterStatus === 'active'
+                  ? 'bg-blue-400 text-white'
+                  : 'bg-white text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              Activos
+            </button>
+            <button
+              onClick={() => setCartFilterStatus('converted')}
+              className={`px-4 py-2 border-2 border-slate-900 rounded-lg font-bold text-sm ${
+                cartFilterStatus === 'converted'
+                  ? 'bg-green-400 text-white'
+                  : 'bg-white text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              Convertidos
+            </button>
+          </div>
           
-          {abandonedCarts.length === 0 ? (
+          {/* Carts List */}
+          {carts.length === 0 ? (
             <div className="text-center py-12">
               <ShoppingCart className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-              <p className="text-slate-500 font-medium">No hay carritos abandonados</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {abandonedCarts.map((cart) => (
-                <div 
-                  key={cart.id}
-                  className="p-4 bg-gradient-to-br from-yellow-50 to-orange-50 border-2 border-slate-900 rounded-xl"
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h3 className="font-bold text-slate-900">Carrito #{cart.id}</h3>
-                      <p className="text-sm text-slate-600">Cliente ID: {cart.id_customer}</p>
-                      <p className="text-xs text-slate-500 mt-1">
-                        🏪 {getIntegrationName(cart.integration_id)}
-                      </p>
-                    </div>
-                    <ShoppingCart className="w-8 h-8 text-yellow-600" />
-                  </div>
-                  
-                  <div className="text-xs text-slate-600 mb-2">
-                    <p>📅 {new Date(cart.date_add).toLocaleString('es-CL')}</p>
-                    {cart.date_upd && (
-                      <p>🔄 Actualizado: {new Date(cart.date_upd).toLocaleString('es-CL')}</p>
-                    )}
-                  </div>
-                  
-                  <div className="pt-3 border-t-2 border-slate-200">
-                    <span className="px-3 py-1 bg-yellow-200 border-2 border-yellow-600 rounded-lg text-xs font-bold">
-                      ⏳ Abandonado
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {activeTab === 'finalized' && (
-        <div className="bg-white border-4 border-slate-900 rounded-xl p-6"
-             style={{ boxShadow: '8px_8px_0px_0px_rgba(15,23,42,1)' }}>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-black text-slate-900">✅ Carritos Finalizados</h2>
-            <div className="flex items-center gap-2 px-4 py-2 bg-green-100 border-2 border-green-600 rounded-lg">
-              <CheckCircle className="w-5 h-5 text-green-700" />
-              <span className="text-sm font-bold text-green-900">
-                {finalizedCarts.length} compras completadas
-              </span>
-            </div>
-          </div>
-          
-          {finalizedCarts.length === 0 ? (
-            <div className="text-center py-12">
-              <CheckCircle className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-              <p className="text-slate-500 font-medium">No hay carritos finalizados</p>
+              <p className="text-slate-500 font-medium">No hay carritos en esta categoría</p>
             </div>
           ) : (
             <div className="space-y-3 max-h-[600px] overflow-y-auto">
-              {finalizedCarts.map((cart) => {
-                const prestashopUrl = getPrestashopCartUrl(cart);
-                return (
-                  <div 
-                    key={cart.id}
-                    className="p-4 bg-gradient-to-r from-green-50 to-teal-50 border-2 border-slate-900 rounded-xl"
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-bold text-slate-900">Carrito #{cart.id}</h3>
-                          <span className="px-2 py-0.5 bg-green-200 border border-green-600 rounded text-xs font-bold text-green-900">
-                            ✅ Finalizado
-                          </span>
-                        </div>
-                        <p className="text-sm text-slate-600">Orden: #{cart.id_order}</p>
-                        <p className="text-xs text-slate-500">Cliente ID: {cart.id_customer}</p>
-                        <p className="text-xs text-slate-500">
-                          🏪 {getIntegrationName(cart.integration_id)}
-                        </p>
+              {carts.map((cart) => (
+                <div 
+                  key={cart.cart_id || cart.id}
+                  className={`p-4 border-2 border-slate-900 rounded-xl ${
+                    cart.status === 'abandoned' ? 'bg-gradient-to-br from-yellow-50 to-orange-50' :
+                    cart.status === 'active' ? 'bg-gradient-to-br from-blue-50 to-cyan-50' :
+                    'bg-gradient-to-br from-green-50 to-teal-50'
+                  }`}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h3 className="font-bold text-slate-900">Carrito #{cart.cart_id || cart.id}</h3>
+                        <span className={`px-2 py-0.5 border rounded text-xs font-bold ${
+                          cart.status === 'abandoned' ? 'bg-yellow-200 border-yellow-600 text-yellow-900' :
+                          cart.status === 'active' ? 'bg-blue-200 border-blue-600 text-blue-900' :
+                          'bg-green-200 border-green-600 text-green-900'
+                        }`}>
+                          {cart.status === 'abandoned' ? '⏳ Abandonado' :
+                           cart.status === 'active' ? '🔵 Activo' :
+                           '✅ Convertido'}
+                        </span>
                       </div>
-                      <CheckCircle className="w-8 h-8 text-green-600" />
+                      <p className="text-sm font-medium text-slate-900">{cart.customer_name}</p>
+                      <p className="text-xs text-slate-600">{cart.customer_email}</p>
+                      <div className="flex items-center gap-3 mt-2 text-xs text-slate-600">
+                        <span>🏪 {cart.store_name}</span>
+                        <span>📦 {cart.items?.length || 0} productos</span>
+                        <span className="font-bold text-green-600">
+                          ${Math.round(cart.total_products || 0).toLocaleString('es-CL')}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 mt-1">
+                        📅 {new Date(cart.created_at).toLocaleString('es-CL', { dateStyle: 'short', timeStyle: 'short' })}
+                      </p>
                     </div>
-                    
-                    <div className="text-xs text-slate-600 mb-3">
-                      <p>📅 {new Date(cart.date_add).toLocaleString('es-CL')}</p>
-                    </div>
-                    
-                    {prestashopUrl && (
-                      <a
-                        href={prestashopUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500 text-white border-2 border-slate-900 rounded-lg font-bold hover:bg-blue-600 transition-colors"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                        Ver en PrestaShop
-                      </a>
-                    )}
+                    <button
+                      onClick={() => setSelectedCartId(cart.cart_id || cart.id)}
+                      className="px-3 py-1 bg-blue-400 text-white rounded-lg text-xs font-bold hover:bg-blue-500 transition-colors border-2 border-slate-900 flex items-center gap-1"
+                    >
+                      <Eye className="w-3 h-3" />
+                      Ver Detalle
+                    </button>
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -489,6 +514,14 @@ const EcommercePage = () => {
             fetchOrders();
             fetchStats();
           }}
+        />
+      )}
+      
+      {/* Cart Detail Modal */}
+      {selectedCartId && (
+        <CartDetailModal
+          cartId={selectedCartId}
+          onClose={() => setSelectedCartId(null)}
         />
       )}
     </div>
