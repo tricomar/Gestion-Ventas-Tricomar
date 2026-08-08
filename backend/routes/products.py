@@ -415,3 +415,112 @@ async def toggle_ecommerce_publication(
             detail=f"Error al actualizar publicación: {str(e)}"
         )
 
+@router.post("/{product_id}/ecommerce-publication/pull")
+async def pull_ecommerce_publication(
+    product_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Sincronizar estado de publicación desde PrestaShop hacia la aplicación
+    """
+    try:
+        tenant_filter = get_tenant_filter(current_user.dict(), {"id": product_id})
+        
+        # Obtener producto
+        product = await db.products.find_one(tenant_filter, {"_id": 0})
+        
+        if not product:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Producto no encontrado"
+            )
+        
+        # Verificar si hay integraciones PrestaShop activas
+        integrations_cursor = db.prestashop_integrations.find({
+            "account_id": current_user.account_id,
+            "is_active": True
+        }, {"_id": 0})
+        integrations = await integrations_cursor.to_list(100)
+        
+        if not integrations:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No hay integraciones de ecommerce activas"
+            )
+        
+        # Obtener estado desde PrestaShop
+        sync_results = []
+        
+        for integration in integrations:
+            try:
+                # Verificar si el producto está vinculado a esta integración
+                prestashop_key = f"prestashop_product_id_{integration.get('id')}"
+                prestashop_product_id = product.get(prestashop_key) or product.get('prestashop_product_id')
+                
+                if prestashop_product_id:
+                    from services.prestashop_service import PrestashopAPIService
+                    
+                    # Crear servicio de PrestaShop
+                    ps_service = PrestashopAPIService(
+                        shop_url=integration['shop_url'],
+                        api_key=integration['api_key']
+                    )
+                    
+                    # Obtener producto de PrestaShop
+                    ps_product = ps_service.get_product(int(prestashop_product_id))
+                    
+                    # Extraer estado activo
+                    product_data = ps_product.get('product', ps_product)
+                    remote_active = bool(int(product_data.get('active', 0)))
+                    
+                    sync_results.append({
+                        "store": integration.get('store_name'),
+                        "active": remote_active
+                    })
+            
+            except Exception as e:
+                sync_results.append({
+                    "store": integration.get('store_name'),
+                    "error": str(e)
+                })
+        
+        # Si hay resultados exitosos, tomar el primero como fuente de verdad
+        successful_syncs = [r for r in sync_results if 'active' in r]
+        
+        if successful_syncs:
+            remote_active = successful_syncs[0]['active']
+            
+            # Actualizar estado en MongoDB
+            now = datetime.now(timezone.utc)
+            await db.products.update_one(
+                tenant_filter,
+                {"$set": {
+                    "ecommerce_active": remote_active,
+                    "ecommerce_last_synced": now.isoformat(),
+                    "ecommerce_sync_source": "prestashop",
+                    "updated_at": now.isoformat()
+                }}
+            )
+            
+            return {
+                "success": True,
+                "product_id": product_id,
+                "ecommerce_active": remote_active,
+                "sync_results": sync_results,
+                "message": "Estado sincronizado desde PrestaShop"
+            }
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="No se pudo sincronizar con ninguna tienda PrestaShop"
+            )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al sincronizar desde PrestaShop: {str(e)}"
+        )
+
+

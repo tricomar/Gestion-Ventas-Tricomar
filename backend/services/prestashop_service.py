@@ -495,18 +495,55 @@ class PrestashopAPIService:
             order_id: ID de la orden
             
         Returns:
-            Datos completos de la orden
+            Datos completos de la orden con items procesados
         """
         try:
             params = {'display': 'full'}
             response = self._make_request(f'orders/{order_id}', params=params)
             
+            order = None
             if 'order' in response:
-                return response['order']
+                order = response['order']
             elif 'orders' in response:
                 if isinstance(response['orders'], dict):
-                    return response['orders']
-            return None
+                    order = response['orders']
+            
+            if not order:
+                return None
+            
+            # Procesar items del pedido
+            associations = order.get('associations', {})
+            order_rows = associations.get('order_rows', [])
+            
+            # Si order_rows no es una lista, convertirla
+            if isinstance(order_rows, dict):
+                order_rows = [order_rows]
+            
+            # Procesar cada producto
+            items = []
+            for row in order_rows:
+                try:
+                    product_id = row.get('product_id')
+                    product_name = row.get('product_name', 'Producto desconocido')
+                    product_quantity = int(row.get('product_quantity', 0))
+                    unit_price = float(row.get('unit_price_tax_incl', 0))
+                    
+                    items.append({
+                        'product_id': product_id,
+                        'product_name': product_name,
+                        'product_quantity': product_quantity,
+                        'product_price': unit_price,
+                        'total_price': unit_price * product_quantity
+                    })
+                except Exception as e:
+                    print(f"Error processing order row: {e}")
+                    continue
+            
+            # Agregar items procesados al pedido
+            order['processed_items'] = items
+            
+            return order
+            
         except Exception as e:
             print(f"Error getting order {order_id}: {str(e)}")
             return None
@@ -736,3 +773,4 @@ class PrestashopAPIService:
             
         except Exception as e:
             raise Exception(f"Error al actualizar estado de producto {product_id}: {str(e)}")
+

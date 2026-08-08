@@ -91,7 +91,7 @@ async def get_ecommerce_stats(current_user: User = Depends(get_current_user)):
         # Abandoned carts
         abandoned_carts = await db.ecommerce_carts.count_documents({
             **tenant_filter,
-            "id_order": {"$exists": False}
+            "status": "abandoned"
         })
         
         return {
@@ -188,7 +188,36 @@ async def get_order_detail(
             state_id = str(order.get('current_state', ''))
             order['state_name'] = state_names.get(state_id, f"Estado {state_id}")
         
-        # Asegurar que items existe (aunque esté vacío)
+        # Asegurar que items existe
+        if 'items' not in order or not order['items']:
+            # Intentar obtener productos desde PrestaShop si hay integration_id
+            if order.get('integration_id'):
+                try:
+                    integration = await db.prestashop_integrations.find_one({
+                        "_id": order['integration_id'],
+                        "is_active": True
+                    }, {"_id": 0})
+                    
+                    if integration:
+                        from services.prestashop_service import PrestashopAPIService
+                        
+                        ps_service = PrestashopAPIService(
+                            shop_url=integration['shop_url'],
+                            api_key=integration['api_key']
+                        )
+                        
+                        # Obtener detalles completos del pedido desde PrestaShop
+                        ps_order = ps_service.get_order_details(int(order.get('id')))
+                        
+                        if ps_order and 'processed_items' in ps_order:
+                            order['items'] = ps_order['processed_items']
+                except Exception as e:
+                    print(f"Error fetching items from PrestaShop: {e}")
+                    order['items'] = []
+            else:
+                order['items'] = []
+        
+        # Si aún no hay items, asegurar lista vacía
         if 'items' not in order:
             order['items'] = []
         
@@ -280,9 +309,7 @@ async def get_order_states(
             "6": "Cancelado",
             "7": "Reembolsado",
             "8": "Error de pago",
-            "9": "En espera de reabastecimiento",
             "10": "Esperando transferencia bancaria",
-            "11": "Pago remoto aceptado",
             "12": "Pago remoto aceptado",
             "13": "En espera de reabastecimiento",
             "35": "Esperando confirmación"
@@ -329,6 +356,116 @@ async def get_order_states(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error al obtener estados: {str(e)}"
+        )
+
+@router.get("/carts")
+async def get_carts(
+    status: str = None,
+    limit: int = 50,
+    current_user: User = Depends(get_current_user)
+):
+    """Obtener carritos de ecommerce con filtros opcionales"""
+    try:
+        tenant_filter = get_tenant_filter(current_user.dict(), {})
+        
+        # Agregar filtro de estado si se proporciona
+        if status:
+            tenant_filter["status"] = status
+        
+        # Obtener carritos ordenados por fecha descendente
+        carts_cursor = db.ecommerce_carts.find(
+            tenant_filter,
+            {"_id": 0}
+        ).sort("created_at", -1).limit(limit)
+        
+        carts = await carts_cursor.to_list(limit)
+        
+        return carts
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al obtener carritos: {str(e)}"
+        )
+
+@router.get("/carts/stats")
+async def get_carts_stats(
+    current_user: User = Depends(get_current_user)
+):
+    """Obtener estadísticas de carritos"""
+    try:
+        tenant_filter = get_tenant_filter(current_user.dict(), {})
+        
+        # Contar carritos por estado
+        pipeline = [
+            {"$match": tenant_filter},
+            {"$group": {
+                "_id": "$status",
+                "count": {"$sum": 1},
+                "total_value": {"$sum": "$total_products"}
+            }}
+        ]
+        
+        stats_by_status = await db.ecommerce_carts.aggregate(pipeline).to_list(100)
+        
+        # Formatear resultados
+        stats = {
+            "active": 0,
+            "abandoned": 0,
+            "converted": 0,
+            "active_value": 0,
+            "abandoned_value": 0,
+            "converted_value": 0
+        }
+        
+        for stat in stats_by_status:
+            status_key = stat['_id']
+            stats[status_key] = stat['count']
+            stats[f"{status_key}_value"] = round(stat['total_value'], 2)
+        
+        # Calcular tasa de abandono
+        total_carts = stats['active'] + stats['abandoned'] + stats['converted']
+        if total_carts > 0:
+            stats['abandonment_rate'] = round((stats['abandoned'] / total_carts) * 100, 1)
+        else:
+            stats['abandonment_rate'] = 0
+        
+        return stats
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al obtener estadísticas de carritos: {str(e)}"
+        )
+
+@router.get("/carts/{cart_id}")
+async def get_cart_detail(
+    cart_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Obtener detalle completo de un carrito"""
+    try:
+        tenant_filter = get_tenant_filter(current_user.dict(), {"cart_id": cart_id})
+        
+        cart = await db.ecommerce_carts.find_one(
+            tenant_filter,
+            {"_id": 0}
+        )
+        
+        if not cart:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Carrito no encontrado"
+            )
+        
+        return cart
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al obtener carrito: {str(e)}"
         )
 
 @router.get("/customers")
@@ -434,83 +571,6 @@ async def send_message(
             detail=f"Error al enviar mensaje: {str(e)}"
         )
 
-@router.get("/carts/abandoned")
-async def get_abandoned_carts(
-    limit: int = 50,
-    integration_id: Optional[str] = None,
-    current_user: User = Depends(get_current_user)
-):
-    """Obtener carritos abandonados"""
-    try:
-        tenant_filter = get_tenant_filter(current_user.dict(), {})
-        
-        # Filtrar por integración si se especifica
-        if integration_id:
-            tenant_filter["integration_id"] = integration_id
-        
-        # Buscar carritos abandonados (no finalizados)
-        abandoned_filter = {
-            **tenant_filter,
-            "$or": [
-                {"id_order": {"$exists": False}},
-                {"id_order": None},
-                {"id_order": "0"}
-            ]
-        }
-        
-        carts_cursor = db.ecommerce_carts.find(
-            abandoned_filter,
-            {"_id": 0}
-        ).sort("date_add", -1).limit(limit)
-        
-        carts = await carts_cursor.to_list(limit)
-        
-        return carts
-        
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error al obtener carritos abandonados: {str(e)}"
-        )
-
-@router.get("/carts/finalized")
-async def get_finalized_carts(
-    limit: int = 50,
-    integration_id: Optional[str] = None,
-    current_user: User = Depends(get_current_user)
-):
-    """Obtener carritos finalizados (con orden de compra)"""
-    try:
-        tenant_filter = get_tenant_filter(current_user.dict(), {})
-        
-        # Filtrar por integración si se especifica
-        if integration_id:
-            tenant_filter["integration_id"] = integration_id
-        
-        # Buscar carritos finalizados (con orden asociada)
-        finalized_filter = {
-            **tenant_filter,
-            "id_order": {"$exists": True, "$nin": [None, "0"]}
-        }
-        
-        carts_cursor = db.ecommerce_carts.find(
-            finalized_filter,
-            {"_id": 0}
-        ).sort("date_add", -1).limit(limit)
-        
-        carts = await carts_cursor.to_list(limit)
-        
-        return carts
-        
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error al obtener carritos finalizados: {str(e)}"
-        )
-
-
-
-@router.get("/badge-config")
 async def get_badge_config(current_user: User = Depends(get_current_user)):
     """Obtener configuración del badge de ecommerce"""
     try:
