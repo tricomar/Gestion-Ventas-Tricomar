@@ -73,9 +73,16 @@ class SyncService:
                     continue
                 
                 # Crear documento de orden
+                # Obtener _id de la integración de MongoDB
+                integration_mongo = await db.prestashop_integrations.find_one(
+                    {'id': integration_id},
+                    {'_id': 1}
+                )
+                integration_mongo_id = str(integration_mongo['_id']) if integration_mongo else integration_id
+                
                 order_doc = {
                     'account_id': account_id,
-                    'integration_id': str(integration['_id']),
+                    'integration_id': integration_mongo_id,
                     'store_id': store_id,
                     'store_code': integration.get('store_code'),
                     'id': str(order_id),
