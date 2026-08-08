@@ -26,8 +26,11 @@ class MessageCreate(BaseModel):
     order_id: Optional[str] = None
 
 @router.get("/stats")
-async def get_ecommerce_stats(current_user: User = Depends(get_current_user)):
-    """Obtener estadísticas de ecommerce con timezone configurado"""
+async def get_ecommerce_stats(
+    store_id: str = None,
+    current_user: User = Depends(get_current_user)
+):
+    """Obtener estadísticas de ecommerce filtradas por tienda"""
     try:
         from utils.timezone_utils import (
             get_day_boundaries_utc,
@@ -54,6 +57,10 @@ async def get_ecommerce_stats(current_user: User = Depends(get_current_user)):
         )
         
         tenant_filter = get_tenant_filter(current_user.dict(), {})
+        
+        # Filtrar por store_id si se proporciona
+        if store_id:
+            tenant_filter["store_id"] = store_id
         
         # Total orders
         total_orders = await db.ecommerce_orders.count_documents(tenant_filter)
@@ -118,11 +125,10 @@ async def get_ecommerce_stats(current_user: User = Depends(get_current_user)):
 async def get_orders(
     limit: int = 50,
     state: str = None,
-    store_code: str = None,
-    integration_id: str = None,
+    store_id: str = None,
     current_user: User = Depends(get_current_user)
 ):
-    """Obtener últimas órdenes de ecommerce con filtros opcionales"""
+    """Obtener últimas órdenes de ecommerce filtradas por tienda"""
     try:
         tenant_filter = get_tenant_filter(current_user.dict(), {})
         
@@ -130,12 +136,9 @@ async def get_orders(
         if state:
             tenant_filter["current_state"] = state
         
-        # Filtrar por integration_id (tiene prioridad)
-        if integration_id:
-            tenant_filter["integration_id"] = integration_id
-        elif store_code:
-            # Fallback por compatibilidad
-            tenant_filter["store_code"] = store_code
+        # Filtrar por store_id (relación canónica)
+        if store_id:
+            tenant_filter["store_id"] = store_id
         
         # Obtener órdenes ordenadas por fecha descendente
         orders_cursor = db.ecommerce_orders.find(
@@ -144,6 +147,20 @@ async def get_orders(
         ).sort("date_add", -1).limit(limit)
         
         orders = await orders_cursor.to_list(limit)
+        
+        # Resolver nombres de tienda dinámicamente
+        if orders:
+            account = await db.accounts.find_one(
+                {"id": current_user.account_id},
+                {"_id": 0, "stores": 1}
+            )
+            stores_map = {}
+            if account and account.get("stores"):
+                stores_map = {s["id"]: s["name"] for s in account["stores"]}
+            
+            for order in orders:
+                if "store_id" in order and order["store_id"] in stores_map:
+                    order["store_name"] = stores_map[order["store_id"]]
         
         return orders
         

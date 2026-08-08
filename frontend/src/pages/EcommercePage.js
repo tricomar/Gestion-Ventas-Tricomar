@@ -17,6 +17,7 @@ import {
   Eye
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useAccount } from '../context/AccountContext';
 import OrderDetailModal from '../components/ecommerce/OrderDetailModal';
 import CartDetailModal from '../components/ecommerce/CartDetailModal';
 import CustomerDetailModal from '../components/ecommerce/CustomerDetailModal';
@@ -26,6 +27,7 @@ const API = `${BACKEND_URL}/api`;
 
 const EcommercePage = () => {
   const { user } = useAuth();
+  const { account } = useAccount();
   const [orders, setOrders] = useState([]);
   const [selectedOrderId, setSelectedOrderId] = useState(null);
   const [carts, setCarts] = useState([]);
@@ -52,7 +54,7 @@ const EcommercePage = () => {
   const [abandonedCarts, setAbandonedCarts] = useState([]);
   const [finalizedCarts, setFinalizedCarts] = useState([]);
   const [integrations, setIntegrations] = useState([]);
-  const [selectedIntegration, setSelectedIntegration] = useState('all');
+  const [selectedStore, setSelectedStore] = useState('all'); // Cambio: usar store_id en vez de integration_id
   const [activeTab, setActiveTab] = useState('orders'); // 'orders', 'carts', 'customers'
   const [cartFilterStatus, setCartFilterStatus] = useState('abandoned'); // 'active', 'abandoned', 'converted'
   const [loading, setLoading] = useState(true);
@@ -84,10 +86,10 @@ const EcommercePage = () => {
   }, []);
 
   useEffect(() => {
-    if (integrations.length > 0 || selectedIntegration === 'all') {
+    if (account?.stores || selectedStore === 'all') {
       fetchEcommerceData();
     }
-  }, [selectedIntegration]);
+  }, [selectedStore]);
 
   const fetchIntegrations = async () => {
     try {
@@ -119,7 +121,8 @@ const EcommercePage = () => {
 
   const fetchStats = async () => {
     try {
-      const response = await axios.get(`${API}/ecommerce/stats`);
+      const storeParam = selectedStore !== 'all' ? `?store_id=${selectedStore}` : '';
+      const response = await axios.get(`${API}/ecommerce/stats${storeParam}`);
       setStats(response.data);
     } catch (error) {
       console.error('Error fetching stats:', error);
@@ -137,24 +140,25 @@ const EcommercePage = () => {
 
   const fetchEcommerceData = async () => {
     try {
-      const integrationParam = selectedIntegration !== 'all' 
-        ? `integration_id=${selectedIntegration}&` 
+      const storeParam = selectedStore !== 'all' 
+        ? `store_id=${selectedStore}&` 
         : '';
 
       // Obtener órdenes
-      const ordersRes = await axios.get(`${API}/ecommerce/orders?${integrationParam}limit=50`);
+      const ordersRes = await axios.get(`${API}/ecommerce/orders?${storeParam}limit=50`);
       setOrders(ordersRes.data);
 
       // Obtener estadísticas
-      const statsRes = await axios.get(`${API}/ecommerce/stats`);
+      const statsParam = selectedStore !== 'all' ? `?store_id=${selectedStore}` : '';
+      const statsRes = await axios.get(`${API}/ecommerce/stats${statsParam}`);
       setStats(statsRes.data);
 
       // Obtener carritos abandonados
-      const abandonedRes = await axios.get(`${API}/ecommerce/carts?${integrationParam}status=abandoned&limit=50`);
+      const abandonedRes = await axios.get(`${API}/ecommerce/carts?${storeParam}status=abandoned&limit=50`);
       setAbandonedCarts(abandonedRes.data);
 
       // Obtener carritos finalizados
-      const finalizedRes = await axios.get(`${API}/ecommerce/carts?${integrationParam}status=converted&limit=50`);
+      const finalizedRes = await axios.get(`${API}/ecommerce/carts?${storeParam}status=converted&limit=50`);
       setFinalizedCarts(finalizedRes.data);
 
     } catch (error) {
@@ -185,8 +189,8 @@ const EcommercePage = () => {
   const fetchCustomers = async () => {
     try {
       const filterParam = customerFilter !== 'all' ? `customer_type=${customerFilter}&` : '';
-      const integrationParam = selectedIntegration !== 'all' ? `integration_id=${selectedIntegration}&` : '';
-      const response = await axios.get(`${API}/ecommerce/customers?${integrationParam}${filterParam}limit=50`);
+      const storeParam = selectedStore !== 'all' ? `store_id=${selectedStore}&` : '';
+      const response = await axios.get(`${API}/ecommerce/customers?${storeParam}${filterParam}limit=50`);
       setCustomers(response.data);
     } catch (error) {
       console.error('Error fetching customers:', error);
@@ -307,14 +311,17 @@ const EcommercePage = () => {
     );
   }
 
-  if (integrations.length === 0) {
+  // Obtener tiendas desde account
+  const stores = account?.stores || [];
+
+  if (stores.length === 0) {
     return (
       <div className="p-8">
         <div className="max-w-2xl mx-auto text-center mt-20">
           <div className="text-8xl mb-6">🛍️</div>
-          <h2 className="text-3xl font-black text-slate-900 mb-4">No hay integraciones de ecommerce</h2>
+          <h2 className="text-3xl font-black text-slate-900 mb-4">No hay tiendas configuradas</h2>
           <p className="text-slate-600 mb-8">
-            Ve a <strong>Configuración → Integraciones</strong> para conectar tu tienda PrestaShop
+            Ve a <strong>Configuración → Tiendas/Cajas</strong> para configurar tus tiendas y conectar PrestaShop
           </p>
         </div>
       </div>
@@ -339,33 +346,29 @@ const EcommercePage = () => {
       {/* Store Filter Buttons */}
       <div className="mb-8 flex flex-wrap gap-3">
         <button
-          onClick={() => setSelectedIntegration('all')}
+          onClick={() => setSelectedStore('all')}
           className={`px-6 py-3 border-2 border-slate-900 rounded-xl font-bold transition-all ${
-            selectedIntegration === 'all'
+            selectedStore === 'all'
               ? 'bg-indigo-400 text-white shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]'
               : 'bg-white text-slate-900 hover:bg-slate-50'
           }`}
         >
           🏪 Todas las Tiendas
         </button>
-        {integrations.map((integration) => {
-          const integrationIdStr = integration._id?.$oid || String(integration._id);
-          const isSelected = selectedIntegration === integrationIdStr;
+        {stores.map((store) => {
+          const isSelected = selectedStore === store.id;
           
           return (
             <button
-              key={integrationIdStr}
-              onClick={() => {
-                console.log('Clicked integration:', integrationIdStr);
-                setSelectedIntegration(integrationIdStr);
-              }}
+              key={store.id}
+              onClick={() => setSelectedStore(store.id)}
               className={`px-6 py-3 border-2 border-slate-900 rounded-xl font-bold transition-all ${
                 isSelected
                   ? 'bg-purple-400 text-white shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]'
                   : 'bg-white text-slate-900 hover:bg-slate-50'
               }`}
             >
-              🛒 {integration.shop_name || integration.store_name}
+              🛒 {store.name}
             </button>
           );
         })}
