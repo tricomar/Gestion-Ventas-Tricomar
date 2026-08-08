@@ -348,19 +348,27 @@ const EcommercePage = () => {
         >
           🏪 Todas las Tiendas
         </button>
-        {integrations.map((integration) => (
-          <button
-            key={integration._id || integration.id}
-            onClick={() => setSelectedIntegration(String(integration._id))}
-            className={`px-6 py-3 border-2 border-slate-900 rounded-xl font-bold transition-all ${
-              selectedIntegration === String(integration._id)
-                ? 'bg-purple-400 text-white shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]'
-                : 'bg-white text-slate-900 hover:bg-slate-50'
-            }`}
-          >
-            🛒 {integration.shop_name || integration.store_name}
-          </button>
-        ))}
+        {integrations.map((integration) => {
+          const integrationIdStr = integration._id?.$oid || String(integration._id);
+          const isSelected = selectedIntegration === integrationIdStr;
+          
+          return (
+            <button
+              key={integrationIdStr}
+              onClick={() => {
+                console.log('Clicked integration:', integrationIdStr);
+                setSelectedIntegration(integrationIdStr);
+              }}
+              className={`px-6 py-3 border-2 border-slate-900 rounded-xl font-bold transition-all ${
+                isSelected
+                  ? 'bg-purple-400 text-white shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]'
+                  : 'bg-white text-slate-900 hover:bg-slate-50'
+              }`}
+            >
+              🛒 {integration.shop_name || integration.store_name}
+            </button>
+          );
+        })}
       </div>
 
       {/* Stats Grid */}

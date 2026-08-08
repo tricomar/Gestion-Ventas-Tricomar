@@ -1852,6 +1852,94 @@ async def delete_integration(
     return {'success': True, 'message': 'Integración eliminada exitosamente'}
 
 
+
+@router.patch("/prestashop/{integration_id}")
+async def update_prestashop_integration(
+    integration_id: str,
+    shop_name: str = None,
+    store_code: str = None,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Actualizar información de integración PrestaShop
+    Actualiza en cascada el nombre en todas las órdenes, carritos y clientes relacionados
+    """
+    from bson import ObjectId
+    
+    try:
+        # Validar que la integración existe y pertenece al usuario
+        integration = await db.prestashop_integrations.find_one({
+            "_id": ObjectId(integration_id),
+            "account_id": current_user.account_id
+        })
+        
+        if not integration:
+            raise HTTPException(status_code=404, detail="Integración no encontrada")
+        
+        # Preparar actualización
+        update_data = {}
+        if shop_name:
+            update_data["shop_name"] = shop_name
+        if store_code:
+            update_data["store_code"] = store_code
+        
+        if not update_data:
+            raise HTTPException(status_code=400, detail="No se proporcionaron datos para actualizar")
+        
+        # 1. Actualizar integración
+        await db.prestashop_integrations.update_one(
+            {"_id": ObjectId(integration_id)},
+            {"$set": update_data}
+        )
+        
+        # 2. Actualizar en cascada en todas las colecciones relacionadas
+        cascade_update = {}
+        if shop_name:
+            cascade_update["store_name"] = shop_name
+        if store_code:
+            cascade_update["store_code"] = store_code
+        
+        if cascade_update:
+            # Actualizar órdenes
+            orders_result = await db.ecommerce_orders.update_many(
+                {"integration_id": integration_id, "account_id": current_user.account_id},
+                {"$set": cascade_update}
+            )
+            
+            # Actualizar carritos
+            carts_result = await db.ecommerce_carts.update_many(
+                {"integration_id": integration_id, "account_id": current_user.account_id},
+                {"$set": cascade_update}
+            )
+            
+            # Actualizar clientes
+            customers_result = await db.ecommerce_customers.update_many(
+                {"integration_id": integration_id, "account_id": current_user.account_id},
+                {"$set": cascade_update}
+            )
+            
+            return {
+                "success": True,
+                "message": "Integración actualizada exitosamente",
+                "updated": {
+                    "integration": True,
+                    "orders": orders_result.modified_count,
+                    "carts": carts_result.modified_count,
+                    "customers": customers_result.modified_count
+                }
+            }
+        
+        return {"success": True, "message": "Integración actualizada exitosamente"}
+        
+    except Exception as e:
+        print(f"Error updating integration: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error al actualizar integración: {str(e)}"
+        )
+
+
+
 @router.get("/prestashop/download-module")
 async def download_prestashop_module():
     """
