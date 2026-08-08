@@ -137,12 +137,12 @@ const EcommercePage = () => {
 
   const fetchEcommerceData = async () => {
     try {
-      const integrationParam = selectedIntegration !== 'all' 
-        ? `integration_id=${selectedIntegration}&` 
+      const storeParam = selectedIntegration !== 'all' 
+        ? `store_code=${selectedIntegration}&` 
         : '';
 
       // Obtener órdenes
-      const ordersRes = await axios.get(`${API}/ecommerce/orders?${integrationParam}limit=50`);
+      const ordersRes = await axios.get(`${API}/ecommerce/orders?${storeParam}limit=50`);
       setOrders(ordersRes.data);
 
       // Obtener estadísticas
@@ -150,11 +150,11 @@ const EcommercePage = () => {
       setStats(statsRes.data);
 
       // Obtener carritos abandonados
-      const abandonedRes = await axios.get(`${API}/ecommerce/carts?${integrationParam}status=abandoned&limit=50`);
+      const abandonedRes = await axios.get(`${API}/ecommerce/carts?${storeParam}status=abandoned&limit=50`);
       setAbandonedCarts(abandonedRes.data);
 
       // Obtener carritos finalizados
-      const finalizedRes = await axios.get(`${API}/ecommerce/carts?${integrationParam}status=converted&limit=50`);
+      const finalizedRes = await axios.get(`${API}/ecommerce/carts?${storeParam}status=converted&limit=50`);
       setFinalizedCarts(finalizedRes.data);
 
     } catch (error) {
@@ -185,7 +185,8 @@ const EcommercePage = () => {
   const fetchCustomers = async () => {
     try {
       const filterParam = customerFilter !== 'all' ? `customer_type=${customerFilter}&` : '';
-      const response = await axios.get(`${API}/ecommerce/customers?${filterParam}limit=50`);
+      const storeParam = selectedIntegration !== 'all' ? `store_code=${selectedIntegration}&` : '';
+      const response = await axios.get(`${API}/ecommerce/customers?${storeParam}${filterParam}limit=50`);
       setCustomers(response.data);
     } catch (error) {
       console.error('Error fetching customers:', error);
@@ -349,15 +350,15 @@ const EcommercePage = () => {
         </button>
         {integrations.map((integration) => (
           <button
-            key={integration.id}
-            onClick={() => setSelectedIntegration(integration.id)}
+            key={integration.store_code || integration.id}
+            onClick={() => setSelectedIntegration(integration.store_code)}
             className={`px-6 py-3 border-2 border-slate-900 rounded-xl font-bold transition-all ${
-              selectedIntegration === integration.id
+              selectedIntegration === integration.store_code
                 ? 'bg-purple-400 text-white shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]'
                 : 'bg-white text-slate-900 hover:bg-slate-50'
             }`}
           >
-            🛒 {integration.store_name}
+            🛒 {integration.shop_name || integration.store_name}
           </button>
         ))}
       </div>
@@ -447,7 +448,7 @@ const EcommercePage = () => {
                       <h3 className="font-bold text-slate-900">Orden #{order.reference || order.id}</h3>
                       <p className="text-sm text-slate-600">{order.customer_name || 'Cliente'}</p>
                       <p className="text-xs text-slate-500">
-                        🏪 {getIntegrationName(order.integration_id)}
+                        🏪 {order.store_name || 'Desconocido'}
                       </p>
                     </div>
                     <div className="text-right">

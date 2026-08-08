@@ -426,6 +426,7 @@ async def get_order_states(
 @router.get("/carts")
 async def get_carts(
     status: str = None,
+    store_code: str = None,
     limit: int = 50,
     current_user: User = Depends(get_current_user)
 ):
@@ -438,6 +439,10 @@ async def get_carts(
             # Mapear 'converted' a 'completed' para consulta BD
             query_status = 'completed' if status == 'converted' else status
             tenant_filter["status"] = query_status
+        
+        # Agregar filtro de tienda si se proporciona
+        if store_code:
+            tenant_filter["store_code"] = store_code
         
         # Obtener carritos ordenados por fecha descendente
         carts_cursor = db.ecommerce_carts.find(
@@ -544,6 +549,7 @@ async def get_cart_detail(
 @router.get("/customers")
 async def get_customers(
     customer_type: str = None,
+    store_code: str = None,
     limit: int = 100,
     current_user: User = Depends(get_current_user)
 ):
@@ -561,6 +567,10 @@ async def get_customers(
             elif customer_type == "one-time":
                 base_filter["is_recurring"] = False
                 base_filter["is_new"] = False
+        
+        # Agregar filtro de tienda si se proporciona
+        if store_code:
+            base_filter["store_code"] = store_code
         
         # Obtener clientes ordenados por total gastado
         customers_cursor = db.ecommerce_customers.find(
