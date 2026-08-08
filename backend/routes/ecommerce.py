@@ -190,46 +190,43 @@ async def get_order_detail(
         
         # Asegurar que items existe
         if 'items' not in order or not order['items']:
-            # Intentar obtener productos desde PrestaShop si hay integration_id
-            if order.get('integration_id'):
-                try:
-                    # Buscar integración por string ID o ObjectId
-                    from bson import ObjectId
+            # Intentar obtener productos desde PrestaShop
+            try:
+                # Buscar integraciones activas del usuario
+                # Como integration_id en orden no coincide con _id de integración,
+                # usamos la primera integración activa del usuario
+                integration = await db.prestashop_integrations.find_one({
+                    "account_id": current_user.account_id,
+                    "is_active": True
+                }, {"_id": 0, "shop_url": 1, "api_key": 1})
+                
+                if integration:
+                    from services.prestashop_service import PrestashopAPIService
                     
-                    integration_query = {
-                        "account_id": current_user.account_id,
-                        "is_active": True
-                    }
-                    
-                    # Intentar convertir a ObjectId si es posible
-                    try:
-                        integration_query["_id"] = ObjectId(order['integration_id'])
-                    except (ValueError, TypeError):
-                        integration_query["integration_id"] = order['integration_id']
-                    
-                    integration = await db.prestashop_integrations.find_one(
-                        integration_query,
-                        {"_id": 0}
+                    ps_service = PrestashopAPIService(
+                        shop_url=integration['shop_url'],
+                        api_key=integration['api_key']
                     )
                     
-                    if integration:
-                        from services.prestashop_service import PrestashopAPIService
-                        
-                        ps_service = PrestashopAPIService(
-                            shop_url=integration['shop_url'],
-                            api_key=integration['api_key']
-                        )
-                        
-                        # Obtener detalles completos del pedido desde PrestaShop
-                        ps_order = ps_service.get_order_details(int(order.get('id')))
-                        
-                        if ps_order and 'processed_items' in ps_order:
-                            order['items'] = ps_order['processed_items']
-                except Exception as e:
-                    print(f"Error fetching items from PrestaShop: {e}")
+                    # Obtener detalles completos del pedido desde PrestaShop
+                    ps_order = ps_service.get_order_details(int(order.get('id')))
+                    
+                    if ps_order and 'processed_items' in ps_order:
+                        order['items'] = ps_order['processed_items']
+                        print(f"✅ Loaded {len(order['items'])} items from PrestaShop for order {order.get('id')}")
+                    else:
+                        order['items'] = []
+                        print(f"⚠️ No items returned from PrestaShop for order {order.get('id')}")
+                else:
                     order['items'] = []
-            else:
+                    print(f"⚠️ No active integration found for account {current_user.account_id}")
+            except Exception as e:
+                print(f"❌ Error fetching items from PrestaShop: {e}")
+                import traceback
+                traceback.print_exc()
                 order['items'] = []
+        else:
+            order['items'] = []
         
         # Si aún no hay items, asegurar lista vacía
         if 'items' not in order:

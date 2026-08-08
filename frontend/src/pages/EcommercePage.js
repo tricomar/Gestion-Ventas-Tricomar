@@ -69,6 +69,9 @@ const EcommercePage = () => {
     recurring_rate: 0
   });
   const [customerFilter, setCustomerFilter] = useState('all'); // 'all', 'new', 'recurring', 'one-time'
+  
+  // Estados de pedidos para mapeo
+  const [orderStates, setOrderStates] = useState([]);
 
   useEffect(() => {
     fetchIntegrations();
@@ -77,6 +80,7 @@ const EcommercePage = () => {
     fetchCarts();
     fetchCartStats();
     fetchCustomerStats();
+    fetchOrderStates();
   }, []);
 
   useEffect(() => {
@@ -94,6 +98,21 @@ const EcommercePage = () => {
       console.error('Error fetching integrations:', error);
       setLoading(false);
     }
+  };
+
+  const fetchOrderStates = async () => {
+    try {
+      const response = await axios.get(`${API}/ecommerce/order-states`);
+      setOrderStates(response.data);
+    } catch (error) {
+      console.error('Error fetching order states:', error);
+    }
+  };
+
+  const getStateName = (stateId) => {
+    if (!stateId) return 'Desconocido';
+    const state = orderStates.find(s => s.id === String(stateId));
+    return state ? state.name : `Estado ${stateId}`;
   };
 
 
@@ -445,7 +464,7 @@ const EcommercePage = () => {
                     <div className="flex items-center gap-2">
                       <span className={`px-3 py-1 border-2 rounded-lg text-xs font-bold flex items-center gap-1 ${getStatusColor(order.current_state || order.status)}`}>
                         {getStatusIcon(order.current_state || order.status)}
-                        {order.state_name || `Estado ${order.current_state || order.status}`}
+                        {order.state_name || getStateName(order.current_state || order.status)}
                       </span>
                       <span className="text-xs text-slate-600 font-medium">
                         💳 {order.payment_method || 'Sin método'}
