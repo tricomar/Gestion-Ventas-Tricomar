@@ -76,6 +76,7 @@ const EcommercePage = () => {
     fetchOrders();
     fetchCarts();
     fetchCartStats();
+    fetchCustomerStats();
   }, []);
 
   useEffect(() => {
@@ -130,11 +131,11 @@ const EcommercePage = () => {
       setStats(statsRes.data);
 
       // Obtener carritos abandonados
-      const abandonedRes = await axios.get(`${API}/ecommerce/carts/abandoned?${integrationParam}limit=50`);
+      const abandonedRes = await axios.get(`${API}/ecommerce/carts?${integrationParam}status=abandoned&limit=50`);
       setAbandonedCarts(abandonedRes.data);
 
       // Obtener carritos finalizados
-      const finalizedRes = await axios.get(`${API}/ecommerce/carts/finalized?${integrationParam}limit=50`);
+      const finalizedRes = await axios.get(`${API}/ecommerce/carts?${integrationParam}status=converted&limit=50`);
       setFinalizedCarts(finalizedRes.data);
 
     } catch (error) {

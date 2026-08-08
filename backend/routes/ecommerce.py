@@ -297,66 +297,56 @@ async def update_order_status(
 async def get_order_states(
     current_user: User = Depends(get_current_user)
 ):
-    """Obtener lista de estados de pedidos disponibles basados en pedidos existentes y PrestaShop"""
+    """Obtener lista de estados de pedidos desde PrestaShop (estados reales incluyendo módulos)"""
     try:
-        # Mapeo de estados comunes de PrestaShop
-        default_state_names = {
-            "1": "Esperando pago con cheque",
-            "2": "Pago aceptado",
-            "3": "Preparación en curso",
-            "4": "Enviado",
-            "5": "Entregado",
-            "6": "Cancelado",
-            "7": "Reembolsado",
-            "8": "Error de pago",
-            "10": "Esperando transferencia bancaria",
-            "12": "Pago remoto aceptado",
-            "13": "En espera de reabastecimiento",
-            "35": "Esperando confirmación"
-        }
+        # Obtener integraciones activas del usuario
+        integrations = await db.prestashop_integrations.find({
+            "account_id": current_user.account_id,
+            "is_active": True
+        }).to_list(10)
         
-        # Obtener estados únicos de los pedidos del usuario
-        tenant_filter = get_tenant_filter(current_user.dict(), {})
+        if not integrations:
+            # Si no hay integraciones, retornar estados por defecto
+            default_states = [
+                {"id": "2", "name": "Pago aceptado", "color": "#32CD32"},
+                {"id": "3", "name": "Preparación en curso", "color": "#FF8C00"},
+                {"id": "4", "name": "Enviado", "color": "#8A2BE2"},
+                {"id": "5", "name": "Entregado", "color": "#228B22"},
+                {"id": "6", "name": "Cancelado", "color": "#DC143C"},
+                {"id": "7", "name": "Reembolsado", "color": "#EC2E15"}
+            ]
+            return default_states
         
-        pipeline = [
-            {"$match": tenant_filter},
-            {"$group": {
-                "_id": "$current_state",
-                "state_name": {"$first": "$state_name"}
-            }},
-            {"$sort": {"_id": 1}}
-        ]
+        # Obtener estados desde la primera integración activa
+        # (en caso de múltiples tiendas, podrían tener estados distintos)
+        integration = integrations[0]
         
-        states_from_orders = await db.ecommerce_orders.aggregate(pipeline).to_list(100)
+        from services.prestashop_service import PrestashopAPIService
         
-        # Convertir a formato esperado
-        states = []
-        for state in states_from_orders:
-            if state['_id']:  # Ignorar nulls
-                state_id = str(state['_id'])
-                # Usar state_name del pedido si existe, sino usar el mapeo por defecto
-                state_name = state.get('state_name') or default_state_names.get(state_id, f"Estado {state_id}")
-                
-                states.append({
-                    "id": state_id,
-                    "name": state_name
-                })
+        ps_service = PrestashopAPIService(
+            shop_url=integration['shop_url'],
+            api_key=integration['api_key']
+        )
         
-        # Si no hay pedidos, devolver estados por defecto de PrestaShop
-        if not states:
-            for state_id, state_name in default_state_names.items():
-                states.append({
-                    "id": state_id,
-                    "name": state_name
-                })
+        # Obtener estados reales desde PrestaShop
+        states = ps_service.get_order_states()
+        
+        # Filtrar estados eliminados u ocultos si es necesario
+        # Por ahora retornamos todos para máxima transparencia
+        # El usuario puede ver estados de módulos, ocultos, etc.
         
         return states
         
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error al obtener estados: {str(e)}"
-        )
+        print(f"Error getting order states: {str(e)}")
+        # En caso de error, retornar estados básicos
+        return [
+            {"id": "2", "name": "Pago aceptado", "color": "#32CD32"},
+            {"id": "3", "name": "Preparación en curso", "color": "#FF8C00"},
+            {"id": "4", "name": "Enviado", "color": "#8A2BE2"},
+            {"id": "5", "name": "Entregado", "color": "#228B22"},
+            {"id": "6", "name": "Cancelado", "color": "#DC143C"}
+        ]
 
 @router.get("/carts")
 async def get_carts(
@@ -370,7 +360,9 @@ async def get_carts(
         
         # Agregar filtro de estado si se proporciona
         if status:
-            tenant_filter["status"] = status
+            # Mapear 'converted' a 'completed' para consulta BD
+            query_status = 'completed' if status == 'converted' else status
+            tenant_filter["status"] = query_status
         
         # Obtener carritos ordenados por fecha descendente
         carts_cursor = db.ecommerce_carts.find(
@@ -420,8 +412,13 @@ async def get_carts_stats(
         
         for stat in stats_by_status:
             status_key = stat['_id']
-            stats[status_key] = stat['count']
-            stats[f"{status_key}_value"] = round(stat['total_value'], 2)
+            # Mapear 'completed' a 'converted' para consistencia
+            if status_key == 'completed':
+                status_key = 'converted'
+            
+            if status_key in stats:
+                stats[status_key] = stat['count']
+                stats[f"{status_key}_value"] = round(stat['total_value'], 2)
         
         # Calcular tasa de abandono
         total_carts = stats['active'] + stats['abandoned'] + stats['converted']
