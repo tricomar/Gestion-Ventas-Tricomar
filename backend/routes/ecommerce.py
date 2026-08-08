@@ -119,6 +119,7 @@ async def get_orders(
     limit: int = 50,
     state: str = None,
     store_code: str = None,
+    integration_id: str = None,
     current_user: User = Depends(get_current_user)
 ):
     """Obtener últimas órdenes de ecommerce con filtros opcionales"""
@@ -128,7 +129,12 @@ async def get_orders(
         # Agregar filtros opcionales
         if state:
             tenant_filter["current_state"] = state
-        if store_code:
+        
+        # Filtrar por integration_id (tiene prioridad)
+        if integration_id:
+            tenant_filter["integration_id"] = integration_id
+        elif store_code:
+            # Fallback por compatibilidad
             tenant_filter["store_code"] = store_code
         
         # Obtener órdenes ordenadas por fecha descendente
@@ -427,6 +433,7 @@ async def get_order_states(
 async def get_carts(
     status: str = None,
     store_code: str = None,
+    integration_id: str = None,
     limit: int = 50,
     current_user: User = Depends(get_current_user)
 ):
@@ -440,8 +447,11 @@ async def get_carts(
             query_status = 'completed' if status == 'converted' else status
             tenant_filter["status"] = query_status
         
-        # Agregar filtro de tienda si se proporciona
-        if store_code:
+        # Filtrar por integration_id (tiene prioridad)
+        if integration_id:
+            tenant_filter["integration_id"] = integration_id
+        elif store_code:
+            # Fallback por compatibilidad
             tenant_filter["store_code"] = store_code
         
         # Obtener carritos ordenados por fecha descendente
@@ -550,6 +560,7 @@ async def get_cart_detail(
 async def get_customers(
     customer_type: str = None,
     store_code: str = None,
+    integration_id: str = None,
     limit: int = 100,
     current_user: User = Depends(get_current_user)
 ):
@@ -568,8 +579,11 @@ async def get_customers(
                 base_filter["is_recurring"] = False
                 base_filter["is_new"] = False
         
-        # Agregar filtro de tienda si se proporciona
-        if store_code:
+        # Filtrar por integration_id (tiene prioridad)
+        if integration_id:
+            base_filter["integration_id"] = integration_id
+        elif store_code:
+            # Fallback por compatibilidad
             base_filter["store_code"] = store_code
         
         # Obtener clientes ordenados por total gastado

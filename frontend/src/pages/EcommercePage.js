@@ -137,12 +137,12 @@ const EcommercePage = () => {
 
   const fetchEcommerceData = async () => {
     try {
-      const storeParam = selectedIntegration !== 'all' 
-        ? `store_code=${selectedIntegration}&` 
+      const integrationParam = selectedIntegration !== 'all' 
+        ? `integration_id=${selectedIntegration}&` 
         : '';
 
       // Obtener órdenes
-      const ordersRes = await axios.get(`${API}/ecommerce/orders?${storeParam}limit=50`);
+      const ordersRes = await axios.get(`${API}/ecommerce/orders?${integrationParam}limit=50`);
       setOrders(ordersRes.data);
 
       // Obtener estadísticas
@@ -150,11 +150,11 @@ const EcommercePage = () => {
       setStats(statsRes.data);
 
       // Obtener carritos abandonados
-      const abandonedRes = await axios.get(`${API}/ecommerce/carts?${storeParam}status=abandoned&limit=50`);
+      const abandonedRes = await axios.get(`${API}/ecommerce/carts?${integrationParam}status=abandoned&limit=50`);
       setAbandonedCarts(abandonedRes.data);
 
       // Obtener carritos finalizados
-      const finalizedRes = await axios.get(`${API}/ecommerce/carts?${storeParam}status=converted&limit=50`);
+      const finalizedRes = await axios.get(`${API}/ecommerce/carts?${integrationParam}status=converted&limit=50`);
       setFinalizedCarts(finalizedRes.data);
 
     } catch (error) {
@@ -185,8 +185,8 @@ const EcommercePage = () => {
   const fetchCustomers = async () => {
     try {
       const filterParam = customerFilter !== 'all' ? `customer_type=${customerFilter}&` : '';
-      const storeParam = selectedIntegration !== 'all' ? `store_code=${selectedIntegration}&` : '';
-      const response = await axios.get(`${API}/ecommerce/customers?${storeParam}${filterParam}limit=50`);
+      const integrationParam = selectedIntegration !== 'all' ? `integration_id=${selectedIntegration}&` : '';
+      const response = await axios.get(`${API}/ecommerce/customers?${integrationParam}${filterParam}limit=50`);
       setCustomers(response.data);
     } catch (error) {
       console.error('Error fetching customers:', error);
@@ -350,10 +350,10 @@ const EcommercePage = () => {
         </button>
         {integrations.map((integration) => (
           <button
-            key={integration.store_code || integration.id}
-            onClick={() => setSelectedIntegration(integration.store_code)}
+            key={integration._id || integration.id}
+            onClick={() => setSelectedIntegration(String(integration._id))}
             className={`px-6 py-3 border-2 border-slate-900 rounded-xl font-bold transition-all ${
-              selectedIntegration === integration.store_code
+              selectedIntegration === String(integration._id)
                 ? 'bg-purple-400 text-white shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]'
                 : 'bg-white text-slate-900 hover:bg-slate-50'
             }`}
