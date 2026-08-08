@@ -15,6 +15,7 @@ from models.users import User
 from middleware.tenant import get_tenant_filter, add_account_id_to_document
 from utils.audit import create_audit_log
 from pydantic import BaseModel
+from services.sync_service import SyncService
 
 # Zona horaria de Chile
 CHILE_TZ = ZoneInfo('America/Santiago')
@@ -72,19 +73,37 @@ async def create_cart_sale(sale_data: CartSale, current_user: User = Depends(get
         # Guardar en base de datos
         await db.sales.insert_one(sale_doc)
         
-        # Actualizar stock de productos (opcional, si quieres descontar automáticamente)
+        # Actualizar stock de productos y sincronizar con PrestaShop
         for item in sale_data.items:
             tenant_filter = get_tenant_filter(current_user.dict(), {'id': item.product_id})
-            await db.products.update_one(
-                tenant_filter,
-                {
-                    '$inc': {
-                        'stock': -item.quantity,
-                        'usage_count': 1
-                    }
-                },
-                upsert=False
-            )
+            
+            # Obtener stock actual antes de actualizar
+            product = await db.products.find_one(tenant_filter, {'_id': 0, 'stock': 1})
+            
+            if product:
+                # Calcular nuevo stock
+                new_stock = max(0, product.get('stock', 0) - item.quantity)
+                
+                # Actualizar stock local
+                await db.products.update_one(
+                    tenant_filter,
+                    {
+                        '$set': {'stock': new_stock},
+                        '$inc': {'usage_count': 1}
+                    },
+                    upsert=False
+                )
+                
+                # Sincronizar stock a PrestaShop en background (no bloquear la venta)
+                try:
+                    await SyncService.sync_stock_to_prestashop(
+                        account_id=current_user.account_id,
+                        product_id=item.product_id,
+                        new_stock=new_stock
+                    )
+                except Exception as sync_error:
+                    # Log error pero no falla la venta
+                    print(f"Error syncing stock to PrestaShop for product {item.product_id}: {sync_error}")
         
         return {
             "success": True,

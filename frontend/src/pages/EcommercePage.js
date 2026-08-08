@@ -58,6 +58,8 @@ const EcommercePage = () => {
   const [activeTab, setActiveTab] = useState('orders'); // 'orders', 'carts', 'customers'
   const [cartFilterStatus, setCartFilterStatus] = useState('abandoned'); // 'active', 'abandoned', 'converted'
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+  const [lastSync, setLastSync] = useState(null);
   
   // Estados para Clientes
   const [customers, setCustomers] = useState([]);
@@ -90,6 +92,15 @@ const EcommercePage = () => {
       fetchEcommerceData();
     }
   }, [selectedStore]);
+
+  // Sincronización automática cada 30 segundos
+  useEffect(() => {
+    const syncInterval = setInterval(() => {
+      syncNewOrders(true); // true = silencioso (sin toast)
+    }, 30000); // 30 segundos
+
+    return () => clearInterval(syncInterval);
+  }, []);
 
   const fetchIntegrations = async () => {
     try {
@@ -205,6 +216,71 @@ const EcommercePage = () => {
     } catch (error) {
       console.error('Error fetching customer stats:', error);
     }
+  };
+
+  const syncNewOrders = async (silent = false) => {
+    try {
+      setSyncing(true);
+      if (!silent) {
+        toast.loading('Sincronizando órdenes...', { id: 'sync-orders' });
+      }
+      
+      const response = await axios.post(`${API}/integrations/ecommerce/sync-new-orders`);
+      
+      if (response.data.success) {
+        const newOrdersCount = response.data.total_new_orders;
+        setLastSync(new Date());
+        
+        if (newOrdersCount > 0) {
+          // Refrescar datos
+          await fetchEcommerceData();
+          await fetchStats();
+          
+          if (!silent) {
+            toast.success(`✅ ${newOrdersCount} orden(es) nueva(s) sincronizada(s)`, { id: 'sync-orders' });
+          }
+        } else {
+          if (!silent) {
+            toast.success('✅ Todo sincronizado', { id: 'sync-orders' });
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error syncing orders:', error);
+      if (!silent) {
+        toast.error('Error al sincronizar órdenes', { id: 'sync-orders' });
+      }
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const syncOrderStates = async () => {
+    try {
+      toast.loading('Sincronizando estados...', { id: 'sync-states' });
+      
+      const response = await axios.post(`${API}/integrations/ecommerce/sync-order-states`);
+      
+      if (response.data.success) {
+        const updatedCount = response.data.updated_orders;
+        
+        if (updatedCount > 0) {
+          // Refrescar datos
+          await fetchEcommerceData();
+          toast.success(`✅ ${updatedCount} estado(s) actualizado(s)`, { id: 'sync-states' });
+        } else {
+          toast.success('✅ Todos los estados están actualizados', { id: 'sync-states' });
+        }
+      }
+    } catch (error) {
+      console.error('Error syncing states:', error);
+      toast.error('Error al sincronizar estados', { id: 'sync-states' });
+    }
+  };
+
+  const handleFullSync = async () => {
+    await syncNewOrders(false);
+    await syncOrderStates();
   };
 
   const fetchCustomerDetail = async (customerId) => {
@@ -330,14 +406,45 @@ const EcommercePage = () => {
 
   return (
     <div className="p-8">
-      {/* Header */}
+      {/* Header con título y botón sincronizar */}
       <div className="mb-8">
-        <h1 
-          className="text-5xl font-black text-slate-900 mb-2"
-          style={{ fontFamily: 'Cabinet Grotesk, sans-serif' }}
-        >
-          🛍️ Ecommerce
-        </h1>
+        <div className="flex justify-between items-center mb-2">
+          <h1 
+            className="text-5xl font-black text-slate-900"
+            style={{ fontFamily: 'Cabinet Grotesk, sans-serif' }}
+          >
+            🛍️ Ecommerce
+          </h1>
+          
+          <div className="flex items-center gap-4">
+            {lastSync && (
+              <div className="text-sm text-slate-600">
+                Última sync: {new Date(lastSync).toLocaleTimeString('es-CL')}
+              </div>
+            )}
+            <button
+              onClick={handleFullSync}
+              disabled={syncing}
+              className={`px-6 py-3 border-2 border-slate-900 rounded-xl font-bold transition-all ${
+                syncing
+                  ? 'bg-slate-300 text-slate-600 cursor-not-allowed'
+                  : 'bg-green-400 text-slate-900 hover:bg-green-500 shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:shadow-none hover:translate-x-1 hover:translate-y-1'
+              }`}
+            >
+              {syncing ? (
+                <>
+                  <RefreshCw className="inline w-5 h-5 mr-2 animate-spin" />
+                  Sincronizando...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="inline w-5 h-5 mr-2" />
+                  Sincronizar
+                </>
+              )}
+            </button>
+          </div>
+        </div>
         <p className="text-lg text-slate-600 font-medium">
           Gestiona tus ventas online en tiempo real
         </p>
