@@ -193,10 +193,24 @@ async def get_order_detail(
             # Intentar obtener productos desde PrestaShop si hay integration_id
             if order.get('integration_id'):
                 try:
-                    integration = await db.prestashop_integrations.find_one({
-                        "_id": order['integration_id'],
+                    # Buscar integración por string ID o ObjectId
+                    from bson import ObjectId
+                    
+                    integration_query = {
+                        "account_id": current_user.account_id,
                         "is_active": True
-                    }, {"_id": 0})
+                    }
+                    
+                    # Intentar convertir a ObjectId si es posible
+                    try:
+                        integration_query["_id"] = ObjectId(order['integration_id'])
+                    except (ValueError, TypeError):
+                        integration_query["integration_id"] = order['integration_id']
+                    
+                    integration = await db.prestashop_integrations.find_one(
+                        integration_query,
+                        {"_id": 0}
+                    )
                     
                     if integration:
                         from services.prestashop_service import PrestashopAPIService
@@ -221,13 +235,77 @@ async def get_order_detail(
         if 'items' not in order:
             order['items'] = []
         
+        # Enriquecer el nombre del estado si solo tenemos el código
+        if order.get('current_state') and (not order.get('state_name') or order['state_name'] == str(order['current_state'])):
+            # Intentar obtener el nombre real del estado desde la integración
+            if order.get('integration_id'):
+                try:
+                    from bson import ObjectId
+                    
+                    integration_query = {
+                        "account_id": current_user.account_id,
+                        "is_active": True
+                    }
+                    
+                    try:
+                        integration_query["_id"] = ObjectId(order['integration_id'])
+                    except (ValueError, TypeError):
+                        integration_query["integration_id"] = order['integration_id']
+                    
+                    integration = await db.prestashop_integrations.find_one(
+                        integration_query,
+                        {"_id": 0, "shop_url": 1, "api_key": 1}
+                    )
+                    
+                    if integration:
+                        from services.prestashop_service import PrestashopAPIService
+                        
+                        ps_service = PrestashopAPIService(
+                            shop_url=integration['shop_url'],
+                            api_key=integration['api_key']
+                        )
+                        
+                        # Obtener estados desde PrestaShop
+                        states = ps_service.get_order_states()
+                        
+                        # Buscar el estado actual
+                        current_state_id = str(order['current_state'])
+                        matching_state = next((s for s in states if s['id'] == current_state_id), None)
+                        
+                        if matching_state and matching_state.get('name'):
+                            order['state_name'] = matching_state['name']
+                except Exception as e:
+                    print(f"Error enriching state name: {e}")
+        
         # Asegurar que customer_email existe
         if not order.get('customer_email'):
             order['customer_email'] = 'No disponible'
         
-        # Si customer_name está vacío, poner placeholder
+        # Si customer_name está vacío, intentar obtenerlo de ecommerce_customers o PrestaShop
         if not order.get('customer_name') or order.get('customer_name').strip() == '':
-            order['customer_name'] = f'Cliente #{order.get("customer_id", "N/A")}'
+            customer_id = order.get('customer_id')
+            
+            if customer_id:
+                # Primero intentar desde la tabla de clientes ecommerce local
+                customer = await db.ecommerce_customers.find_one({
+                    "account_id": current_user.account_id,
+                    "customer_id": str(customer_id)
+                }, {"_id": 0, "name": 1, "firstname": 1, "lastname": 1})
+                
+                if customer:
+                    # Usar nombre completo si existe
+                    if customer.get('name'):
+                        order['customer_name'] = customer['name']
+                    elif customer.get('firstname') or customer.get('lastname'):
+                        firstname = customer.get('firstname', '').strip()
+                        lastname = customer.get('lastname', '').strip()
+                        order['customer_name'] = f"{firstname} {lastname}".strip()
+                
+                # Si todavía no tenemos nombre, placeholder
+                if not order.get('customer_name') or order.get('customer_name').strip() == '':
+                    order['customer_name'] = f'Cliente #{customer_id}'
+            else:
+                order['customer_name'] = 'Cliente desconocido'
         
         return order
         

@@ -502,11 +502,16 @@ class PrestashopAPIService:
             response = self._make_request(f'orders/{order_id}', params=params)
             
             order = None
-            if 'order' in response:
+            
+            # Manejar diferentes estructuras de respuesta
+            if 'orders' in response:
+                orders_data = response['orders']
+                if isinstance(orders_data, list) and len(orders_data) > 0:
+                    order = orders_data[0]
+                elif isinstance(orders_data, dict):
+                    order = orders_data
+            elif 'order' in response:
                 order = response['order']
-            elif 'orders' in response:
-                if isinstance(response['orders'], dict):
-                    order = response['orders']
             
             if not order:
                 return None
