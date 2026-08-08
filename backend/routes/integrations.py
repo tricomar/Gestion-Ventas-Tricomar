@@ -18,6 +18,7 @@ from models.integrations import (
 )
 from services.prestashop_service import PrestashopAPIService
 from services.category_sync_service import CategorySyncService
+from services.sync_service import SyncService
 from middleware.tenant import get_tenant_filter, add_account_id_to_document
 from utils import db, get_current_user
 from models.users import User
@@ -1975,3 +1976,115 @@ async def download_prestashop_module():
             'Content-Disposition': 'attachment; filename="emergent_webhooks.zip"'
         }
     )
+
+
+
+@router.post("/ecommerce/sync-new-orders")
+async def sync_new_ecommerce_orders(
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Sincronizar órdenes nuevas desde todas las integraciones PrestaShop
+    Se ejecuta automáticamente cada pocos minutos o manualmente
+    """
+    try:
+        # Obtener todas las integraciones activas del usuario
+        integrations = await db.prestashop_integrations.find(
+            {'account_id': current_user.account_id, 'is_active': True},
+            {'_id': 0}
+        ).to_list(10)
+        
+        if not integrations:
+            return {
+                'success': False,
+                'message': 'No hay integraciones activas',
+                'total_new_orders': 0
+            }
+        
+        total_new_orders = 0
+        results = []
+        
+        for integration in integrations:
+            result = await SyncService.sync_new_orders(
+                account_id=current_user.account_id,
+                store_id=integration.get('store_id'),
+                integration_id=integration['id']
+            )
+            
+            if result['success']:
+                total_new_orders += result.get('new_orders', 0)
+            
+            results.append({
+                'store_id': integration.get('store_id'),
+                'shop_url': integration.get('shop_url'),
+                'result': result
+            })
+        
+        return {
+            'success': True,
+            'total_new_orders': total_new_orders,
+            'integrations': results
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error sincronizando órdenes: {str(e)}"
+        )
+
+
+@router.post("/ecommerce/sync-order-states")
+async def sync_ecommerce_order_states(
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Sincronizar estados de órdenes desde PrestaShop
+    Actualiza órdenes que han cambiado de estado
+    """
+    try:
+        result = await SyncService.sync_order_states(current_user.account_id)
+        
+        if not result['success']:
+            raise HTTPException(status_code=500, detail=result['message'])
+        
+        return result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error sincronizando estados: {str(e)}"
+        )
+
+
+@router.post("/products/{product_id}/sync-stock")
+async def sync_product_stock_to_prestashop(
+    product_id: str,
+    new_stock: int,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Sincronizar stock de un producto hacia PrestaShop
+    Se ejecuta automáticamente cuando se actualiza stock en inventario
+    """
+    try:
+        result = await SyncService.sync_stock_to_prestashop(
+            account_id=current_user.account_id,
+            product_id=product_id,
+            new_stock=new_stock
+        )
+        
+        if not result['success']:
+            raise HTTPException(status_code=500, detail=result['message'])
+        
+        return result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error sincronizando stock: {str(e)}"
+        )
+
