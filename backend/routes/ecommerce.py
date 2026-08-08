@@ -465,22 +465,36 @@ async def get_cart_detail(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error al obtener carrito: {str(e)}"
+            detail=f"Error al obtener detalle del carrito: {str(e)}"
         )
+
 
 @router.get("/customers")
 async def get_customers(
-    limit: int = 10,
+    customer_type: str = None,
+    limit: int = 100,
     current_user: User = Depends(get_current_user)
 ):
-    """Obtener últimos clientes registrados"""
+    """Obtener lista de clientes de ecommerce"""
     try:
-        tenant_filter = get_tenant_filter(current_user.dict(), {})
+        # Usar filtro simple de account_id en lugar de get_tenant_filter
+        base_filter = {"account_id": current_user.account_id}
         
+        # Agregar filtro de tipo si se proporciona
+        if customer_type:
+            if customer_type == "new":
+                base_filter["is_new"] = True
+            elif customer_type == "recurring":
+                base_filter["is_recurring"] = True
+            elif customer_type == "one-time":
+                base_filter["is_recurring"] = False
+                base_filter["is_new"] = False
+        
+        # Obtener clientes ordenados por total gastado
         customers_cursor = db.ecommerce_customers.find(
-            tenant_filter,
+            base_filter,
             {"_id": 0}
-        ).sort("date_add", -1).limit(limit)
+        ).sort("total_spent", -1).limit(limit)
         
         customers = await customers_cursor.to_list(limit)
         
@@ -490,6 +504,99 @@ async def get_customers(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error al obtener clientes: {str(e)}"
+        )
+
+@router.get("/customers/stats")
+async def get_customers_stats(
+    current_user: User = Depends(get_current_user)
+):
+    """Obtener estadísticas de clientes"""
+    try:
+        base_filter = {"account_id": current_user.account_id}
+        
+        # Total de clientes
+        total_customers = await db.ecommerce_customers.count_documents(base_filter)
+        
+        # Clientes nuevos (últimos 30 días)
+        new_customers = await db.ecommerce_customers.count_documents({
+            **base_filter,
+            "is_new": True
+        })
+        
+        # Clientes recurrentes (más de 1 pedido)
+        recurring_customers = await db.ecommerce_customers.count_documents({
+            **base_filter,
+            "is_recurring": True
+        })
+        
+        # Calcular promedios
+        pipeline = [
+            {"$match": base_filter},
+            {"$group": {
+                "_id": None,
+                "avg_order_value": {"$avg": "$average_order_value"},
+                "avg_orders_per_customer": {"$avg": "$order_count"},
+                "total_revenue": {"$sum": "$total_spent"}
+            }}
+        ]
+        
+        avg_stats = await db.ecommerce_customers.aggregate(pipeline).to_list(1)
+        
+        stats = {
+            "total_customers": total_customers,
+            "new_customers": new_customers,
+            "recurring_customers": recurring_customers,
+            "one_time_customers": total_customers - recurring_customers,
+            "avg_order_value": round(avg_stats[0]['avg_order_value'], 2) if avg_stats else 0,
+            "avg_orders_per_customer": round(avg_stats[0]['avg_orders_per_customer'], 1) if avg_stats else 0,
+            "total_revenue": round(avg_stats[0]['total_revenue'], 2) if avg_stats else 0,
+            "recurring_rate": round((recurring_customers / total_customers * 100), 1) if total_customers > 0 else 0
+        }
+        
+        return stats
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al obtener estadísticas de clientes: {str(e)}"
+        )
+
+@router.get("/customers/{customer_id}")
+async def get_customer_detail(
+    customer_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """Obtener detalle completo de un cliente"""
+    try:
+        base_filter = {
+            "account_id": current_user.account_id,
+            "customer_id": customer_id
+        }
+        
+        customer = await db.ecommerce_customers.find_one(
+            base_filter,
+            {"_id": 0}
+        )
+        
+        if not customer:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Cliente no encontrado"
+            )
+        
+        return customer
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al obtener cliente: {str(e)}"
+        )
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al obtener carrito: {str(e)}"
         )
 
 @router.get("/guest-emails")

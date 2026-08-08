@@ -81,6 +81,26 @@ const EcommercePage = () => {
     }
   };
 
+
+
+  const fetchStats = async () => {
+    try {
+      const response = await axios.get(`${API}/ecommerce/stats`);
+      setStats(response.data);
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    }
+  };
+
+  const fetchOrders = async () => {
+    try {
+      const response = await axios.get(`${API}/ecommerce/orders?limit=50`);
+      setOrders(response.data);
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+    }
+  };
+
   const fetchEcommerceData = async () => {
     try {
       const integrationParam = selectedIntegration !== 'all' 
