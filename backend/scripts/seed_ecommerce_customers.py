@@ -6,11 +6,16 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from datetime import datetime, timezone, timedelta
 import os
 import random
+from dotenv import load_dotenv
+
+# Cargar variables de entorno
+load_dotenv('/app/backend/.env')
 
 async def seed_customers():
     mongo_url = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
+    db_name = os.environ.get('DB_NAME', 'negocio_feliz')
     client = AsyncIOMotorClient(mongo_url)
-    db = client['negocio_feliz']
+    db = client[db_name]
     
     account_id = "acc_cd0a3e485753"
     
@@ -60,7 +65,9 @@ async def seed_customers():
     customers = []
     for customer_id, data in customers_data.items():
         # Cliente es nuevo si su primera compra fue en los últimos 30 días
-        first_order_dt = datetime.fromisoformat(data['first_order_date'].replace('Z', '+00:00'))
+        first_order_str = data['first_order_date']
+        # Parsear fecha sin timezone y añadir UTC
+        first_order_dt = datetime.strptime(first_order_str, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
         is_new = first_order_dt >= thirty_days_ago
         
         # Cliente es recurrente si tiene más de 1 pedido
@@ -70,7 +77,8 @@ async def seed_customers():
         avg_order_value = data['total_spent'] / data['order_count'] if data['order_count'] > 0 else 0
         
         # Calcular días desde última compra
-        last_order_dt = datetime.fromisoformat(data['last_order_date'].replace('Z', '+00:00'))
+        last_order_str = data['last_order_date']
+        last_order_dt = datetime.strptime(last_order_str, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
         days_since_last_order = (now - last_order_dt).days
         
         customer = {
