@@ -19,6 +19,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import OrderDetailModal from '../components/ecommerce/OrderDetailModal';
 import CartDetailModal from '../components/ecommerce/CartDetailModal';
+import CustomerDetailModal from '../components/ecommerce/CustomerDetailModal';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -52,9 +53,22 @@ const EcommercePage = () => {
   const [finalizedCarts, setFinalizedCarts] = useState([]);
   const [integrations, setIntegrations] = useState([]);
   const [selectedIntegration, setSelectedIntegration] = useState('all');
-  const [activeTab, setActiveTab] = useState('orders'); // 'orders', 'carts'
+  const [activeTab, setActiveTab] = useState('orders'); // 'orders', 'carts', 'customers'
   const [cartFilterStatus, setCartFilterStatus] = useState('abandoned'); // 'active', 'abandoned', 'converted'
   const [loading, setLoading] = useState(true);
+  
+  // Estados para Clientes
+  const [customers, setCustomers] = useState([]);
+  const [selectedCustomerId, setSelectedCustomerId] = useState(null);
+  const [customerStats, setCustomerStats] = useState({
+    total_customers: 0,
+    new_customers: 0,
+    recurring_customers: 0,
+    one_time_customers: 0,
+    avg_order_value: 0,
+    recurring_rate: 0
+  });
+  const [customerFilter, setCustomerFilter] = useState('all'); // 'all', 'new', 'recurring', 'one-time'
 
   useEffect(() => {
     fetchIntegrations();
@@ -148,11 +162,56 @@ const EcommercePage = () => {
     }
   };
 
+  const fetchCustomers = async () => {
+    try {
+      const filterParam = customerFilter !== 'all' ? `customer_type=${customerFilter}&` : '';
+      const response = await axios.get(`${API}/ecommerce/customers?${filterParam}limit=50`);
+      setCustomers(response.data);
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+      toast.error('Error al cargar clientes');
+    }
+  };
+
+  const fetchCustomerStats = async () => {
+    try {
+      const response = await axios.get(`${API}/ecommerce/customers/stats`);
+      setCustomerStats(response.data);
+    } catch (error) {
+      console.error('Error fetching customer stats:', error);
+    }
+  };
+
+  const fetchCustomerDetail = async (customerId) => {
+    try {
+      const response = await axios.get(`${API}/ecommerce/customers/${customerId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching customer detail:', error);
+      toast.error('Error al cargar detalle del cliente');
+      return null;
+    }
+  };
+
+  const handleCustomerClick = async (customerId) => {
+    const detail = await fetchCustomerDetail(customerId);
+    if (detail) {
+      setSelectedCustomerId(detail);
+    }
+  };
+
   useEffect(() => {
     if (activeTab === 'carts') {
       fetchCarts();
     }
   }, [cartFilterStatus]);
+
+  useEffect(() => {
+    if (activeTab === 'customers') {
+      fetchCustomers();
+      fetchCustomerStats();
+    }
+  }, [activeTab, customerFilter]);
 
 
   const getStatusColor = (status) => {
@@ -332,6 +391,16 @@ const EcommercePage = () => {
           }`}
         >
           🛒 Carritos ({cartStats.abandoned + cartStats.active})
+        </button>
+        <button
+          onClick={() => setActiveTab('customers')}
+          className={`px-6 py-3 border-2 border-slate-900 rounded-xl font-bold transition-all ${
+            activeTab === 'customers'
+              ? 'bg-purple-400 text-white shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]'
+              : 'bg-white text-slate-900 hover:bg-slate-50'
+          }`}
+        >
+          👥 Clientes ({customerStats.total_customers})
         </button>
       </div>
 
@@ -525,6 +594,164 @@ const EcommercePage = () => {
         </div>
       )}
 
+      {/* Customers Tab */}
+      {activeTab === 'customers' && (
+        <div className="bg-white border-4 border-slate-900 rounded-xl p-6"
+             style={{ boxShadow: '8px 8px 0px 0px rgba(15,23,42,1)' }}>
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-black text-slate-900">👥 Clientes Ecommerce</h2>
+            
+            {/* Filtros */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => setCustomerFilter('all')}
+                className={`px-4 py-2 border-2 border-slate-900 rounded-lg font-semibold text-sm transition-all ${
+                  customerFilter === 'all'
+                    ? 'bg-purple-400 text-white shadow-[2px_2px_0px_0px_rgba(15,23,42,1)]'
+                    : 'bg-white text-slate-900 hover:bg-slate-50'
+                }`}
+              >
+                Todos ({customerStats.total_customers})
+              </button>
+              <button
+                onClick={() => setCustomerFilter('new')}
+                className={`px-4 py-2 border-2 border-slate-900 rounded-lg font-semibold text-sm transition-all ${
+                  customerFilter === 'new'
+                    ? 'bg-green-400 text-white shadow-[2px_2px_0px_0px_rgba(15,23,42,1)]'
+                    : 'bg-white text-slate-900 hover:bg-slate-50'
+                }`}
+              >
+                Nuevos ({customerStats.new_customers})
+              </button>
+              <button
+                onClick={() => setCustomerFilter('recurring')}
+                className={`px-4 py-2 border-2 border-slate-900 rounded-lg font-semibold text-sm transition-all ${
+                  customerFilter === 'recurring'
+                    ? 'bg-blue-400 text-white shadow-[2px_2px_0px_0px_rgba(15,23,42,1)]'
+                    : 'bg-white text-slate-900 hover:bg-slate-50'
+                }`}
+              >
+                Recurrentes ({customerStats.recurring_customers})
+              </button>
+              <button
+                onClick={() => setCustomerFilter('one-time')}
+                className={`px-4 py-2 border-2 border-slate-900 rounded-lg font-semibold text-sm transition-all ${
+                  customerFilter === 'one-time'
+                    ? 'bg-gray-400 text-white shadow-[2px_2px_0px_0px_rgba(15,23,42,1)]'
+                    : 'bg-white text-slate-900 hover:bg-slate-50'
+                }`}
+              >
+                Una compra ({customerStats.one_time_customers})
+              </button>
+            </div>
+          </div>
+
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-slate-900 rounded-lg p-4">
+              <div className="text-sm font-semibold text-slate-600 mb-1">Valor Promedio Pedido</div>
+              <div className="text-2xl font-black text-slate-900">
+                ${Math.round(customerStats.avg_order_value || 0).toLocaleString('es-CL')}
+              </div>
+            </div>
+            <div className="bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-slate-900 rounded-lg p-4">
+              <div className="text-sm font-semibold text-slate-600 mb-1">Tasa Recurrencia</div>
+              <div className="text-2xl font-black text-slate-900">
+                {customerStats.recurring_rate || 0}%
+              </div>
+            </div>
+            <div className="bg-gradient-to-br from-green-50 to-green-100 border-2 border-slate-900 rounded-lg p-4">
+              <div className="text-sm font-semibold text-slate-600 mb-1">Clientes Activos</div>
+              <div className="text-2xl font-black text-slate-900">
+                {customerStats.recurring_customers + customerStats.new_customers}
+              </div>
+            </div>
+          </div>
+          
+          {customers.length === 0 ? (
+            <div className="text-center py-12">
+              <Users className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+              <p className="text-slate-500">No hay clientes para mostrar</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b-2 border-slate-900">
+                    <th className="text-left py-3 px-4 font-black text-slate-900">Cliente</th>
+                    <th className="text-left py-3 px-4 font-black text-slate-900">Email</th>
+                    <th className="text-center py-3 px-4 font-black text-slate-900">Tipo</th>
+                    <th className="text-center py-3 px-4 font-black text-slate-900">Pedidos</th>
+                    <th className="text-right py-3 px-4 font-black text-slate-900">Total Gastado</th>
+                    <th className="text-right py-3 px-4 font-black text-slate-900">Promedio</th>
+                    <th className="text-center py-3 px-4 font-black text-slate-900">Acción</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {customers.map((customer, index) => {
+                    const getTypeColor = (type) => {
+                      const colors = {
+                        'new': 'bg-green-100 text-green-800 border-green-800',
+                        'recurring': 'bg-blue-100 text-blue-800 border-blue-800',
+                        'one-time': 'bg-gray-100 text-gray-800 border-gray-800'
+                      };
+                      return colors[type] || colors['one-time'];
+                    };
+
+                    const getTypeLabel = (type) => {
+                      const labels = {
+                        'new': 'Nuevo',
+                        'recurring': 'Recurrente',
+                        'one-time': 'Una compra'
+                      };
+                      return labels[type] || 'Una compra';
+                    };
+
+                    return (
+                      <tr 
+                        key={index}
+                        className="border-b border-slate-200 hover:bg-purple-50 transition-colors"
+                      >
+                        <td className="py-3 px-4">
+                          <div className="font-semibold text-slate-900">
+                            {customer.name || 'Cliente sin nombre'}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-slate-600 text-sm">
+                          {customer.email}
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <span className={`px-2 py-1 border-2 rounded-lg text-xs font-bold ${getTypeColor(customer.customer_type)}`}>
+                            {getTypeLabel(customer.customer_type)}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-center font-semibold text-slate-900">
+                          {customer.order_count}
+                        </td>
+                        <td className="py-3 px-4 text-right font-bold text-green-600">
+                          ${Math.round(customer.total_spent || 0).toLocaleString('es-CL')}
+                        </td>
+                        <td className="py-3 px-4 text-right font-semibold text-blue-600">
+                          ${Math.round(customer.average_order_value || 0).toLocaleString('es-CL')}
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <button
+                            onClick={() => handleCustomerClick(customer.customer_id)}
+                            className="px-3 py-1 bg-purple-400 text-white border-2 border-slate-900 rounded-lg font-semibold text-sm hover:bg-purple-500 transition-colors shadow-[2px_2px_0px_0px_rgba(15,23,42,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px]"
+                          >
+                            <Eye size={16} className="inline" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Order Detail Modal */}
       {selectedOrderId && (
         <OrderDetailModal
@@ -542,6 +769,14 @@ const EcommercePage = () => {
         <CartDetailModal
           cartId={selectedCartId}
           onClose={() => setSelectedCartId(null)}
+        />
+      )}
+
+      {/* Customer Detail Modal */}
+      {selectedCustomerId && (
+        <CustomerDetailModal
+          customer={selectedCustomerId}
+          onClose={() => setSelectedCustomerId(null)}
         />
       )}
     </div>
