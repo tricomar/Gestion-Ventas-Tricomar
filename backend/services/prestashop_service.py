@@ -263,19 +263,20 @@ class PrestashopAPIService:
         
         return ''
     
-    def get_products(self, limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
+    def get_products(self, limit: int = 100, offset: int = 0, display: str = 'full') -> List[Dict[str, Any]]:
         """
         Obtener productos de PrestaShop
         
         Args:
             limit: Número máximo de productos a obtener
             offset: Offset para paginación
+            display: Campos a obtener ('full' o lista de campos específicos)
             
         Returns:
             Lista de productos
         """
         params = {
-            'display': 'full',
+            'display': display,
             'limit': f'{offset},{limit}'
         }
         

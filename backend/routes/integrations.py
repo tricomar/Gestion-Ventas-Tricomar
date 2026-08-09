@@ -430,8 +430,49 @@ async def sync_products_background(job_id: str, integration_id: str, integration
             {'$set': {'status': 'running', 'message': 'Obteniendo productos de PrestaShop...'}}
         )
         
-        # Obtener productos de PrestaShop (sin límite, traer todos)
-        ps_products = ps_service.get_products(limit=5000)  # Aumentado a 5000
+        # Obtener productos de PrestaShop en lotes pequeños (50 productos)
+        # Solo pedir campos esenciales para evitar timeout
+        all_products = []
+        batch_size = 50
+        offset = 0
+        max_products = 5000  # Límite de seguridad
+        
+        # Campos específicos que necesitamos (reduce tamaño de respuesta)
+        display_fields = '[id,name,reference,price,id_category_default,quantity,active,id_tax_rules_group,wholesale_price,available_for_order,visibility]'
+        
+        while offset < max_products:
+            try:
+                batch = ps_service.get_products(limit=batch_size, offset=offset, display=display_fields)
+                
+                if not batch:
+                    break
+                
+                all_products.extend(batch)
+                offset += len(batch)
+                
+                # Actualizar progreso
+                progress = min(95, int((offset / max_products) * 100))
+                await db.sync_jobs.update_one(
+                    {'id': job_id},
+                    {
+                        '$set': {
+                            'progress': progress,
+                            'message': f'Obtenidos {len(all_products)} productos...'
+                        }
+                    }
+                )
+                
+                # Si el lote es menor que batch_size, ya no hay más
+                if len(batch) < batch_size:
+                    break
+                    
+            except Exception as e:
+                print(f"Error obteniendo lote en offset {offset}: {e}")
+                # Si falla un lote, continuar con el siguiente
+                offset += batch_size
+                continue
+        
+        ps_products = all_products
         total = len(ps_products)
         
         await db.sync_jobs.update_one(
