@@ -827,7 +827,8 @@ async def sync_resources_background(
                     results['images'] = count
                     
                 elif resource == 'orders':
-                    count = await sync_orders_resource(ps_service, integration_id, account_id, store_code)
+                    store_id = integration.get('store_id')
+                    count = await sync_orders_resource(ps_service, integration_id, account_id, store_code, store_id)
                     results['orders'] = count
                     
                 elif resource == 'customers':
@@ -1066,7 +1067,7 @@ async def sync_images_resource(ps_service, integration_id: str, account_id: str)
     return synced_count
 
 
-async def sync_orders_resource(ps_service, integration_id: str, account_id: str, store_code: str) -> int:
+async def sync_orders_resource(ps_service, integration_id: str, account_id: str, store_code: str, store_id: str = None) -> int:
     """Sincronizar órdenes/pedidos"""
     ps_orders = ps_service.get_orders(limit=500)
     synced_count = 0
@@ -1087,6 +1088,7 @@ async def sync_orders_resource(ps_service, integration_id: str, account_id: str,
         order_data = {
             'account_id': account_id,
             'integration_id': integration_id,
+            'store_id': store_id,  # ✅ AÑADIDO: store_id para filtrado por tienda
             'id': str(order_id),
             'reference': ps_order.get('reference', f'PS-{order_id}'),
             'customer_id': int(ps_order.get('id_customer', 0)),
