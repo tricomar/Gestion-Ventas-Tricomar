@@ -60,12 +60,15 @@ def validate_rut(rut: str) -> bool:
     
     return rut_dv == dv_esperado
 
-@router.get("", response_model=List[Customer])
+@router.get("")
 async def get_customers(
     store: Optional[str] = None,
+    page: int = 1,
+    limit: int = 30,
+    search: Optional[str] = None,
     current_user: User = Depends(get_current_user)
 ):
-    """Obtener todos los clientes con filtro opcional por tienda"""
+    """Obtener clientes con paginación, búsqueda y filtro opcional por tienda"""
     # Filtro de tenant
     tenant_filter = get_tenant_filter(current_user.dict())
     
@@ -73,7 +76,27 @@ async def get_customers(
     if store and store != 'Todas':
         tenant_filter['store'] = store
     
-    customers = await db.customers.find(tenant_filter, {'_id': 0}).sort('name', 1).to_list(1000)
+    # Agregar búsqueda flexible (nombre, email, teléfono, RUT)
+    if search and search.strip():
+        search_pattern = {'$regex': search.strip(), '$options': 'i'}
+        tenant_filter['$or'] = [
+            {'name': search_pattern},
+            {'email': search_pattern},
+            {'phone': search_pattern},
+            {'rut': search_pattern}
+        ]
+    
+    # Contar total de clientes que cumplen filtros
+    total_customers = await db.customers.count_documents(tenant_filter)
+    
+    # Calcular skip para paginación
+    skip = (page - 1) * limit
+    
+    # Obtener clientes paginados
+    customers = await db.customers.find(
+        tenant_filter, 
+        {'_id': 0}
+    ).sort('name', 1).skip(skip).limit(limit).to_list(limit)
     
     result = []
     for customer in customers:
@@ -82,7 +105,18 @@ async def get_customers(
             customer['created_at'] = datetime.fromisoformat(customer['created_at'])
         result.append(Customer(**customer))
     
-    return result
+    # Calcular total de páginas
+    total_pages = (total_customers + limit - 1) // limit
+    
+    return {
+        'customers': result,
+        'pagination': {
+            'page': page,
+            'limit': limit,
+            'total': total_customers,
+            'total_pages': total_pages
+        }
+    }
 
 @router.get("/search")
 async def search_customers(q: str, current_user: User = Depends(get_current_user)):

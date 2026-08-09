@@ -35,7 +35,7 @@ const InventoryPage = () => {
   const [customExpiryEnd, setCustomExpiryEnd] = useState('');
   
   // Sorting
-  const [sortBy, setSortBy] = useState(null); // 'name', 'price', 'brand', 'expiry_date'
+  const [sortBy, setSortBy] = useState(null); // 'name', 'price', 'brand', 'expiry_date', 'stock'
   const [sortOrder, setSortOrder] = useState('asc'); // 'asc', 'desc'
   
   // Multi-select for bulk delete
@@ -267,6 +267,15 @@ const InventoryPage = () => {
         return sortOrder === 'asc' 
           ? dateA - dateB 
           : dateB - dateA;
+      });
+    } else if (sortBy === 'stock') {
+      filtered.sort((a, b) => {
+        const stockA = a.stock_available || 0;
+        const stockB = b.stock_available || 0;
+        
+        return sortOrder === 'asc' 
+          ? stockA - stockB 
+          : stockB - stockA;
       });
     }
     
@@ -879,8 +888,18 @@ const InventoryPage = () => {
                       )}
                     </div>
                   </th>
-                  <th className="px-6 py-4 text-center text-xs font-bold uppercase tracking-wider">
-                    Stock Disponible
+                  <th 
+                    className="px-6 py-4 text-center text-xs font-bold uppercase tracking-wider cursor-pointer hover:bg-slate-800 transition-colors"
+                    onClick={() => handleSort('stock')}
+                  >
+                    <div className="flex items-center justify-center gap-2">
+                      Stock Disponible
+                      {sortBy === 'stock' && (
+                        sortOrder === 'asc' ? 
+                          <ChevronUp className="w-4 h-4" /> : 
+                          <ChevronDown className="w-4 h-4" />
+                      )}
+                    </div>
                   </th>
                   {hasActiveEcommerce && (
                     <th className="px-6 py-4 text-center text-xs font-bold uppercase tracking-wider">

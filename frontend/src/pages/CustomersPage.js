@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { Users, Plus, Edit2, Trash2, Eye, Phone, MapPin, TrendingUp, Home } from 'lucide-react';
+import { Users, Plus, Edit2, Trash2, Eye, Phone, MapPin, TrendingUp, Home, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import CustomerForm from '../components/CustomerForm';
 import CustomerDetailPanel from '../components/CustomerDetailPanel';
@@ -22,19 +22,40 @@ const CustomersPage = () => {
   const [filterStore, setFilterStore] = useState('Todas');
   const [showDetailPanel, setShowDetailPanel] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState(null);
+  
+  // Búsqueda y paginación
+  const [searchQuery, setSearchQuery] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 30,
+    total: 0,
+    total_pages: 0
+  });
 
   useEffect(() => {
     fetchCustomers();
-  }, [filterStore]);
+  }, [filterStore, searchQuery, currentPage]);
 
   const fetchCustomers = async () => {
     try {
       setLoading(true);
-      const url = filterStore === 'Todas' 
-        ? `${API}/customers`
-        : `${API}/customers?store=${filterStore}`;
-      const response = await axios.get(url);
-      setCustomers(response.data);
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: '30'
+      });
+      
+      if (filterStore !== 'Todas') {
+        params.append('store', filterStore);
+      }
+      
+      if (searchQuery.trim()) {
+        params.append('search', searchQuery.trim());
+      }
+      
+      const response = await axios.get(`${API}/customers?${params.toString()}`);
+      setCustomers(response.data.customers);
+      setPagination(response.data.pagination);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching customers:', error);
@@ -65,6 +86,20 @@ const CustomersPage = () => {
     setSelectedCustomerId(customerId);
     setShowDetailPanel(true);
   };
+  
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
+    setCurrentPage(1); // Resetear a página 1 al buscar
+  };
+  
+  const handlePageChange = (newPage) => {
+    setCurrentPage(newPage);
+  };
+  
+  const handleStoreFilter = (storeId) => {
+    setFilterStore(storeId);
+    setCurrentPage(1); // Resetear a página 1 al cambiar filtro
+  };
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -84,11 +119,26 @@ const CustomersPage = () => {
       </header>
 
       <div className="p-8">
+        {/* Barra de búsqueda */}
+        <div className="mb-6">
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Buscar por nombre, email, teléfono o RUT..."
+              value={searchQuery}
+              onChange={handleSearchChange}
+              className="w-full pl-12 pr-4 py-3 border-2 border-slate-900 rounded-xl font-medium focus:outline-none focus:ring-2 focus:ring-lime-400"
+              style={{ boxShadow: '2px 2px 0px 0px rgba(15,23,42,1)' }}
+            />
+          </div>
+        </div>
+
         {/* Controls */}
         <div className="flex justify-between items-center mb-6">
           <div className="flex gap-3">
             <button
-              onClick={() => setFilterStore('Todas')}
+              onClick={() => handleStoreFilter('Todas')}
               className={`px-4 py-2 rounded-lg font-bold border-2 border-slate-900 ${
                 filterStore === 'Todas' ? 'bg-slate-900 text-white' : 'bg-white'
               }`}
@@ -99,7 +149,7 @@ const CustomersPage = () => {
             {stores && stores.map((store, index) => (
               <button
                 key={store.id}
-                onClick={() => setFilterStore(store.id)}
+                onClick={() => handleStoreFilter(store.id)}
                 className={`px-4 py-2 rounded-lg font-bold border-2 border-slate-900 ${
                   filterStore === store.id 
                     ? index === 0 ? 'bg-lime-200' : 'bg-orange-200'
@@ -129,7 +179,7 @@ const CustomersPage = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="bg-white border-2 border-slate-900 rounded-xl p-4" style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}>
             <p className="text-xs font-bold text-slate-500 uppercase">Total Clientes</p>
-            <p className="text-3xl font-black text-slate-900">{customers.length}</p>
+            <p className="text-3xl font-black text-slate-900">{pagination.total}</p>
           </div>
           <div className="bg-white border-2 border-slate-900 rounded-xl p-4" style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}>
             <p className="text-xs font-bold text-slate-500 uppercase">Compras Totales</p>
@@ -248,6 +298,50 @@ const CustomersPage = () => {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+        
+        {/* Paginación */}
+        {!loading && customers.length > 0 && (
+          <div className="mt-6 flex items-center justify-between bg-white border-2 border-slate-900 rounded-xl p-4" style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}>
+            <div className="text-sm text-slate-600">
+              Mostrando {((currentPage - 1) * 30) + 1} a {Math.min(currentPage * 30, pagination.total)} de {pagination.total} clientes
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className={`flex items-center gap-1 px-4 py-2 border-2 border-slate-900 rounded-lg font-bold ${
+                  currentPage === 1 
+                    ? 'bg-slate-100 text-slate-400 cursor-not-allowed' 
+                    : 'bg-white hover:bg-slate-100'
+                }`}
+                style={currentPage === 1 ? {} : { boxShadow: '2px 2px 0px 0px rgba(15,23,42,1)' }}
+              >
+                <ChevronLeft className="w-4 h-4" />
+                Anterior
+              </button>
+              
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-slate-600">
+                  Página {currentPage} de {pagination.total_pages}
+                </span>
+              </div>
+              
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage >= pagination.total_pages}
+                className={`flex items-center gap-1 px-4 py-2 border-2 border-slate-900 rounded-lg font-bold ${
+                  currentPage >= pagination.total_pages 
+                    ? 'bg-slate-100 text-slate-400 cursor-not-allowed' 
+                    : 'bg-white hover:bg-slate-100'
+                }`}
+                style={currentPage >= pagination.total_pages ? {} : { boxShadow: '2px 2px 0px 0px rgba(15,23,42,1)' }}
+              >
+                Siguiente
+                <ChevronRight className="w-4 h-4" />
+              </button>
             </div>
           </div>
         )}
