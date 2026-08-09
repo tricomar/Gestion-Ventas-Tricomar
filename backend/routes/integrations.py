@@ -599,6 +599,7 @@ async def sync_products_background(job_id: str, integration_id: str, integration
                 'min_stock': 5,  # Valor por defecto
                 'prestashop_id': prod_id,  # Referencia al producto de PrestaShop
                 'prestashop_integration_id': integration_id,  # Referencia a la integración
+                'ecommerce_active': ps_prod.get('active', '1') == '1',  # Estado real de PrestaShop
                 'updated_at': datetime.now(timezone.utc).isoformat()
             }
             
