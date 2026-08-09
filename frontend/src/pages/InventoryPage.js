@@ -270,8 +270,8 @@ const InventoryPage = () => {
       });
     } else if (sortBy === 'stock') {
       filtered.sort((a, b) => {
-        const stockA = a.stock_available || 0;
-        const stockB = b.stock_available || 0;
+        const stockA = a.stock !== undefined && a.stock !== null ? a.stock : 0;
+        const stockB = b.stock !== undefined && b.stock !== null ? b.stock : 0;
         
         return sortOrder === 'asc' 
           ? stockA - stockB 
