@@ -430,8 +430,8 @@ async def sync_products_background(job_id: str, integration_id: str, integration
             {'$set': {'status': 'running', 'message': 'Obteniendo productos de PrestaShop...'}}
         )
         
-        # Obtener productos de PrestaShop
-        ps_products = ps_service.get_products(limit=500)
+        # Obtener productos de PrestaShop (sin límite, traer todos)
+        ps_products = ps_service.get_products(limit=5000)  # Aumentado a 5000
         total = len(ps_products)
         
         await db.sync_jobs.update_one(

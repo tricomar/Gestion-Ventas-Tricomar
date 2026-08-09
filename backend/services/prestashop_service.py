@@ -832,7 +832,7 @@ class PrestashopAPIService:
 
 
     
-    async def update_product_active(self, product_id: int, active: bool) -> Dict[str, Any]:
+    def update_product_active(self, product_id: int, active: bool) -> Dict[str, Any]:
         """
         Actualizar el estado activo/inactivo de un producto en PrestaShop
         
@@ -867,4 +867,5 @@ class PrestashopAPIService:
             
         except Exception as e:
             raise Exception(f"Error al actualizar estado de producto {product_id}: {str(e)}")
+
 

@@ -374,11 +374,12 @@ async def toggle_ecommerce_publication(
         
         for integration in integrations:
             try:
-                # Verificar si el producto está vinculado a esta integración
-                prestashop_key = f"prestashop_product_id_{integration.get('id')}"
-                prestashop_product_id = product.get(prestashop_key) or product.get('prestashop_product_id')
+                # El producto tiene prestashop_id si fue sincronizado
+                prestashop_product_id = product.get('prestashop_id')
+                integration_id = product.get('prestashop_integration_id')
                 
-                if prestashop_product_id:
+                # Solo actualizar si el producto pertenece a esta integración
+                if prestashop_product_id and integration_id == integration.get('id'):
                     from services.prestashop_service import PrestashopAPIService
                     
                     # Crear servicio de PrestaShop
@@ -388,15 +389,18 @@ async def toggle_ecommerce_publication(
                     )
                     
                     # Actualizar estado en PrestaShop
-                    await ps_service.update_product_active(
+                    result = ps_service.update_product_active(
                         product_id=int(prestashop_product_id),
                         active=active
                     )
                     
-                    sync_success.append(integration.get('store_name', 'Unknown'))
+                    if result:
+                        sync_success.append(integration.get('shop_name', 'Unknown'))
+                    else:
+                        sync_errors.append(f"{integration.get('shop_name', 'Unknown')}: No se pudo actualizar")
             
             except Exception as e:
-                sync_errors.append(f"{integration.get('store_name', 'Unknown')}: {str(e)}")
+                sync_errors.append(f"{integration.get('shop_name', 'Unknown')}: {str(e)}")
         
         return {
             "success": True,
