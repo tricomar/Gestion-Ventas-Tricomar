@@ -12,7 +12,6 @@ import {
   XCircle,
   Truck,
   RefreshCw,
-  ExternalLink,
   AlertCircle,
   Eye
 } from 'lucide-react';
@@ -343,16 +342,6 @@ const EcommercePage = () => {
     return integration ? integration.store_name : 'Desconocido';
   };
 
-  const getPrestashopOrderUrl = (integrationId, orderId) => {
-    const integration = integrations.find(i => i.id === integrationId);
-    if (!integration || !orderId || !integration.api_url) return '#';
-    
-    // Construir URL del admin de PrestaShop para ver la orden
-    // Formato típico: https://tienda.com/admin123/index.php?controller=AdminOrders&id_order=123&vieworder
-    const baseUrl = integration.api_url.replace('/api', '');
-    return `${baseUrl}/index.php?controller=AdminOrders&id_order=${orderId}&vieworder`;
-  };
-
   const getPrestashopCartUrl = (cart) => {
     const integration = integrations.find(i => i.id === cart.integration_id);
     if (!integration || !cart.id_order || !integration.api_url) return null;
@@ -597,17 +586,6 @@ const EcommercePage = () => {
                         <Eye className="w-3 h-3" />
                         Ver Detalle
                       </button>
-                      {order.integration_id && (
-                        <a
-                          href={getPrestashopOrderUrl(order.integration_id, order.id)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1 px-3 py-1 bg-slate-900 text-white rounded-lg text-xs font-bold hover:bg-slate-800 transition-colors"
-                        >
-                          <ExternalLink className="w-3 h-3" />
-                          PrestaShop
-                        </a>
-                      )}
                     </div>
                   </div>
                 </div>
