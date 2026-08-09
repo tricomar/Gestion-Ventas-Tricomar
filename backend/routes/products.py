@@ -329,6 +329,7 @@ async def toggle_ecommerce_publication(
 ):
     """
     Activar/desactivar publicación de producto en ecommerce (PrestaShop)
+    Respeta el aislamiento multi-tenant usando solo la integración del producto
     """
     try:
         tenant_filter = get_tenant_filter(current_user.dict(), {"id": product_id})
@@ -342,17 +343,27 @@ async def toggle_ecommerce_publication(
                 detail="Producto no encontrado"
             )
         
-        # Verificar si hay integraciones PrestaShop activas
-        integrations_cursor = db.prestashop_integrations.find({
-            "account_id": current_user.account_id,
-            "is_active": True
-        }, {"_id": 0})
-        integrations = await integrations_cursor.to_list(100)
+        # Verificar que el producto tiene integración de PrestaShop
+        prestashop_product_id = product.get('prestashop_id')
+        integration_id = product.get('prestashop_integration_id')
         
-        if not integrations:
+        if not prestashop_product_id or not integration_id:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="No hay integraciones de ecommerce activas"
+                detail="Este producto no está vinculado a ninguna integración de ecommerce"
+            )
+        
+        # Obtener SOLO la integración específica del producto (aislamiento de datos)
+        integration = await db.prestashop_integrations.find_one({
+            "account_id": current_user.account_id,
+            "id": integration_id,
+            "is_active": True
+        }, {"_id": 0})
+        
+        if not integration:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="La integración de ecommerce de este producto no está activa"
             )
         
         # Actualizar estado en MongoDB
@@ -368,46 +379,34 @@ async def toggle_ecommerce_publication(
             {"$set": update_data}
         )
         
-        # Sincronizar con PrestaShop si el producto tiene prestashop_product_id
-        sync_errors = []
-        sync_success = []
+        # Sincronizar con PrestaShop de la tienda específica
+        sync_error = None
+        sync_success = False
         
-        for integration in integrations:
-            try:
-                # El producto tiene prestashop_id si fue sincronizado
-                prestashop_product_id = product.get('prestashop_id')
-                integration_id = product.get('prestashop_integration_id')
-                
-                # Solo actualizar si el producto pertenece a esta integración
-                if prestashop_product_id and integration_id == integration.get('id'):
-                    from services.prestashop_service import PrestashopAPIService
-                    
-                    # Crear servicio de PrestaShop
-                    ps_service = PrestashopAPIService(
-                        shop_url=integration['shop_url'],
-                        api_key=integration['api_key']
-                    )
-                    
-                    # Actualizar estado en PrestaShop
-                    result = ps_service.update_product_active(
-                        product_id=int(prestashop_product_id),
-                        active=active
-                    )
-                    
-                    if result:
-                        sync_success.append(integration.get('shop_name', 'Unknown'))
-                    else:
-                        sync_errors.append(f"{integration.get('shop_name', 'Unknown')}: No se pudo actualizar")
+        try:
+            from services.prestashop_service import PrestashopAPIService
             
-            except Exception as e:
-                sync_errors.append(f"{integration.get('shop_name', 'Unknown')}: {str(e)}")
+            # Crear servicio de PrestaShop para esta integración específica
+            ps_service = PrestashopAPIService(
+                shop_url=integration['shop_url'],
+                api_key=integration['api_key']
+            )
+            
+            # Actualizar estado en PrestaShop
+            sync_success = ps_service.update_product_active(
+                product_id=int(prestashop_product_id),
+                active=active
+            )
+            
+        except Exception as e:
+            sync_error = str(e)
         
         return {
             "success": True,
             "product_id": product_id,
             "ecommerce_active": active,
-            "synchronized_stores": sync_success,
-            "errors": sync_errors if sync_errors else None,
+            "prestashop_synced": sync_success,
+            "sync_error": sync_error,
             "message": f"Producto {'activado' if active else 'desactivado'} en ecommerce"
         }
         
