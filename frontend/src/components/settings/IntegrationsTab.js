@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
-import { CheckCircle, XCircle, Trash2, Settings, ShoppingCart, Package, Download, Webhook, Activity, Clock, AlertCircle } from 'lucide-react';
+import { CheckCircle, XCircle, Trash2, Settings, ShoppingCart, Package, Download, Webhook, Activity, Clock, AlertCircle, Database } from 'lucide-react';
 import PrestashopModal from './PrestashopModal';
 import { useStores } from '../../hooks/useStores';
+import { useAuth } from '../../context/AuthContext';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const IntegrationsTab = () => {
   const { stores } = useStores();
+  const { user } = useAuth();
   const [integrations, setIntegrations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showPrestashopModal, setShowPrestashopModal] = useState(false);
@@ -157,6 +159,31 @@ const IntegrationsTab = () => {
     } catch (error) {
       console.error('Error deleting integration:', error);
       toast.error('Error al eliminar integración');
+    }
+  };
+
+  const handleClearIntegrationData = async (integrationId) => {
+    if (!window.confirm('⚠️ ¿Estás seguro de borrar TODO el contenido sincronizado de esta tienda?\n\nSe eliminarán:\n- Órdenes\n- Clientes\n- Carritos\n- Productos\n- Categorías\n\nLa configuración de la integración se mantendrá y podrás sincronizar nuevamente.')) {
+      return;
+    }
+
+    try {
+      const response = await axios.delete(`${API}/integrations/prestashop/${integrationId}/clear-data`);
+      toast.success(response.data.message || 'Contenido eliminado exitosamente');
+      
+      // Mostrar detalles
+      if (response.data.details) {
+        const details = response.data.details;
+        const total = Object.values(details).reduce((sum, val) => sum + val, 0);
+        console.log('Registros eliminados:', details);
+        toast.info(`${total} registros eliminados en total`);
+      }
+      
+      fetchIntegrations();
+    } catch (error) {
+      console.error('Error clearing integration data:', error);
+      const errorMsg = error.response?.data?.detail || 'Error al borrar contenido sincronizado';
+      toast.error(errorMsg);
     }
   };
 
@@ -403,6 +430,17 @@ const IntegrationsTab = () => {
                     >
                       <span className="text-lg">🧪</span>
                     </button>
+                    
+                    {/* Botón Borrar Contenido - Solo para account_admin */}
+                    {user?.role === 'account_admin' && (
+                      <button
+                        onClick={() => handleClearIntegrationData(integration.id)}
+                        className="p-2 bg-orange-100 border-2 border-slate-900 rounded-lg hover:bg-orange-200 transition-colors"
+                        title="Borrar Contenido Sincronizado"
+                      >
+                        <Database className="w-5 h-5 text-orange-700" />
+                      </button>
+                    )}
                     
                     <button
                       onClick={() => handleDeleteIntegration(integration.id)}

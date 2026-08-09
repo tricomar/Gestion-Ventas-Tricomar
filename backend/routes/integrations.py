@@ -1895,6 +1895,73 @@ async def delete_integration(
     return {'success': True, 'message': 'Integración eliminada exitosamente'}
 
 
+@router.delete("/prestashop/{integration_id}/clear-data")
+async def clear_integration_data(
+    integration_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Borrar todo el contenido sincronizado de una integración sin eliminar la configuración.
+    Solo disponible para account_admin.
+    """
+    # Verificar que el usuario es account_admin
+    if current_user.role != 'account_admin':
+        raise HTTPException(
+            status_code=403, 
+            detail="Solo los administradores de cuenta pueden borrar contenido sincronizado"
+        )
+    
+    # Verificar que la integración existe
+    integration = await db.prestashop_integrations.find_one(
+        get_tenant_filter(current_user.dict(), {'id': integration_id}),
+        {'_id': 0}
+    )
+    
+    if not integration:
+        raise HTTPException(status_code=404, detail="Integración no encontrada")
+    
+    # Contar registros antes de borrar
+    counts = {
+        'orders': await db.ecommerce_orders.count_documents({'integration_id': integration_id, 'account_id': current_user.account_id}),
+        'customers': await db.ecommerce_customers.count_documents({'integration_id': integration_id, 'account_id': current_user.account_id}),
+        'carts': await db.ecommerce_carts.count_documents({'integration_id': integration_id, 'account_id': current_user.account_id}),
+        'products': await db.prestashop_products.count_documents({'integration_id': integration_id, 'account_id': current_user.account_id}),
+        'categories': await db.prestashop_categories.count_documents({'integration_id': integration_id, 'account_id': current_user.account_id}),
+        'prestashop_orders': await db.prestashop_orders.count_documents({'integration_id': integration_id, 'account_id': current_user.account_id}),
+        'stock_conflicts': await db.stock_conflicts.count_documents({'integration_id': integration_id, 'account_id': current_user.account_id})
+    }
+    
+    # Borrar todos los datos sincronizados
+    await db.ecommerce_orders.delete_many({'integration_id': integration_id, 'account_id': current_user.account_id})
+    await db.ecommerce_customers.delete_many({'integration_id': integration_id, 'account_id': current_user.account_id})
+    await db.ecommerce_carts.delete_many({'integration_id': integration_id, 'account_id': current_user.account_id})
+    await db.prestashop_products.delete_many({'integration_id': integration_id, 'account_id': current_user.account_id})
+    await db.prestashop_categories.delete_many({'integration_id': integration_id, 'account_id': current_user.account_id})
+    await db.prestashop_orders.delete_many({'integration_id': integration_id, 'account_id': current_user.account_id})
+    await db.stock_conflicts.delete_many({'integration_id': integration_id, 'account_id': current_user.account_id})
+    
+    # Registrar acción en logs
+    log = {
+        'id': str(uuid4()),
+        'account_id': current_user.account_id,
+        'integration_id': integration_id,
+        'sync_type': 'clear_data',
+        'status': 'success',
+        'message': f'Contenido sincronizado borrado por {current_user.email}',
+        'details': counts,
+        'created_at': datetime.now(timezone.utc).isoformat()
+    }
+    await db.sync_logs.insert_one(log)
+    
+    total_deleted = sum(counts.values())
+    
+    return {
+        'success': True, 
+        'message': f'{total_deleted} registros eliminados exitosamente',
+        'details': counts
+    }
+
+
 
 @router.patch("/prestashop/{integration_id}")
 async def update_prestashop_integration(
