@@ -247,6 +247,16 @@ async def update_account_stores(
                 updated_store["name"] = new_store.get("name", existing_store.get("name"))
                 updated_store["code"] = new_store.get("code", existing_store.get("code"))
                 updated_stores.append(updated_store)
+            else:
+                # Nueva tienda - agregar con campos por defecto
+                new_store_data = {
+                    "id": new_store.get("id"),
+                    "name": new_store.get("name"),
+                    "code": new_store.get("code"),
+                    "type": "hybrid",  # physical | ecommerce | hybrid
+                    "created_at": datetime.now(timezone.utc).isoformat()
+                }
+                updated_stores.append(new_store_data)
         
         # Actualizar en la base de datos
         await db.accounts.update_one(
