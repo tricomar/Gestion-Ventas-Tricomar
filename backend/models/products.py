@@ -1,7 +1,16 @@
 from pydantic import BaseModel, Field, ConfigDict, field_validator
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, List, Dict, Any
 import uuid
+
+class ProductCombination(BaseModel):
+    """Combinación/Variante de producto (tallas, colores, etc.)"""
+    id: int
+    reference: Optional[str] = None
+    ean13: Optional[str] = None
+    quantity: int = 0
+    price: float = 0
+    attributes: List[Dict[str, Any]] = []  # [{"name": "Talla", "value": "M"}, {"name": "Color", "value": "Rojo"}]
 
 class ProductBase(BaseModel):
     name: str
@@ -18,6 +27,13 @@ class ProductBase(BaseModel):
     prestashop_id: Optional[int] = None  # ID del producto en PrestaShop
     prestashop_integration_id: Optional[str] = None  # ID de integración para limpieza
     store_id: Optional[str] = None  # ID de tienda para filtrado multi-tenant
+    
+    # Nuevos campos para sincronización completa
+    image_url: Optional[str] = None  # URL de imagen principal
+    summary: Optional[str] = None  # Descripción corta (resumen)
+    description: Optional[str] = None  # Descripción larga
+    weight: Optional[float] = None  # Peso en kg
+    combinations: Optional[List[ProductCombination]] = []  # Combinaciones/variantes
     
     @field_validator('sku')
     @classmethod

@@ -389,6 +389,38 @@ class PrestashopAPIService:
         
         return products
 
+    def get_product_combinations(self, product_id: int) -> List[Dict[str, Any]]:
+        """
+        Obtener combinaciones/variantes de un producto
+        
+        Args:
+            product_id: ID del producto
+            
+        Returns:
+            Lista de combinaciones con sus atributos
+        """
+        try:
+            params = {
+                'filter[id_product]': product_id,
+                'display': 'full'
+            }
+            
+            response = self._make_request('combinations', params=params)
+            
+            combinations = []
+            if 'combinations' in response:
+                combs = response['combinations']
+                if isinstance(combs, list):
+                    combinations = combs
+                elif isinstance(combs, dict):
+                    combinations = [combs]
+            
+            return combinations
+        except Exception as e:
+            print(f"[PrestaShop] Error obteniendo combinaciones del producto {product_id}: {e}")
+            return []
+
+
     
     def get_product_stock(self, product_id: int) -> Optional[int]:
         """
