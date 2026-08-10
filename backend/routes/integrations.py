@@ -2556,7 +2556,7 @@ async def sync_products_batch(
     
     # Crear servicio PrestaShop
     ps_service = PrestashopAPIService(
-        api_url=integration['shop_url'] + '/api',
+        shop_url=integration['shop_url'],
         api_key=integration['api_key']
     )
     
