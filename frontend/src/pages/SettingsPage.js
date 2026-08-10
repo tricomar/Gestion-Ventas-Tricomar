@@ -170,6 +170,17 @@ const SettingsPage = () => {
     }
   }, [activeTab, isSupervisor]);
 
+  // Escuchar evento global de recarga de categorías
+  useEffect(() => {
+    const handleReloadCategories = () => {
+      console.log('📢 Evento de recarga de categorías recibido');
+      fetchHierarchicalCategories();
+    };
+
+    window.addEventListener('reloadCategories', handleReloadCategories);
+    return () => window.removeEventListener('reloadCategories', handleReloadCategories);
+  }, []);
+
   // Mostrar toast con resumen al cargar categorías
   useEffect(() => {
     if (hierarchicalCategories.length > 0 && activeTab === 'inventory') {

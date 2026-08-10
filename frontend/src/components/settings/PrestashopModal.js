@@ -269,6 +269,10 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
             toast.success(`✓ Sincronización completada: ${totalSynced} elementos`, {
               duration: 5000
             });
+            
+            // DISPARAR EVENTO GLOBAL para recargar categorías
+            console.log('🔔 Disparando evento reloadCategories');
+            window.dispatchEvent(new CustomEvent('reloadCategories'));
           } else if (job.status === 'failed') {
             clearInterval(pollInterval);
             setSyncing(false);
