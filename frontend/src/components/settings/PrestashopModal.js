@@ -180,19 +180,28 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
         prod.prestashop_integration_id === integId || prod.store_id === storeId
       );
       
+      // Determinar si hay integración existente
+      const hasExistingIntegration = hasCategories || hasProducts;
+      
       setCompletedStages({
         stage1: hasCategories,
         stage2: hasProducts,
         stage3: false // Por ahora, órdenes/clientes no son verificables fácilmente
       });
       
-      // Establecer etapa actual
-      if (!hasCategories) {
-        setCurrentStage('stage1');
-      } else if (!hasProducts) {
-        setCurrentStage('stage2');
+      // Si ya existe integración previa, ir directo a vista de resincronización (stage3)
+      // En lugar del flujo secuencial
+      if (hasExistingIntegration) {
+        setCurrentStage('stage3'); // Mostrar todos los recursos con checkboxes
       } else {
-        setCurrentStage('stage3');
+        // Primera vez: flujo secuencial
+        if (!hasCategories) {
+          setCurrentStage('stage1');
+        } else if (!hasProducts) {
+          setCurrentStage('stage2');
+        } else {
+          setCurrentStage('stage3');
+        }
       }
     } catch (error) {
       console.error('Error verificando etapas completadas:', error);
@@ -913,19 +922,105 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
                   </div>
                 )}
                 
-                {/* ETAPA 3: Recursos adicionales */}
+                {/* ETAPA 3: Recursos adicionales o Resincronización completa */}
                 {currentStage === 'stage3' && (
                   <div className="space-y-4">
-                    <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border-2 border-blue-600 rounded-xl p-4">
-                      <h3 className="font-bold text-lg text-slate-900 mb-2">
-                        {SYNC_STAGES.stage3.title}
-                      </h3>
-                      <p className="text-sm text-slate-700">
-                        {SYNC_STAGES.stage3.description}
-                      </p>
-                    </div>
+                    {/* Banner informativo */}
+                    {(completedStages.stage1 || completedStages.stage2) ? (
+                      <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-600 rounded-xl p-4">
+                        <h3 className="font-bold text-lg text-slate-900 mb-2">
+                          ✓ Resincronizar Recursos
+                        </h3>
+                        <p className="text-sm text-slate-700">
+                          Ya tienes una integración activa. Selecciona los recursos que deseas actualizar.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border-2 border-blue-600 rounded-xl p-4">
+                        <h3 className="font-bold text-lg text-slate-900 mb-2">
+                          {SYNC_STAGES.stage3.title}
+                        </h3>
+                        <p className="text-sm text-slate-700">
+                          {SYNC_STAGES.stage3.description}
+                        </p>
+                      </div>
+                    )}
                     
-                    {/* Recursos de Etapa 3 */}
+                    {/* SI HAY INTEGRACIÓN PREVIA: Mostrar Categorías y Productos también */}
+                    {(completedStages.stage1 || completedStages.stage2) && (
+                      <div className="space-y-3">
+                        <p className="text-sm font-bold text-slate-600 uppercase tracking-wide">
+                          Recursos Base
+                        </p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {/* Categorías */}
+                          <div
+                            className={`border-2 rounded-xl p-4 cursor-pointer transition-all ${
+                              syncResources.categories 
+                                ? 'bg-gradient-to-br from-green-50 to-green-100 border-green-600' 
+                                : 'bg-slate-50 border-slate-300 hover:border-slate-400'
+                            }`}
+                            onClick={() => setSyncResources(prev => ({ ...prev, categories: !prev.categories }))}
+                          >
+                            <div className="flex items-start gap-3">
+                              <input
+                                type="checkbox"
+                                checked={syncResources.categories || false}
+                                onChange={() => {}}
+                                className="w-5 h-5 rounded border-2 border-slate-900 cursor-pointer mt-0.5"
+                              />
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <Tag className="w-5 h-5" />
+                                  <h4 className="font-bold text-slate-900">
+                                    Categorías {completedStages.stage1 && <span className="text-green-600">✓</span>}
+                                  </h4>
+                                </div>
+                                <p className="text-xs text-slate-700">
+                                  Actualizar categorías de productos
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Productos */}
+                          <div
+                            className={`border-2 rounded-xl p-4 cursor-pointer transition-all ${
+                              syncResources.products 
+                                ? 'bg-gradient-to-br from-purple-50 to-purple-100 border-purple-600' 
+                                : 'bg-slate-50 border-slate-300 hover:border-slate-400'
+                            }`}
+                            onClick={() => setSyncResources(prev => ({ ...prev, products: !prev.products }))}
+                          >
+                            <div className="flex items-start gap-3">
+                              <input
+                                type="checkbox"
+                                checked={syncResources.products || false}
+                                onChange={() => {}}
+                                className="w-5 h-5 rounded border-2 border-slate-900 cursor-pointer mt-0.5"
+                              />
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <Package className="w-5 h-5" />
+                                  <h4 className="font-bold text-slate-900">
+                                    Productos {completedStages.stage2 && <span className="text-purple-600">✓</span>}
+                                  </h4>
+                                </div>
+                                <p className="text-xs text-slate-700">
+                                  Actualizar catálogo completo de productos
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <p className="text-sm font-bold text-slate-600 uppercase tracking-wide mt-4">
+                          Recursos Adicionales
+                        </p>
+                      </div>
+                    )}
+                    
+                    {/* Recursos de Etapa 3 (órdenes, clientes, etc) */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {SYNC_STAGES.stage3.resources.map((resource) => {
                         const Icon = resource.icon;
@@ -988,13 +1083,20 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
                             toast.error('Selecciona al menos un recurso');
                             return;
                           }
-                          handleSyncResources(selectedResources);
+                          
+                          // Si seleccionó productos, usar batch sync
+                          if (selectedResources.includes('products')) {
+                            handleBatchSync();
+                          } else {
+                            // Para otros recursos (categorías, órdenes, etc), usar sync normal
+                            handleSyncResources(selectedResources);
+                          }
                         }}
-                        disabled={syncing}
+                        disabled={syncing || batchSyncing}
                         className="flex items-center gap-2 px-6 py-3 bg-blue-500 text-white border-2 border-slate-900 rounded-xl font-bold hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                         style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
                       >
-                        {syncing ? (
+                        {(syncing || batchSyncing) ? (
                           <>
                             <Loader className="w-5 h-5 animate-spin" />
                             Sincronizando...

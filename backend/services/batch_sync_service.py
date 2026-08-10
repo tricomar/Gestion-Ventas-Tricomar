@@ -219,18 +219,42 @@ class BatchSyncService:
         return categories_map
     
     async def _count_available_products(self, batch_size: int) -> int:
-        """Contar productos disponibles en PrestaShop"""
+        """Contar productos disponibles en PrestaShop consultando el total real"""
         try:
-            # Intentar obtener un lote grande para estimar
-            test_batch = self.ps_service.get_products(limit=batch_size, offset=0)
-            if len(test_batch) < batch_size:
-                return len(test_batch)
+            # PrestaShop puede devolver el total en el primer request con limit=1
+            # usando el parámetro display=[id] para minimizar datos
+            logger.info("Consultando total de productos en PrestaShop...")
             
-            # Si devuelve el batch completo, hay más productos
-            # Hacer estimación conservadora
-            return batch_size * 50  # Máximo estimado
-        except Exception:
-            return batch_size
+            # Intentar obtener el conteo real de la API
+            # PrestaShop devuelve headers con información de paginación
+            first_request = self.ps_service.get_products(limit=1, offset=0)
+            
+            # Si la API tiene soporte para contar, usar eso
+            # De lo contrario, hacer requests incrementales hasta encontrar el límite
+            count = 0
+            offset = 0
+            max_iterations = 100  # Protección contra loops infinitos
+            
+            for i in range(max_iterations):
+                batch = self.ps_service.get_products(limit=batch_size, offset=offset)
+                if not batch or len(batch) == 0:
+                    break
+                    
+                count += len(batch)
+                
+                # Si recibimos menos del batch_size, llegamos al final
+                if len(batch) < batch_size:
+                    break
+                    
+                offset += batch_size
+            
+            logger.info(f"Total de productos detectados en PrestaShop: {count}")
+            return count
+            
+        except Exception as e:
+            logger.error(f"Error contando productos: {e}")
+            # Fallback conservador
+            return batch_size * 10
     
     async def _sync_single_product(
         self,
