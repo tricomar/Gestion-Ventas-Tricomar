@@ -22,16 +22,25 @@ const StoresTab = () => {
 
   useEffect(() => {
     if (stores && stores.length > 0) {
-      const names = {};
-      const codes = {};
-      stores.forEach(store => {
-        names[store.id] = store.name;
-        codes[store.id] = store.code || '';
+      setStoreNames(prevNames => {
+        const names = {};
+        stores.forEach(store => {
+          // Mantener valor editado si existe, sino usar el del store
+          names[store.id] = prevNames[store.id] !== undefined ? prevNames[store.id] : store.name;
+        });
+        return names;
       });
-      setStoreNames(names);
-      setStoreCodes(codes);
+      
+      setStoreCodes(prevCodes => {
+        const codes = {};
+        stores.forEach(store => {
+          // Mantener valor editado si existe, sino usar el del store
+          codes[store.id] = prevCodes[store.id] !== undefined ? prevCodes[store.id] : (store.code || '');
+        });
+        return codes;
+      });
     }
-  }, [stores]);
+  }, [stores.length]); // Solo re-ejecutar cuando cambia la cantidad de tiendas, no su contenido
 
   const handleSaveStoreNames = async (e) => {
     e.preventDefault();
@@ -107,17 +116,15 @@ const StoresTab = () => {
   };
 
   const handleDeleteStore = async (storeId) => {
-    if (stores.length <= 1) {
-      toast.error('No puedes eliminar la última tienda');
-      return;
-    }
-
     const storeToDelete = stores.find(s => s.id === storeId);
     if (!storeToDelete) return;
 
-    const confirmed = window.confirm(
-      `¿Estás seguro de eliminar "${storeToDelete.name}"?\n\n⚠️ Esta acción no se puede deshacer.`
-    );
+    const isLastStore = stores.length === 1;
+    const confirmMessage = isLastStore 
+      ? `¿Estás seguro de eliminar "${storeToDelete.name}"?\n\n⚠️ Esta será tu última tienda. Podrás crear una nueva después.\n\nEsta acción no se puede deshacer.`
+      : `¿Estás seguro de eliminar "${storeToDelete.name}"?\n\n⚠️ Esta acción no se puede deshacer.`;
+
+    const confirmed = window.confirm(confirmMessage);
 
     if (!confirmed) return;
 
@@ -171,7 +178,7 @@ const StoresTab = () => {
               <li>Puedes tener hasta <strong>{maxStores}</strong> tienda(s) según tu plan</li>
               <li>Edita nombres y códigos de tiendas existentes</li>
               <li>Agrega nuevas tiendas si no has alcanzado el límite</li>
-              <li>Elimina tiendas que ya no necesites (mínimo 1)</li>
+              <li>Elimina tiendas que ya no necesites</li>
             </ul>
           </div>
         </div>
@@ -187,16 +194,15 @@ const StoresTab = () => {
                   {index === 0 && <span className="ml-2 text-xs text-blue-600">(Por defecto)</span>}
                 </label>
                 
-                {stores.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteStore(store.id)}
-                    className="p-2 hover:bg-red-100 rounded-lg transition-colors"
-                    title="Eliminar tienda"
-                  >
-                    <Trash2 className="w-4 h-4 text-red-600" />
-                  </button>
-                )}
+                {/* Siempre permitir eliminar */}
+                <button
+                  type="button"
+                  onClick={() => handleDeleteStore(store.id)}
+                  className="p-2 hover:bg-red-100 rounded-lg transition-colors"
+                  title="Eliminar tienda"
+                >
+                  <Trash2 className="w-4 h-4 text-red-600" />
+                </button>
               </div>
               
               <div className="mb-3">
