@@ -1,0 +1,35 @@
+{
+  "summary": "Root cause found for 'Error al agregar/eliminar tienda' bug. Backend PUT /api/auth/account/stores works perfectly (add/edit/delete all persist correctly via curl). The frontend bug is in StoresTab.js: it destructures `refetch: refetchAccount` from useAccount(), but AccountContext actually exports `refreshAccount` (not `refetch`). So `refetchAccount` is undefined -> calling it throws TypeError AFTER the successful axios PUT, triggering the catch block which shows the misleading error toast even though changes ARE persisted to DB.",
+  "tested_scope": ["backend", "frontend", "integration", "auth"],
+  "passed": [
+    "Login hola@tricomar.cl / QWEasd123$ works (redirects to /dashboard)",
+    "GET /api/auth/account/info returns account acc_06ca10fb49e1 with max_stores=2",
+    "PUT /api/auth/account/stores ADD new store: returns success=true, persists in DB",
+    "PUT /api/auth/account/stores EDIT store name: returns success=true, persists",
+    "PUT /api/auth/account/stores DELETE (via omission): returns success=true, persists",
+    "Navigate Configuración -> Tiendas/Cajas tab loads UI correctly (counter '1 / 2 tiendas')",
+    "'Agregar Nueva Tienda/Caja' button visible and clickable",
+    "Add-store form fills and submits; backend persists (verified after reload: 'Tienda Test UI' appears in dashboard chart 'Ventas por Tienda' and remains after page reload)"
+  ],
+  "failed": [
+    {
+      "area": "Frontend - StoresTab.js integration with AccountContext",
+      "issue": "'Error al agregar tienda' toast shown on SUCCESSFUL add. Console shows: TypeError: refetchAccount is not a function at handleAddStore. Root cause: StoresTab.js line 13 uses `const { account, refetch: refetchAccount } = useAccount();` but AccountContext.js exports `{ account, loading, refreshAccount }` — there is no `refetch` key, so refetchAccount is undefined. Same defect affects handleSaveStoreNames and handleDeleteStore (edit and delete flows).",
+      "evidence": "Console: 'Error adding store: TypeError: refetchAccount is not a function at handleAddStore (bundle.js:38594:7)'. After add, error toast appears AND UI counter still shows '1 / 2', but after page reload the new store is present (backend persisted it). Dashboard chart 'Ventas por Tienda' shows both 'Tienda 1' and 'Tienda Test UI'.",
+      "priority": "HIGH"
+    },
+    {
+      "area": "Frontend - UI does not refresh after mutation",
+      "issue": "Because refetchAccount throws, the AccountContext is never refreshed after add/edit/delete. UI shows stale state until manual page reload. This is the same root cause as the misleading error toast.",
+      "evidence": "Counter remained '1 / 2 tiendas' immediately after successful add; only became '2 / 2' after page reload.",
+      "priority": "HIGH"
+    }
+  ],
+  "action_items": [
+    "Fix /app/frontend/src/components/settings/StoresTab.js line 13: change `const { account, refetch: refetchAccount } = useAccount();` to `const { account, refreshAccount } = useAccount();` and rename the three calls `refetchAccount()` to `refreshAccount()` in handleSaveStoreNames, handleAddStore, and handleDeleteStore. OR add `refetch: refreshAccount` alias in AccountContext.js provider value.",
+    "After fix, retest add/edit/delete flows end-to-end via UI and verify no error toasts appear on success and counter updates without page reload."
+  ],
+  "success_rate": {"backend": "100%", "frontend": "40%"},
+  "retest_needed": true,
+  "full_testing_deferred": true
+}
