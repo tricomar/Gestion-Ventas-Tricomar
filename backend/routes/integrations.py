@@ -989,7 +989,9 @@ async def sync_categories_resource(ps_service, integration_id: str, account_id: 
             'prestashop_id': cat_id,
             'name': name,
             'parent_id': int(ps_cat.get('id_parent', 0)),
-            'active': ps_cat.get('active', '1') == '1'
+            'active': ps_cat.get('active', '1') == '1',
+            'store_id': store_id,
+            'store_name': store_name
         }
         
         if existing:
@@ -1004,6 +1006,76 @@ async def sync_categories_resource(ps_service, integration_id: str, account_id: 
         
         synced_count += 1
     
+    # COPIAR A COLECCIÓN CATEGORIES (para UI)
+    print(f"[SYNC] Copiando {synced_count} categorías a colección categories...")
+    all_ps_categories = await db.prestashop_categories.find(
+        {'account_id': account_id, 'integration_id': integration_id, 'active': True},
+        {'_id': 0}
+    ).to_list(1000)
+    
+    ps_cat_map = {cat['prestashop_id']: cat for cat in all_ps_categories}
+    
+    for ps_cat in all_ps_categories:
+        prestashop_id = ps_cat['prestashop_id']
+        parent_ps_id = ps_cat.get('parent_id', 0)
+        
+        existing_cat = await db.categories.find_one(
+            {
+                'account_id': account_id,
+                'store_id': store_id,
+                'prestashop_id': prestashop_id
+            },
+            {'_id': 0}
+        )
+        
+        level = 0
+        parent_local_id = None
+        
+        if parent_ps_id and parent_ps_id > 0 and parent_ps_id in ps_cat_map:
+            parent_cat = await db.categories.find_one(
+                {
+                    'account_id': account_id,
+                    'store_id': store_id,
+                    'prestashop_id': parent_ps_id
+                },
+                {'_id': 0}
+            )
+            
+            if parent_cat:
+                parent_local_id = parent_cat['id']
+                level = parent_cat.get('level', 0) + 1
+        
+        level = min(level, 3)
+        
+        category_doc_final = {
+            'account_id': account_id,
+            'store_id': store_id,
+            'name': ps_cat['name'],
+            'parent_id': parent_local_id,
+            'level': level,
+            'source': 'prestashop',
+            'store': store_name,
+            'prestashop_id': prestashop_id,
+            'prestashop_parent_id': parent_ps_id,
+            'integration_id': integration_id,
+            'updated_at': datetime.now(timezone.utc).isoformat()
+        }
+        
+        if existing_cat:
+            await db.categories.update_one(
+                {
+                    'account_id': account_id,
+                    'store_id': store_id,
+                    'prestashop_id': prestashop_id
+                },
+                {'$set': category_doc_final}
+            )
+        else:
+            category_doc_final['id'] = str(uuid4())
+            category_doc_final['created_at'] = datetime.now(timezone.utc).isoformat()
+            await db.categories.insert_one(category_doc_final)
+    
+    print(f"[SYNC] ✅ Copiadas {len(all_ps_categories)} categorías activas a colección categories")
     return synced_count
 
 
