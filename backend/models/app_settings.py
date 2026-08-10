@@ -9,7 +9,7 @@ class AppSettings(BaseModel):
     """
     Global application settings for timezone and currency
     """
-    account_id: str
+    account_id: Optional[str] = ""  # Optional para super_admin
     timezone: str = 'America/Santiago'  # Default to Chile
     currency_code: str = 'CLP'  # Default to Chilean Peso
     currency_symbol: str = '$'

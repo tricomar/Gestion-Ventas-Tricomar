@@ -42,6 +42,18 @@ async def get_available_currencies():
 @router.get("")
 async def get_app_settings(current_user: User = Depends(get_current_user)):
     """Get current application settings for the user's account"""
+    # Super admin sin account_id: devolver settings por defecto sin guardar
+    if not current_user.account_id:
+        return AppSettings(
+            account_id="",  # Vacío para super_admin
+            timezone='America/Santiago',
+            currency_code='CLP',
+            currency_symbol='$',
+            decimal_places=0,
+            date_format='DD/MM/YYYY',
+            time_format='24h'
+        )
+    
     settings = await db.app_settings.find_one(
         {'account_id': current_user.account_id},
         {'_id': 0}
