@@ -1931,7 +1931,8 @@ async def clear_integration_data(
         'prestashop_categories': await db.prestashop_categories.count_documents({'integration_id': integration_id, 'account_id': current_user.account_id}),
         'prestashop_orders': await db.prestashop_orders.count_documents({'integration_id': integration_id, 'account_id': current_user.account_id}),
         'stock_conflicts': await db.stock_conflicts.count_documents({'integration_id': integration_id, 'account_id': current_user.account_id}),
-        'inventory_products': await db.products.count_documents({'prestashop_integration_id': integration_id, 'account_id': current_user.account_id})
+        'inventory_products': await db.products.count_documents({'prestashop_integration_id': integration_id, 'account_id': current_user.account_id}),
+        'local_categories': await db.categories.count_documents({'integration_id': integration_id, 'account_id': current_user.account_id})
     }
     
     # Borrar todos los datos sincronizados
@@ -1943,8 +1944,11 @@ async def clear_integration_data(
     await db.prestashop_orders.delete_many({'integration_id': integration_id, 'account_id': current_user.account_id})
     await db.stock_conflicts.delete_many({'integration_id': integration_id, 'account_id': current_user.account_id})
     
-    # ✅ NUEVO: Borrar productos del inventario local que fueron sincronizados
+    # ✅ Borrar productos del inventario local que fueron sincronizados
     await db.products.delete_many({'prestashop_integration_id': integration_id, 'account_id': current_user.account_id})
+    
+    # ✅ Borrar categorías locales que fueron sincronizadas
+    await db.categories.delete_many({'integration_id': integration_id, 'account_id': current_user.account_id})
     
     # Registrar acción en logs
     log = {
