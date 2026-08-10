@@ -7,88 +7,88 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 // Definición de recursos disponibles para sincronizar
-const SYNC_RESOURCES = [
-  {
-    id: 'products',
-    label: 'Productos y Marcas',
-    description: 'Importa el catálogo completo de productos incluyendo nombres, SKU, marcas y descripciones',
-    icon: Package,
-    color: 'green',
-    essential: true
+// Estructura de recursos organizados por etapas secuenciales
+const SYNC_STAGES = {
+  // ETAPA 1: Categorías (Obligatorio primero)
+  stage1: {
+    id: 'stage1',
+    title: 'Paso 1: Sincronizar Categorías',
+    description: 'Primero debes sincronizar las categorías para organizar correctamente tus productos',
+    required: true,
+    resources: [
+      {
+        id: 'categories',
+        label: 'Categorías',
+        description: 'Estructura completa de categorías y subcategorías de tu tienda',
+        icon: Tag,
+        color: 'green',
+        stage: 1
+      }
+    ]
   },
-  {
-    id: 'categories',
-    label: 'Categorías',
-    description: 'Importa la estructura de categorías y subcategorías de tu tienda',
-    icon: Tag,
-    color: 'purple',
-    essential: true
+  
+  // ETAPA 2: Productos (Después de categorías)
+  stage2: {
+    id: 'stage2',
+    title: 'Paso 2: Sincronizar Productos Completos',
+    description: 'Ahora puedes sincronizar productos con toda su información',
+    required: true,
+    dependsOn: 'stage1',
+    resources: [
+      {
+        id: 'products',
+        label: 'Productos Completos',
+        description: 'Marca, Precio, Stock, Imagen, SKU, Código de Barra, Resumen, Descripción, Peso y Combinaciones',
+        icon: Package,
+        color: 'purple',
+        stage: 2
+      }
+    ]
   },
-  {
-    id: 'prices',
-    label: 'Precios',
-    description: 'Sincroniza precios de venta y precios de costo',
-    icon: '$',
-    color: 'yellow',
-    essential: true
-  },
-  {
-    id: 'stock',
-    label: 'Stock / Inventario',
-    description: 'Mantén actualizado el stock de productos en ambas plataformas',
-    icon: Package,
-    color: 'blue',
-    essential: true
-  },
-  {
-    id: 'images',
-    label: 'Imágenes de Productos',
-    description: 'Descarga y asocia las imágenes de productos a tu inventario local',
-    icon: Image,
-    color: 'indigo',
-    essential: true
-  },
-  {
-    id: 'orders',
-    label: 'Órdenes / Pedidos',
-    description: 'Importa pedidos completados con detalles de productos, clientes y pagos',
-    icon: ShoppingBag,
-    color: 'orange',
-    essential: true
-  },
-  {
-    id: 'customers',
-    label: 'Clientes',
-    description: 'Sincroniza información de clientes: nombres, emails, teléfonos y direcciones',
-    icon: Users,
-    color: 'teal',
-    essential: false
-  },
-  {
-    id: 'messages',
-    label: 'Mensajes e Hilos',
-    description: 'Importa conversaciones y mensajes de clientes para seguimiento',
-    icon: MessageSquare,
-    color: 'pink',
-    essential: false
-  },
-  {
-    id: 'abandoned_carts',
-    label: 'Carritos Abandonados',
-    description: 'Rastrea carritos de compra no finalizados para estrategias de recuperación',
-    icon: ShoppingCart,
-    color: 'red',
-    essential: false
-  },
-  {
-    id: 'completed_carts',
-    label: 'Carritos Finalizados',
-    description: 'Historial completo de carritos de compra convertidos en órdenes',
-    icon: Check,
-    color: 'emerald',
-    essential: false
+  
+  // ETAPA 3: Resto de recursos (Después de productos)
+  stage3: {
+    id: 'stage3',
+    title: 'Paso 3: Sincronizar Datos Adicionales',
+    description: 'Complementa tu integración con órdenes, clientes y más',
+    required: false,
+    dependsOn: 'stage2',
+    resources: [
+      {
+        id: 'orders',
+        label: 'Órdenes / Pedidos',
+        description: 'Historial de pedidos completados con detalles',
+        icon: ShoppingBag,
+        color: 'orange',
+        stage: 3
+      },
+      {
+        id: 'customers',
+        label: 'Clientes',
+        description: 'Información de clientes: nombres, emails, teléfonos',
+        icon: Users,
+        color: 'teal',
+        stage: 3
+      },
+      {
+        id: 'messages',
+        label: 'Mensajes e Hilos',
+        description: 'Conversaciones y mensajes de clientes',
+        icon: MessageSquare,
+        color: 'pink',
+        stage: 3
+      },
+      {
+        id: 'abandoned_carts',
+        label: 'Carritos Abandonados',
+        description: 'Carritos no finalizados para estrategias de recuperación',
+        icon: ShoppingCart,
+        color: 'red',
+        stage: 3
+      }
+    ]
   }
-];
+};
 
 const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) => {
   const [step, setStep] = useState(1); // 1: Conexión, 2: Sincronización
@@ -139,6 +139,13 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
     job_id: null
   });
   const [showBatchReport, setShowBatchReport] = useState(false);
+  
+  // Estados para etapas de sincronización secuencial
+  const [syncStages, setSyncStages] = useState({
+    categories: false,    // Etapa 1: Categorías
+    products: false,      // Etapa 2: Productos
+    rest: false          // Etapa 3: Resto (órdenes, clientes, etc.)
+  });
 
   useEffect(() => {
     if (integration) {
