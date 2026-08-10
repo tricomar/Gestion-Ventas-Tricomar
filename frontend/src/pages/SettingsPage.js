@@ -1072,7 +1072,13 @@ const SettingsPage = () => {
 
         {/* Integrations Tab */}
         {activeTab === 'integrations' && isSupervisor && (
-          <IntegrationsTab />
+          <IntegrationsTab 
+            stores={stores}
+            onIntegrationChange={() => {
+              console.log('🔄 Recargando categorías tras sincronización...');
+              fetchHierarchicalCategories();
+            }}
+          />
         )}
 
         {/* Personalization Tab */}
