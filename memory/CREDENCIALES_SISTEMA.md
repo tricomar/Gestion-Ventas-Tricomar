@@ -1,11 +1,21 @@
 # Credenciales de Acceso - Negocio Feliz
 
-## 🔐 Credenciales de Administrador
+## 🔐 Credenciales Super Admin (Admin Global)
+
+**Email:** admin@negocio-feliz.com  
+**Contraseña:** Admin123!@#  
+**Role:** super_admin  
+**Permisos:** Acceso completo al sistema
+
+---
+
+## 👤 Credenciales Account Admin (Tu Usuario)
 
 **Email:** hola@tricomar.cl  
 **Contraseña:** QWEasd123$  
 **Role:** account_admin  
-**Account ID:** acc_06ca10fb49e1
+**Account ID:** acc_06ca10fb49e1  
+**Permisos:** Administrador de la cuenta Tricomar
 
 ---
 
