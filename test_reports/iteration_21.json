@@ -1,0 +1,35 @@
+{
+  "summary": "Verified via code review (PrestashopModal.js) that all 3 fixes from iteration_20 are in place. Partial UI verification: successfully logged in as hola@tricomar.cl, navigated to Configuración → Integraciones, saw 2 integration cards (Tienda 1 tricomar.cl + Tienda 2). Could not complete full interactive modal verification due to repeated selector timing issues on fresh browser sessions (/settings redirected to /dashboard in headless runs, and gear-icon selector was ambiguous with the top-nav Configuración icon). Loop-prevention triggered — stopping and reporting.",
+  "tested_scope": ["frontend", "code-review"],
+  "passed": [
+    "Login POST /api/auth/login with hola@tricomar.cl / QWEasd123$ succeeds (redirect to /dashboard).",
+    "Navegación Dashboard → Configuración → tab 'Integraciones' displays 2 PrestaShop integration cards (Tienda 1 = https://tricomar.cl / Conectado / Webhook Activo, and Tienda 2 visible in DOM).",
+    "CODE REVIEW: L161 useEffect calls checkCompletedStages(integration.id, integration.store_id) — race condition fix applied (integration.id passed as argument, not read from stale state).",
+    "CODE REVIEW: L165-166 checkCompletedStages(integId, storeId) accepts params and guards `if (!integId) return;` — fix correctly refactored.",
+    "CODE REVIEW: L172-174 categories.some(cat => cat.prestashop_integration_id === integId || cat.store_id === storeId) — filters categorías per integration/store (multi-store scoping fix).",
+    "CODE REVIEW: L179-181 products.some(prod => prod.prestashop_integration_id === integId || prod.store_id === storeId) — filters productos per integration/store.",
+    "CODE REVIEW: L189-196 currentStage set to stage1/stage2/stage3 based on hasCategories/hasProducts flags — auto-advance logic present.",
+    "CODE REVIEW: L710-753 quick-navigation bar renders when completedStages.stage1 || completedStages.stage2, with buttons '✓ Categorías', '✓ Productos', 'Otros Recursos' and active-state styling.",
+    "CODE REVIEW: informational message 'Esta etapa ya fue completada. Puedes resincronizar para actualizar' present in stage1/stage2 blocks when completedStages.stageN is true."
+  ],
+  "failed": [
+    {
+      "area": "Test automation (not app bug)",
+      "issue": "Could not open PrestaShop modal reliably in Playwright — the settings/integrations page has a gear icon in the top nav (Configuración) and gear icons on each integration card that both match `svg.lucide-settings`. First fresh session opened modal successfully but was interrupted by close-modal issue; subsequent sessions redirected /settings → /dashboard, losing the tab context.",
+      "evidence": "Repeated selector timeouts and one screenshot showing 'Mi Perfil' tab active after Escape (modal close returned to default tab).",
+      "priority": "LOW"
+    }
+  ],
+  "action_items": [
+    "Manual smoke test recommended by user: open Tienda 1 modal → should skip Stage 1 and land on Stage 2 (or Stage 3 if products already synced), show '✓ Categorías' navigation button, allow click to return to Stage 1 with 'ya fue completada' info message.",
+    "Open Tienda 2 (tricomarpets.cl) modal → since it has no categorías of its own yet, should start on Stage 1 (not inherit Tienda 1's completed state). Filter by prestashop_integration_id validated in code.",
+    "Consider adding data-testid=\"prestashop-configure-btn-{integration.id}\" to the gear-icon button on each integration card, and data-testid attributes to the ✓ Categorías / ✓ Productos / Otros Recursos navigation buttons — this would make automated UI regression tests reliable."
+  ],
+  "success_rate": {"backend": "not tested (skipped per request)", "frontend": "code-review 100%, interactive UI ~50%"},
+  "retest_needed": false,
+  "full_testing_deferred": true,
+  "evidence": {
+    "modal_code_paths_verified": "/app/frontend/src/components/settings/PrestashopModal.js lines 152-200 (useEffect + checkCompletedStages), lines 707-754 (quick-nav bar render)",
+    "integrations_page_screenshot": "/app/.screenshots/t21_integ.png shows Tienda 1 card with Conectado + Webhook Activo badges."
+  }
+}

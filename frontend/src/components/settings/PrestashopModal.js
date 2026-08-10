@@ -157,22 +157,28 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
       setConnectionStatus('connected');
       setStep(2); // Si ya existe integración, ir directo a sincronización
       
-      // Verificar qué etapas ya están completadas
-      checkCompletedStages();
+      // Verificar qué etapas ya están completadas - pasar integration.id directamente
+      checkCompletedStages(integration.id, integration.store_id);
     }
   }, [integration]);
   
-  const checkCompletedStages = async () => {
-    if (!integrationId) return;
+  const checkCompletedStages = async (integId, storeId) => {
+    if (!integId) return;
     
     try {
-      // Verificar si hay categorías sincronizadas
+      // Verificar si hay categorías sincronizadas PARA ESTA INTEGRACIÓN
       const categoriesResponse = await axios.get(`${API}/categories`);
-      const hasCategories = categoriesResponse.data && categoriesResponse.data.length > 0;
+      const categories = categoriesResponse.data || [];
+      const hasCategories = categories.some(cat => 
+        cat.prestashop_integration_id === integId || cat.store_id === storeId
+      );
       
-      // Verificar si hay productos sincronizados
+      // Verificar si hay productos sincronizados PARA ESTA INTEGRACIÓN
       const productsResponse = await axios.get(`${API}/products/search?query=`);
-      const hasProducts = productsResponse.data && productsResponse.data.length > 0;
+      const products = productsResponse.data || [];
+      const hasProducts = products.some(prod => 
+        prod.prestashop_integration_id === integId || prod.store_id === storeId
+      );
       
       setCompletedStages({
         stage1: hasCategories,
@@ -700,6 +706,53 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
 
             {step === 2 && (
               <div className="space-y-6">
+                {/* Navegación de etapas - permite volver a etapas anteriores */}
+                {(completedStages.stage1 || completedStages.stage2) && (
+                  <div className="bg-slate-100 border-2 border-slate-900 rounded-xl p-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-bold text-slate-700">Navegación rápida:</span>
+                      <div className="flex gap-2">
+                        {completedStages.stage1 && (
+                          <button
+                            onClick={() => setCurrentStage('stage1')}
+                            className={`px-3 py-1.5 text-sm font-bold border-2 border-slate-900 rounded-lg transition-colors ${
+                              currentStage === 'stage1' 
+                                ? 'bg-green-500 text-white' 
+                                : 'bg-white text-slate-700 hover:bg-slate-50'
+                            }`}
+                          >
+                            ✓ Categorías
+                          </button>
+                        )}
+                        {completedStages.stage2 && (
+                          <button
+                            onClick={() => setCurrentStage('stage2')}
+                            className={`px-3 py-1.5 text-sm font-bold border-2 border-slate-900 rounded-lg transition-colors ${
+                              currentStage === 'stage2' 
+                                ? 'bg-purple-500 text-white' 
+                                : 'bg-white text-slate-700 hover:bg-slate-50'
+                            }`}
+                          >
+                            ✓ Productos
+                          </button>
+                        )}
+                        {(completedStages.stage1 && completedStages.stage2) && (
+                          <button
+                            onClick={() => setCurrentStage('stage3')}
+                            className={`px-3 py-1.5 text-sm font-bold border-2 border-slate-900 rounded-lg transition-colors ${
+                              currentStage === 'stage3' 
+                                ? 'bg-blue-500 text-white' 
+                                : 'bg-white text-slate-700 hover:bg-slate-50'
+                            }`}
+                          >
+                            Otros Recursos
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
                 {/* Mostrar solo la etapa actual */}
                 {currentStage === 'stage1' && (
                   <div className="space-y-4">
@@ -779,6 +832,14 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
                 {/* ETAPA 2: Productos */}
                 {currentStage === 'stage2' && (
                   <div className="space-y-4">
+                    {completedStages.stage2 && (
+                      <div className="bg-blue-50 border-2 border-blue-600 rounded-xl p-3">
+                        <p className="text-sm text-blue-900 font-semibold">
+                          ℹ️ Esta etapa ya fue completada. Puedes resincronizar para actualizar los productos.
+                        </p>
+                      </div>
+                    )}
+                    
                     <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border-2 border-purple-600 rounded-xl p-4">
                       <h3 className="font-bold text-lg text-slate-900 mb-2">
                         {SYNC_STAGES.stage2.title}

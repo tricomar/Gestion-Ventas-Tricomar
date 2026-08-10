@@ -1,0 +1,47 @@
+{
+  "summary": "Tested PrestaShop modal sequential stage flow for hola@tricomar.cl. Modal correctly shows only ONE stage at a time (Stage 1 rendered when opened on Tienda 1). Backend /sync-batch endpoint correctly reads max_products_sync from account (default 500 fallback). However, checkCompletedStages() has a state race-condition bug that prevents auto-advance to next stage on re-open, and the reported UX limitation (no way to resync a completed resource) is still present.",
+  "tested_scope": ["backend", "frontend", "integration"],
+  "passed": [
+    "POST /api/auth/login (hola@tricomar.cl / QWEasd123$) -> 200 with token",
+    "GET /api/integrations/prestashop/list -> 200, returns 2 integrations: tricomar.cl (id=38b5bca6...) and tricomarpets.cl (id=252d6da9...)",
+    "Modal opens correctly from Configuración → Integraciones → Configurar (title icon on Tienda 1 card)",
+    "Modal displays ONLY Stage 1 at initial open: header 'Paso 1: Sincronizar Categorías' visible, Stage 2 and Stage 3 markup NOT rendered (verified via full HTML string match: stage1=True, stage2=False, stage3=False)",
+    "Only ONE 'Sincronizar Categorías' button rendered; no 'Sincronizar Productos' nor 'Sincronizar Recursos' buttons present in Stage 1",
+    "Backend code review (integrations.py L2517-2555) confirms /sync-batch reads account.max_products_sync when max_products param is None; default fallback = 500",
+    "Backend code review (batch_sync_service.py) confirms batch_size default = 100"
+  ],
+  "failed": [
+    {
+      "area": "Frontend - PrestashopModal.js checkCompletedStages",
+      "issue": "Auto-advance to next stage on re-open does NOT work. Per iteration_19, 131 categorías were already synced for Tienda 1 (tricomar.cl). Expected: modal opens on Stage 2 (Productos). Actual: modal opens on Stage 1 (Categorías).",
+      "evidence": "Root cause visible in code L152-194: useEffect calls setIntegrationId(integration.id) then immediately calls checkCompletedStages(); but checkCompletedStages guards with `if (!integrationId) return;` — since setIntegrationId is async, integrationId is still null at that moment, so the function returns early and completedStages stays {false,false,false}, keeping currentStage='stage1'. Fix: pass integration.id as arg to checkCompletedStages, or use a useEffect that depends on integrationId.",
+      "priority": "HIGH"
+    },
+    {
+      "area": "Frontend - PrestashopModal.js UX",
+      "issue": "No manual re-sync available for a resource once its stage is 'completed'. User explicitly reported this: after finishing the flow, they cannot re-sync categorías or productos because the modal shows only the current stage.",
+      "evidence": "Code L704-950 renders only one branch based on currentStage. No UI control to jump back to a previous completed stage.",
+      "priority": "HIGH"
+    },
+    {
+      "area": "Frontend - checkCompletedStages scoping",
+      "issue": "checkCompletedStages calls GET /api/categories and GET /api/products/search?query= which return ALL account-wide data, not filtered by the current integration/store. With two integrations (tricomar.cl and tricomarpets.cl), completing sync for one store will incorrectly mark the other store's modal as 'complete' too.",
+      "evidence": "Code L170-181 in PrestashopModal.js — no store_id/integration_id filter passed. Since account already has 122 prestashop categories from tricomar.cl, opening the tricomarpets.cl modal would show stage2 or stage3, misleading the user.",
+      "priority": "MEDIUM"
+    }
+  ],
+  "action_items": [
+    "Fix checkCompletedStages race condition: refactor to accept integration.id as parameter (or use separate useEffect depending on integrationId) so stage auto-detection works on modal re-open.",
+    "Add a way to manually re-sync a completed stage (e.g., 'Volver a Categorías' / 'Volver a Productos' buttons, or a stage stepper/navigator that lets user jump between stages regardless of completion).",
+    "Scope checkCompletedStages queries by store_id or integration_id so multi-store accounts don't cross-contaminate stage state between integrations."
+  ],
+  "success_rate": {"backend": "100%", "frontend": "40%"},
+  "retest_needed": true,
+  "full_testing_deferred": true,
+  "evidence": {
+    "modal_screenshot": "/app/.screenshots/t20_modal.png — shows 'Configurar PrestaShop' modal with 'Paso 1: Sincronizar Categorías' header and green 'Sincronizar Categorías' CTA. Only Stage 1 is rendered.",
+    "stage_flags": "stage1=True, stage2=False, stage3=False (HTML content check)",
+    "button_counts": "Sincronizar Categorías=1, Sincronizar Productos=0, Sincronizar Recursos=0",
+    "prior_sync_state": "iteration_19 confirmed 131 prestashop categories were synced for Tienda 1; modal should have skipped Stage 1 but did not."
+  }
+}
