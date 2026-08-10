@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { Package, Plus, Edit, Trash2, Home, Download, Search, Filter, Calculator, ChevronUp, ChevronDown } from 'lucide-react';
@@ -160,7 +160,7 @@ const InventoryPage = () => {
   };
 
   
-  const filterProducts = () => {
+  const filterProducts = useCallback(() => {
     let filtered = [...products];
     
     // Filter by search query (name or SKU)
@@ -280,7 +280,11 @@ const InventoryPage = () => {
     }
     
     setFilteredProducts(filtered);
-  };
+  }, [products, searchQuery, selectedCategory, selectedStore, expiryDateFilter, customExpiryStart, customExpiryEnd, sortBy, sortOrder, stores]);
+
+  useEffect(() => {
+    filterProducts();
+  }, [filterProducts]);
 
   const handleDelete = async (productId) => {
     // Find product name for better feedback

@@ -28,7 +28,8 @@ async def get_economic_indicators():
         return indicators_cache['data']
     
     try:
-        async with httpx.AsyncClient(timeout=10.0, verify=False) as client:
+        # SECURITY FIX: SSL verification enabled for production security
+        async with httpx.AsyncClient(timeout=10.0, verify=True) as client:
             # Obtener todos los indicadores en paralelo
             indicators_config = [
                 {'code': 'uf', 'name': 'UF'},

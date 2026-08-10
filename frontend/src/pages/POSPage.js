@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import { toast } from 'sonner';
 import { Search, Plus, ShoppingCart, X, ChevronDown, FileText, TrendingDown, DollarSign } from 'lucide-react';
@@ -35,13 +35,8 @@ const POSPage = () => {
   const [cartDiscount, setCartDiscount] = useState({ type: 'none', value: 0 }); // type: 'percent' | 'amount' | 'none'
   const [discountPercentages, setDiscountPercentages] = useState([0, 5, 10, 15, 20, 25, 30, 50]); // Configurables
 
-  useEffect(() => {
-    fetchFrequentProducts();
-    fetchTodayStats();
-    fetchPOSSettings();
-  }, []);
-
-  const fetchPOSSettings = async () => {
+  // Fetch functions wrapped with useCallback to avoid hook dependency warnings
+  const fetchPOSSettings = useCallback(async () => {
     try {
       const response = await axios.get(`${API}/settings`);
       if (response.data.pos_discount_percentages) {
@@ -53,16 +48,31 @@ const POSPage = () => {
     } catch (error) {
       console.error('Error fetching POS settings:', error);
     }
-  };
+  }, []);
 
-  const fetchTodayStats = async () => {
+  const fetchTodayStats = useCallback(async () => {
     try {
       const response = await axios.get(`${API}/pos-stats/today`);
       setTodayStats(response.data);
     } catch (error) {
       console.error('Error fetching today stats:', error);
     }
-  };
+  }, []);
+
+  const fetchFrequentProducts = useCallback(async () => {
+    try {
+      const response = await axios.get(`${API}/products/top-selling?limit=20`);
+      setProducts(response.data);
+    } catch (error) {
+      console.error('Error fetching products:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchFrequentProducts();
+    fetchTodayStats();
+    fetchPOSSettings();
+  }, [fetchFrequentProducts, fetchTodayStats, fetchPOSSettings]);
 
   // Click outside to close records menu
   useEffect(() => {
@@ -76,13 +86,39 @@ const POSPage = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const searchProducts = useCallback(async () => {
+    if (searchQuery.length < 2) return;
+    
+    try {
+      const response = await axios.get(`${API}/products/search`, {
+        params: { q: searchQuery, limit: 10 }
+      });
+      setSearchResults(response.data);
+    } catch (error) {
+      console.error('Error searching products:', error);
+    }
+  }, [searchQuery]);
+
+  const searchCustomers = useCallback(async () => {
+    if (customerSearch.length < 2) return;
+    
+    try {
+      const response = await axios.get(`${API}/customers/search`, {
+        params: { q: customerSearch, limit: 10 }
+      });
+      setCustomerResults(response.data);
+    } catch (error) {
+      console.error('Error searching customers:', error);
+    }
+  }, [customerSearch]);
+
   useEffect(() => {
     if (searchQuery.length >= 2) {
       searchProducts();
     } else {
       setSearchResults([]);
     }
-  }, [searchQuery]);
+  }, [searchQuery, searchProducts]);
 
   useEffect(() => {
     if (customerSearch.length >= 2) {
@@ -90,34 +126,7 @@ const POSPage = () => {
     } else {
       setCustomerResults([]);
     }
-  }, [customerSearch]);
-
-  const fetchFrequentProducts = async () => {
-    try {
-      const response = await axios.get(`${API}/products/top-selling?limit=20`);
-      setProducts(response.data);
-    } catch (error) {
-      console.error('Error fetching products:', error);
-    }
-  };
-
-  const searchProducts = async () => {
-    try {
-      const response = await axios.get(`${API}/products/search?q=${searchQuery}`);
-      setSearchResults(response.data);
-    } catch (error) {
-      console.error('Error searching products:', error);
-    }
-  };
-
-  const searchCustomers = async () => {
-    try {
-      const response = await axios.get(`${API}/customers/search?q=${customerSearch}`);
-      setCustomerResults(response.data);
-    } catch (error) {
-      console.error('Error searching customers:', error);
-    }
-  };
+  }, [customerSearch, searchCustomers]);
 
   const recordsMenuItems = [
     { path: '/sales-records', icon: FileText, label: 'Registro de Ventas', color: 'from-green-400 to-emerald-400' },

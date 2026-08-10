@@ -26,9 +26,13 @@ DB_NAME = os.environ.get('DB_NAME', 'sales_db')
 print(f"📊 Usando base de datos: {DB_NAME}")
 print(f"🔗 MongoDB URL: {MONGO_URL}")
 
-SUPER_ADMIN_EMAIL = "carlos@tricomar.cl"
-SUPER_ADMIN_PASSWORD = "QWEasd123$"
-SUPER_ADMIN_NAME = "Carlos - Super Admin"
+# SECURITY FIX: Cargar credenciales desde variables de entorno
+SUPER_ADMIN_EMAIL = os.environ.get('SUPER_ADMIN_EMAIL', 'admin@example.com')
+SUPER_ADMIN_PASSWORD = os.environ.get('SUPER_ADMIN_PASSWORD')
+SUPER_ADMIN_NAME = os.environ.get('SUPER_ADMIN_NAME', 'Super Admin')
+
+if not SUPER_ADMIN_PASSWORD:
+    raise ValueError("⚠️  SUPER_ADMIN_PASSWORD debe estar definido en .env")
 
 async def init_super_admin():
     """
