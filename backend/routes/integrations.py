@@ -500,7 +500,8 @@ async def sync_products_background(job_id: str, integration_id: str, integration
                 store_code = matching_store.get('code', 'A')
         
         # Crear servicio de sincronización de categorías
-        category_sync = CategorySyncService(ps_service, account_id, store_name)
+        # Instanciar servicio de sincronización de categorías
+        category_sync = CategorySyncService(ps_service, account_id, store_name, integration_id, store_id)
         
         # Actualizar job
         await db.sync_jobs.update_one(
@@ -887,11 +888,11 @@ async def sync_resources_background(
             
             try:
                 if resource == 'categories':
-                    count = await sync_categories_resource(ps_service, integration_id, account_id, store_name)
+                    count = await sync_categories_resource(ps_service, integration_id, account_id, store_name, store_id)
                     results['categories'] = count
                     
                 elif resource == 'products':
-                    count = await sync_products_resource(ps_service, integration_id, account_id, store_name, store_code)
+                    count = await sync_products_resource(ps_service, integration_id, account_id, store_name, store_code, store_id)
                     results['products'] = count
                     
                 elif resource == 'prices':
@@ -956,11 +957,11 @@ async def sync_resources_background(
 
 
 # Funciones helper para sincronizar cada tipo de recurso
-async def sync_categories_resource(ps_service, integration_id: str, account_id: str, store_name: str) -> int:
+async def sync_categories_resource(ps_service, integration_id: str, account_id: str, store_name: str, store_id: str = None) -> int:
     """Sincronizar categorías"""
     from services.category_sync_service import CategorySyncService
     
-    category_sync = CategorySyncService(ps_service, account_id, store_name)
+    category_sync = CategorySyncService(ps_service, account_id, store_name, integration_id, store_id)
     ps_categories = ps_service.get_categories(limit=200)
     
     synced_count = 0
@@ -1006,11 +1007,11 @@ async def sync_categories_resource(ps_service, integration_id: str, account_id: 
     return synced_count
 
 
-async def sync_products_resource(ps_service, integration_id: str, account_id: str, store_name: str, store_code: str) -> int:
+async def sync_products_resource(ps_service, integration_id: str, account_id: str, store_name: str, store_code: str, store_id: str = None) -> int:
     """Sincronizar productos (simplificado)"""
     from services.category_sync_service import CategorySyncService
     
-    category_sync = CategorySyncService(ps_service, account_id, store_name)
+    category_sync = CategorySyncService(ps_service, account_id, store_name, integration_id, store_id)
     ps_products = ps_service.get_products(limit=500)
     
     synced_count = 0
