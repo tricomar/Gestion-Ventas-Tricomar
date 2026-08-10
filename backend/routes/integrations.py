@@ -2530,7 +2530,7 @@ async def sync_products_batch(
         integration_id: ID de la integración PrestaShop
         batch_size: Tamaño de cada lote (default: 100)
         pause_seconds: Pausa entre lotes en segundos (default: 0.5)
-        max_products: Máximo de productos a sincronizar (None = todos)
+        max_products: Máximo de productos a sincronizar (None = usar límite de cuenta)
     
     Returns:
         job_id para consultar progreso
@@ -2545,6 +2545,14 @@ async def sync_products_batch(
     
     if not integration:
         raise HTTPException(status_code=404, detail="Integración no encontrada")
+    
+    # Si no se especificó max_products, obtener límite de la cuenta
+    if max_products is None:
+        account = await db.accounts.find_one(
+            {'id': current_user.account_id},
+            {'_id': 0, 'max_products_sync': 1}
+        )
+        max_products = account.get('max_products_sync', 500) if account else 500
     
     # Crear servicio PrestaShop
     ps_service = PrestashopAPIService(

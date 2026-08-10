@@ -141,11 +141,13 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
   const [showBatchReport, setShowBatchReport] = useState(false);
   
   // Estados para etapas de sincronización secuencial
-  const [syncStages, setSyncStages] = useState({
-    categories: false,    // Etapa 1: Categorías
-    products: false,      // Etapa 2: Productos
-    rest: false          // Etapa 3: Resto (órdenes, clientes, etc.)
+  const [completedStages, setCompletedStages] = useState({
+    stage1: false,    // Etapa 1: Categorías
+    stage2: false,    // Etapa 2: Productos
+    stage3: false     // Etapa 3: Resto (órdenes, clientes, etc.)
   });
+  
+  const [currentStage, setCurrentStage] = useState('stage1'); // Etapa actual visible
 
   useEffect(() => {
     if (integration) {
@@ -154,8 +156,42 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
       setIntegrationId(integration.id);
       setConnectionStatus('connected');
       setStep(2); // Si ya existe integración, ir directo a sincronización
+      
+      // Verificar qué etapas ya están completadas
+      checkCompletedStages();
     }
   }, [integration]);
+  
+  const checkCompletedStages = async () => {
+    if (!integrationId) return;
+    
+    try {
+      // Verificar si hay categorías sincronizadas
+      const categoriesResponse = await axios.get(`${API}/categories`);
+      const hasCategories = categoriesResponse.data && categoriesResponse.data.length > 0;
+      
+      // Verificar si hay productos sincronizados
+      const productsResponse = await axios.get(`${API}/products/search?query=`);
+      const hasProducts = productsResponse.data && productsResponse.data.length > 0;
+      
+      setCompletedStages({
+        stage1: hasCategories,
+        stage2: hasProducts,
+        stage3: false // Por ahora, órdenes/clientes no son verificables fácilmente
+      });
+      
+      // Establecer etapa actual
+      if (!hasCategories) {
+        setCurrentStage('stage1');
+      } else if (!hasProducts) {
+        setCurrentStage('stage2');
+      } else {
+        setCurrentStage('stage3');
+      }
+    } catch (error) {
+      console.error('Error verificando etapas completadas:', error);
+    }
+  };
 
   const handleTestConnection = async () => {
     if (!shopUrl || !apiKey) {
@@ -246,11 +282,11 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
     }
   };
 
-  const handleSyncResources = async () => {
+  const handleSyncResources = async (resources = null) => {
     if (!integrationId) return;
     
-    // Obtener solo los recursos seleccionados
-    const selectedResources = Object.keys(syncResources).filter(key => syncResources[key]);
+    // Si no se pasan recursos, obtener de syncResources
+    const selectedResources = resources || Object.keys(syncResources).filter(key => syncResources[key]);
     
     if (selectedResources.length === 0) {
       toast.error('Selecciona al menos un recurso para sincronizar');
@@ -290,6 +326,12 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
             toast.success(`✓ Sincronización completada: ${totalSynced} elementos`, {
               duration: 5000
             });
+            
+            // Marcar etapa 1 (categorías) como completada
+            if (selectedResources.includes('categories')) {
+              setCompletedStages(prev => ({ ...prev, stage1: true }));
+              setCurrentStage('stage2');
+            }
             
             // DISPARAR EVENTO GLOBAL para recargar categorías
             console.log('🔔 Disparando evento reloadCategories');
@@ -355,7 +397,7 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
         {
           batch_size: 100,
           pause_seconds: 0.5,
-          max_products: null // null = todos los productos
+          max_products: null // null = usar límite configurado en cuenta
         }
       );
       
@@ -397,6 +439,10 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
             
             const message = `✓ Sincronización completada: ${progress.synced_products} productos sincronizados`;
             toast.success(message, { duration: 5000 });
+            
+            // Marcar etapa 2 como completada
+            setCompletedStages(prev => ({ ...prev, stage2: true }));
+            setCurrentStage('stage3');
             
             // Mostrar opción de descargar reporte
             if (progress.errors_count > 0 || progress.incomplete_count > 0) {
@@ -465,29 +511,6 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
   };
 
 
-
-  const handleToggleResource = (resourceId) => {
-    setSyncResources(prev => ({
-      ...prev,
-      [resourceId]: !prev[resourceId]
-    }));
-  };
-
-  const handleSelectAll = () => {
-    const newState = {};
-    SYNC_RESOURCES.forEach(resource => {
-      newState[resource.id] = true;
-    });
-    setSyncResources(newState);
-  };
-
-  const handleSelectEssential = () => {
-    const newState = {};
-    SYNC_RESOURCES.forEach(resource => {
-      newState[resource.id] = resource.essential;
-    });
-    setSyncResources(newState);
-  };
 
   const handleFinish = () => {
     onSuccess();
@@ -677,106 +700,256 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
 
             {step === 2 && (
               <div className="space-y-6">
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-900 rounded-xl p-4">
-                  <p className="text-sm text-blue-900">
-                    <strong>🔄 Selecciona los recursos a sincronizar</strong><br/>
-                    Elige qué información quieres importar desde tu tienda PrestaShop. Los recursos esenciales están preseleccionados.
-                  </p>
-                </div>
+                {/* Mostrar solo la etapa actual */}
+                {currentStage === 'stage1' && (
+                  <div className="space-y-4">
+                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-600 rounded-xl p-4">
+                      <h3 className="font-bold text-lg text-slate-900 mb-2">
+                        {SYNC_STAGES.stage1.title}
+                      </h3>
+                      <p className="text-sm text-slate-700">
+                        {SYNC_STAGES.stage1.description}
+                      </p>
+                    </div>
+                    
+                    {/* Recursos de Etapa 1 */}
+                    <div className="space-y-3">
+                      {SYNC_STAGES.stage1.resources.map((resource) => {
+                        const Icon = resource.icon;
+                        const colorClasses = {
+                          green: 'from-green-50 to-green-100 border-green-600',
+                          purple: 'from-purple-50 to-purple-100 border-purple-600',
+                          orange: 'from-orange-50 to-orange-100 border-orange-600',
+                          teal: 'from-teal-50 to-teal-100 border-teal-600',
+                          pink: 'from-pink-50 to-pink-100 border-pink-600',
+                          red: 'from-red-50 to-red-100 border-red-600'
+                        };
 
-                {/* Botones de selección rápida */}
-                <div className="flex gap-3">
-                  <button
-                    type="button"
-                    onClick={handleSelectEssential}
-                    className="flex-1 px-4 py-2 bg-green-100 border-2 border-green-600 rounded-lg font-bold text-green-900 hover:bg-green-200 transition-colors text-sm"
-                  >
-                    ✓ Solo Esenciales
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleSelectAll}
-                    className="flex-1 px-4 py-2 bg-blue-100 border-2 border-blue-600 rounded-lg font-bold text-blue-900 hover:bg-blue-200 transition-colors text-sm"
-                  >
-                    Seleccionar Todo
-                  </button>
-                </div>
-
-                {/* Lista de recursos con checkboxes */}
-                <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
-                  {SYNC_RESOURCES.map((resource) => {
-                    const Icon = resource.icon;
-                    const isSelected = syncResources[resource.id];
-                    const colorClasses = {
-                      green: 'from-green-50 to-green-100 border-green-600',
-                      purple: 'from-purple-50 to-purple-100 border-purple-600',
-                      yellow: 'from-yellow-50 to-yellow-100 border-yellow-600',
-                      blue: 'from-blue-50 to-blue-100 border-blue-600',
-                      indigo: 'from-indigo-50 to-indigo-100 border-indigo-600',
-                      orange: 'from-orange-50 to-orange-100 border-orange-600',
-                      teal: 'from-teal-50 to-teal-100 border-teal-600',
-                      pink: 'from-pink-50 to-pink-100 border-pink-600',
-                      red: 'from-red-50 to-red-100 border-red-600',
-                      emerald: 'from-emerald-50 to-emerald-100 border-emerald-600'
-                    };
-
-                    return (
-                      <div
-                        key={resource.id}
-                        className={`border-2 rounded-xl p-4 cursor-pointer transition-all ${
-                          isSelected 
-                            ? `bg-gradient-to-br ${colorClasses[resource.color]} shadow-md` 
-                            : 'bg-slate-50 border-slate-300 hover:border-slate-400'
-                        }`}
-                        onClick={() => handleToggleResource(resource.id)}
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className="flex items-center pt-0.5">
-                            <input
-                              type="checkbox"
-                              checked={isSelected}
-                              onChange={() => {}}
-                              className="w-5 h-5 rounded border-2 border-slate-900 cursor-pointer"
-                            />
-                          </div>
-                          
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
-                              {typeof Icon === 'string' ? (
-                                <span className="text-lg">{Icon}</span>
-                              ) : (
-                                <Icon className="w-5 h-5" />
-                              )}
-                              <h4 className="font-bold text-slate-900">
-                                {resource.label}
-                                {resource.essential && (
-                                  <span className="ml-2 px-2 py-0.5 bg-yellow-100 border border-yellow-600 rounded text-xs font-bold text-yellow-900">
-                                    ESENCIAL
-                                  </span>
-                                )}
-                              </h4>
-                            </div>
-                            <p className="text-xs text-slate-600 leading-relaxed">
-                              {resource.description}
-                            </p>
-                            
-                            {/* Mostrar resultado de sincronización si existe */}
-                            {syncResults[resource.id] !== undefined && (
-                              <div className="mt-2 flex items-center gap-2">
-                                <Check className="w-4 h-4 text-green-600" />
-                                <span className="text-xs font-bold text-green-800">
-                                  {syncResults[resource.id]} elementos sincronizados
-                                </span>
+                        return (
+                          <div
+                            key={resource.id}
+                            className={`border-2 rounded-xl p-4 bg-gradient-to-br ${colorClasses[resource.color]}`}
+                          >
+                            <div className="flex items-start gap-3">
+                              <Icon className="w-6 h-6 flex-shrink-0" />
+                              <div className="flex-1">
+                                <h4 className="font-bold text-slate-900 mb-1">
+                                  {resource.label}
+                                </h4>
+                                <p className="text-sm text-slate-700">
+                                  {resource.description}
+                                </p>
                               </div>
-                            )}
+                            </div>
                           </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                        );
+                      })}
+                    </div>
+                    
+                    <div className="flex justify-between gap-3 pt-4 border-t-2 border-slate-200">
+                      <button
+                        onClick={onClose}
+                        className="px-6 py-3 bg-slate-100 border-2 border-slate-900 rounded-xl font-bold hover:bg-slate-200 transition-colors"
+                      >
+                        Cancelar
+                      </button>
+                      
+                      <button
+                        onClick={() => handleSyncResources(['categories'])}
+                        disabled={syncing}
+                        className="flex items-center gap-2 px-6 py-3 bg-green-500 text-white border-2 border-slate-900 rounded-xl font-bold hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                        style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
+                      >
+                        {syncing ? (
+                          <>
+                            <Loader className="w-5 h-5 animate-spin" />
+                            Sincronizando...
+                          </>
+                        ) : (
+                          <>
+                            <Tag className="w-5 h-5" />
+                            Sincronizar Categorías
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
+                
+                {/* ETAPA 2: Productos */}
+                {currentStage === 'stage2' && (
+                  <div className="space-y-4">
+                    <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border-2 border-purple-600 rounded-xl p-4">
+                      <h3 className="font-bold text-lg text-slate-900 mb-2">
+                        {SYNC_STAGES.stage2.title}
+                      </h3>
+                      <p className="text-sm text-slate-700">
+                        {SYNC_STAGES.stage2.description}
+                      </p>
+                    </div>
+                    
+                    {/* Recursos de Etapa 2 */}
+                    <div className="space-y-3">
+                      {SYNC_STAGES.stage2.resources.map((resource) => {
+                        const Icon = resource.icon;
+                        const colorClasses = {
+                          green: 'from-green-50 to-green-100 border-green-600',
+                          purple: 'from-purple-50 to-purple-100 border-purple-600',
+                          orange: 'from-orange-50 to-orange-100 border-orange-600',
+                          teal: 'from-teal-50 to-teal-100 border-teal-600',
+                          pink: 'from-pink-50 to-pink-100 border-pink-600',
+                          red: 'from-red-50 to-red-100 border-red-600'
+                        };
 
-                {/* Barra de progreso de sincronización */}
+                        return (
+                          <div
+                            key={resource.id}
+                            className={`border-2 rounded-xl p-4 bg-gradient-to-br ${colorClasses[resource.color]}`}
+                          >
+                            <div className="flex items-start gap-3">
+                              <Icon className="w-6 h-6 flex-shrink-0" />
+                              <div className="flex-1">
+                                <h4 className="font-bold text-slate-900 mb-1">
+                                  {resource.label}
+                                </h4>
+                                <p className="text-sm text-slate-700">
+                                  {resource.description}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    
+                    <div className="flex justify-between gap-3 pt-4 border-t-2 border-slate-200">
+                      <button
+                        onClick={onClose}
+                        className="px-6 py-3 bg-slate-100 border-2 border-slate-900 rounded-xl font-bold hover:bg-slate-200 transition-colors"
+                      >
+                        Cancelar
+                      </button>
+                      
+                      <button
+                        onClick={handleBatchSync}
+                        disabled={batchSyncing}
+                        className="flex items-center gap-2 px-6 py-3 bg-purple-500 text-white border-2 border-slate-900 rounded-xl font-bold hover:bg-purple-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                        style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
+                      >
+                        {batchSyncing ? (
+                          <>
+                            <Loader className="w-5 h-5 animate-spin" />
+                            Sincronizando...
+                          </>
+                        ) : (
+                          <>
+                            <Package className="w-5 h-5" />
+                            Sincronizar Productos
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
+                
+                {/* ETAPA 3: Recursos adicionales */}
+                {currentStage === 'stage3' && (
+                  <div className="space-y-4">
+                    <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border-2 border-blue-600 rounded-xl p-4">
+                      <h3 className="font-bold text-lg text-slate-900 mb-2">
+                        {SYNC_STAGES.stage3.title}
+                      </h3>
+                      <p className="text-sm text-slate-700">
+                        {SYNC_STAGES.stage3.description}
+                      </p>
+                    </div>
+                    
+                    {/* Recursos de Etapa 3 */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {SYNC_STAGES.stage3.resources.map((resource) => {
+                        const Icon = resource.icon;
+                        const isSelected = syncResources[resource.id] || false;
+                        const colorClasses = {
+                          green: 'from-green-50 to-green-100 border-green-600',
+                          purple: 'from-purple-50 to-purple-100 border-purple-600',
+                          orange: 'from-orange-50 to-orange-100 border-orange-600',
+                          teal: 'from-teal-50 to-teal-100 border-teal-600',
+                          pink: 'from-pink-50 to-pink-100 border-pink-600',
+                          red: 'from-red-50 to-red-100 border-red-600'
+                        };
+
+                        return (
+                          <div
+                            key={resource.id}
+                            className={`border-2 rounded-xl p-4 cursor-pointer transition-all ${
+                              isSelected 
+                                ? `bg-gradient-to-br ${colorClasses[resource.color]}` 
+                                : 'bg-slate-50 border-slate-300 hover:border-slate-400'
+                            }`}
+                            onClick={() => setSyncResources(prev => ({ ...prev, [resource.id]: !prev[resource.id] }))}
+                          >
+                            <div className="flex items-start gap-3">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => {}}
+                                className="w-5 h-5 rounded border-2 border-slate-900 cursor-pointer mt-0.5"
+                              />
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <Icon className="w-5 h-5" />
+                                  <h4 className="font-bold text-slate-900">
+                                    {resource.label}
+                                  </h4>
+                                </div>
+                                <p className="text-xs text-slate-700">
+                                  {resource.description}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    
+                    <div className="flex justify-between gap-3 pt-4 border-t-2 border-slate-200">
+                      <button
+                        onClick={onClose}
+                        className="px-6 py-3 bg-slate-100 border-2 border-slate-900 rounded-xl font-bold hover:bg-slate-200 transition-colors"
+                      >
+                        Cerrar
+                      </button>
+                      
+                      <button
+                        onClick={() => {
+                          const selectedResources = Object.keys(syncResources).filter(k => syncResources[k]);
+                          if (selectedResources.length === 0) {
+                            toast.error('Selecciona al menos un recurso');
+                            return;
+                          }
+                          handleSyncResources(selectedResources);
+                        }}
+                        disabled={syncing}
+                        className="flex items-center gap-2 px-6 py-3 bg-blue-500 text-white border-2 border-slate-900 rounded-xl font-bold hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                        style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
+                      >
+                        {syncing ? (
+                          <>
+                            <Loader className="w-5 h-5 animate-spin" />
+                            Sincronizando...
+                          </>
+                        ) : (
+                          <>
+                            <RefreshCw className="w-5 h-5" />
+                            Sincronizar Recursos
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Barra de progreso de sincronización rápida */}
                 {syncing && (
                   <div className="bg-white border-2 border-slate-900 rounded-xl p-4">
                     <div className="flex justify-between text-sm mb-2">
@@ -795,72 +968,6 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
                     </p>
                   </div>
                 )}
-
-                {/* Mensaje de éxito */}
-                {Object.keys(syncResults).length > 0 && !syncing && (
-                  <div className="bg-green-50 border-2 border-green-600 rounded-lg p-4">
-                    <p className="text-sm text-green-900 font-semibold mb-2">
-                      ✓ Sincronización completada exitosamente
-                    </p>
-                    <p className="text-xs text-green-800">
-                      Los recursos seleccionados se sincronizarán automáticamente cada 15 minutos.
-                      Puedes volver a sincronizar manualmente cuando lo necesites.
-                    </p>
-                  </div>
-                )}
-
-                {/* Botones de acción */}
-                <div className="flex justify-between gap-3 pt-4 border-t-2 border-slate-200">
-                  <button
-                    onClick={onClose}
-                    className="px-6 py-3 bg-slate-100 border-2 border-slate-900 rounded-xl font-bold hover:bg-slate-200 transition-colors"
-                  >
-                    {Object.keys(syncResults).length > 0 ? 'Cerrar' : 'Cancelar'}
-                  </button>
-                  
-                  <div className="flex gap-3">
-                    {/* Botón de Sincronización por Lotes (Profesional) */}
-                    {syncResources.products && (
-                      <button
-                        onClick={handleBatchSync}
-                        disabled={batchSyncing || syncing}
-                        className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white border-2 border-slate-900 rounded-xl font-bold hover:from-green-600 hover:to-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                        style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
-                      >
-                        {batchSyncing ? (
-                          <>
-                            <Loader className="w-5 h-5 animate-spin" />
-                            Sincronizando...
-                          </>
-                        ) : (
-                          <>
-                            <Package className="w-5 h-5" />
-                            Sincronización Profesional
-                          </>
-                        )}
-                      </button>
-                    )}
-                    
-                    <button
-                      onClick={handleSyncResources}
-                      disabled={syncing || batchSyncing || Object.keys(syncResources).filter(k => syncResources[k]).length === 0}
-                      className="flex items-center gap-2 px-6 py-3 bg-pink-500 text-white border-2 border-slate-900 rounded-xl font-bold hover:bg-pink-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                      style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
-                    >
-                      {syncing ? (
-                        <>
-                          <Loader className="w-5 h-5 animate-spin" />
-                          Sincronizando...
-                        </>
-                      ) : (
-                        <>
-                          <RefreshCw className="w-5 h-5" />
-                          Sincronizar Rápida
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
                 
                 {/* Barra de Progreso de Sincronización por Lotes */}
                 {batchSyncing && (
