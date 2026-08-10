@@ -21,6 +21,10 @@ const ProductForm = ({ product, onClose }) => {
   const [expiryDate, setExpiryDate] = useState('');
   const [category, setCategory] = useState('');
   const [stock, setStock] = useState('');
+  const [summary, setSummary] = useState('');
+  const [description, setDescription] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
+  const [weight, setWeight] = useState('');
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState([]);
 
@@ -97,7 +101,11 @@ const ProductForm = ({ product, onClose }) => {
         barcode: barcode || null,
         expiry_date: expiryDate || null,
         category: category || null,
-        stock: stock ? parseInt(stock) : 0
+        stock: stock ? parseInt(stock) : 0,
+        summary: summary || null,
+        description: description || null,
+        image_url: imageUrl || null,
+        weight: weight ? parseFloat(weight) : null
       };
 
       if (product) {
@@ -282,6 +290,75 @@ const ProductForm = ({ product, onClose }) => {
             </div>
           </div>
 
+          {/* Resumen (Descripción corta) */}
+          <div>
+            <label className="block text-xs font-bold tracking-widest uppercase text-slate-500 mb-2">
+              Resumen (Descripción Corta)
+            </label>
+            <textarea
+              value={summary}
+              onChange={(e) => setSummary(e.target.value)}
+              rows="2"
+              maxLength="250"
+              className="w-full bg-white border-2 border-slate-900 rounded-xl px-4 py-3 font-medium text-slate-900 focus:ring-0 focus:outline-none focus:border-indigo-500 resize-none"
+              placeholder="Descripción breve del producto (opcional, máx. 250 caracteres)"
+              data-testid="product-summary-input"
+            />
+            <p className="text-xs text-slate-500 mt-1">
+              {summary.length}/250 caracteres
+            </p>
+          </div>
+
+          {/* Descripción completa */}
+          <div>
+            <label className="block text-xs font-bold tracking-widest uppercase text-slate-500 mb-2">
+              Descripción Completa
+            </label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows="4"
+              className="w-full bg-white border-2 border-slate-900 rounded-xl px-4 py-3 font-medium text-slate-900 focus:ring-0 focus:outline-none focus:border-indigo-500 resize-none"
+              placeholder="Descripción detallada del producto (opcional)"
+              data-testid="product-description-input"
+            />
+          </div>
+
+          {/* URL de Imagen y Peso */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold tracking-widest uppercase text-slate-500 mb-2">
+                URL de Imagen
+              </label>
+              <input
+                type="url"
+                value={imageUrl}
+                onChange={(e) => setImageUrl(e.target.value)}
+                className="w-full bg-white border-2 border-slate-900 rounded-xl px-4 py-3 font-medium text-slate-900 focus:ring-0 focus:outline-none focus:border-indigo-500"
+                placeholder="https://ejemplo.com/imagen.jpg"
+                data-testid="product-image-url-input"
+              />
+              <p className="text-xs text-slate-500 mt-1">
+                URL de la imagen de portada del producto
+              </p>
+            </div>
+            <div>
+              <label className="block text-xs font-bold tracking-widest uppercase text-slate-500 mb-2">
+                Peso (kg)
+              </label>
+              <input
+                type="number"
+                step="0.001"
+                min="0"
+                value={weight}
+                onChange={(e) => setWeight(e.target.value)}
+                className="w-full bg-white border-2 border-slate-900 rounded-xl px-4 py-3 font-medium text-slate-900 focus:ring-0 focus:outline-none focus:border-indigo-500"
+                placeholder="0.000"
+                data-testid="product-weight-input"
+              />
+            </div>
+          </div>
+
           {/* Prices Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -391,4 +468,3 @@ const ProductForm = ({ product, onClose }) => {
 };
 
 export default ProductForm;
- ProductForm;
