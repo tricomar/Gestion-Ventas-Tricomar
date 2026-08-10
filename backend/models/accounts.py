@@ -24,6 +24,7 @@ class Account(BaseModel):
     stores: List[Store] = []
     enabled_modules: List[str] = ["sales"]  # Módulos habilitados
     status: str = "active"  # active, suspended, cancelled
+    max_products_sync: int = 500  # Límite de productos a sincronizar por integración
     created_at: str
     updated_at: str
 
@@ -34,6 +35,7 @@ class UpdateAccountRequest(BaseModel):
     max_employees: Optional[int] = None
     enabled_modules: Optional[List[str]] = None
     status: Optional[str] = None
+    max_products_sync: Optional[int] = None  # Límite de productos a sincronizar
 
 class AddStoreRequest(BaseModel):
     """Request para agregar una tienda a una cuenta"""

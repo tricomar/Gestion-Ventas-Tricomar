@@ -36,6 +36,7 @@ const SuperAdminPage = () => {
     plan: '',
     max_stores: 1,
     max_employees: 0,
+    max_products_sync: 500,
     enabled_modules: [],
     status: 'active'
   });
@@ -95,6 +96,7 @@ const SuperAdminPage = () => {
         plan: response.data.plan,
         max_stores: response.data.max_stores,
         max_employees: response.data.max_employees,
+        max_products_sync: response.data.max_products_sync || 500,
         enabled_modules: response.data.enabled_modules || [],
         status: response.data.status
       });
@@ -628,6 +630,22 @@ const SuperAdminPage = () => {
                   className="w-full px-4 py-3 border-2 border-slate-900 rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-slate-900"
                 />
                 <p className="text-sm text-slate-600 mt-1">Actual: {selectedAccount.current_employees || 0} empleados</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-2">Límite de Productos a Sincronizar</label>
+                <input
+                  type="number"
+                  min="100"
+                  max="10000"
+                  step="100"
+                  value={editForm.max_products_sync || 500}
+                  onChange={(e) => setEditForm({...editForm, max_products_sync: parseInt(e.target.value)})}
+                  className="w-full px-4 py-3 border-2 border-slate-900 rounded-lg font-medium focus:outline-none focus:ring-2 focus:ring-slate-900"
+                />
+                <p className="text-sm text-slate-600 mt-1">
+                  Define cuántos productos máximo se sincronizarán desde PrestaShop/WooCommerce/etc. (100-10,000)
+                </p>
               </div>
 
               <button

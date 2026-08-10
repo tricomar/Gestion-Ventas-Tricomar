@@ -176,6 +176,19 @@ async def update_account(
                 )
             update_data["status"] = request.status
         
+        if request.max_products_sync is not None:
+            if request.max_products_sync < 100:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="max_products_sync debe ser al menos 100"
+                )
+            if request.max_products_sync > 10000:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="max_products_sync no puede exceder 10,000"
+                )
+            update_data["max_products_sync"] = request.max_products_sync
+        
         # Actualizar cuenta
         await db.accounts.update_one(
             {"id": account_id},

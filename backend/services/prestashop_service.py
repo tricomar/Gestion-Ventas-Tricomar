@@ -934,6 +934,17 @@ class PrestashopAPIService:
             if 'prestashop' in product_dict and 'product' in product_dict['prestashop']:
                 product_dict['prestashop']['product']['active'] = active_value
                 
+                # Limpiar campos problemáticos que PrestaShop regenera automáticamente
+                # Estos campos pueden causar errores 400 si se envían en PUT
+                product = product_dict['prestashop']['product']
+                fields_to_remove = [
+                    'manufacturer_name', 'quantity', 'position_in_category',
+                    'date_add', 'date_upd'
+                ]
+                for field in fields_to_remove:
+                    if field in product:
+                        del product[field]
+                
                 # Convertir a XML
                 updated_xml = xmltodict.unparse(product_dict, encoding='utf-8')
                 

@@ -1085,6 +1085,11 @@ async def sync_products_resource(ps_service, integration_id: str, account_id: st
     
     print(f"[Sync] Iniciando sincronización de productos...")
     
+    # Obtener límite de productos desde la cuenta
+    account = await db.accounts.find_one({'id': account_id}, {'_id': 0})
+    max_products = account.get('max_products_sync', 500) if account else 500
+    print(f"[Sync] Límite de productos para esta cuenta: {max_products}")
+    
     # Obtener manufacturers (marcas) una sola vez
     manufacturers_map = {}
     try:
@@ -1106,8 +1111,8 @@ async def sync_products_resource(ps_service, integration_id: str, account_id: st
     except Exception as e:
         print(f"[Sync] Error cargando categorías: {e}")
     
-    # Obtener productos de PrestaShop
-    ps_products = ps_service.get_products(limit=500)
+    # Obtener productos de PrestaShop con límite de la cuenta
+    ps_products = ps_service.get_products(limit=max_products)
     print(f"[Sync] {len(ps_products)} productos obtenidos de PrestaShop")
     
     synced_count = 0
