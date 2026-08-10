@@ -531,6 +531,10 @@ const IntegrationsTab = () => {
           onSuccess={() => {
             // Refrescar inmediatamente al éxito
             fetchIntegrations();
+            // Notificar al componente padre sobre cambios
+            if (onIntegrationChange) {
+              onIntegrationChange();
+            }
           }}
           stores={stores}
         />
