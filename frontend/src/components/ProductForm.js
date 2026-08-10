@@ -59,15 +59,25 @@ const ProductForm = ({ product, onClose }) => {
   const availableCategories = React.useMemo(() => {
     if (!store || !stores || stores.length === 0) return [];
     
-    // Buscar el nombre de la tienda a partir del código (key)
+    // Buscar el nombre y id de la tienda a partir del código (key)
     const selectedStore = stores.find(s => s.key === store);
     const selectedStoreName = selectedStore?.name;
+    const selectedStoreId = selectedStore?.id;
     
-    if (!selectedStoreName) return [];
+    if (!selectedStoreName && !selectedStoreId) return [];
     
     // Filtrar categorías que pertenecen a esa tienda
+    // O que no tienen tienda asignada (store === null o undefined)
     return categories
-      .filter(c => c.store === selectedStoreName)
+      .filter(c => {
+        // Incluir si no tiene tienda asignada (categorías globales)
+        if (!c.store) return true;
+        // O si coincide con el nombre de la tienda
+        if (c.store === selectedStoreName) return true;
+        // O si coincide con el id de la tienda
+        if (c.store === selectedStoreId) return true;
+        return false;
+      })
       .map(c => c.name)
       .sort();
   }, [categories, store, stores]);
