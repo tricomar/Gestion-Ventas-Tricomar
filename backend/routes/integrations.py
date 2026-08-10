@@ -516,7 +516,8 @@ async def sync_products_background(job_id: str, integration_id: str, integration
         max_products = 5000  # Límite de seguridad
         
         # Campos específicos que necesitamos (reduce tamaño de respuesta)
-        display_fields = '[id,name,reference,price,id_category_default,quantity,active,id_tax_rules_group,wholesale_price,available_for_order,visibility]'
+        # Incluir manufacturer_name para obtener la marca del producto
+        display_fields = '[id,name,reference,price,id_category_default,quantity,active,id_tax_rules_group,wholesale_price,available_for_order,visibility,manufacturer_name]'
         
         while offset < max_products:
             try:
@@ -594,8 +595,9 @@ async def sync_products_background(job_id: str, integration_id: str, integration
             price_with_tax = price_without_tax * (1 + tax_rate)
             
             # Según requerimiento del usuario: el costo local debe basarse en el precio CON IVA
-            cost_price = price_with_tax
-            sale_price = price_with_tax  # Precio de venta con IVA
+            # Redondear a número entero como pidió el usuario
+            cost_price = round(price_with_tax)
+            sale_price = round(price_with_tax)  # Precio de venta con IVA redondeado
             
             # Obtener marca/fabricante
             brand_name = ps_prod.get('manufacturer_name', '')
