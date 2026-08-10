@@ -90,6 +90,33 @@ class PrestashopAPIService:
             print(f"[PrestaShop] Request Exception: {str(e)}")
             raise Exception(f"Error en petición: {str(e)}")
     
+    def _make_request_xml(self, endpoint: str, method: str = 'GET', data: Optional[str] = None) -> str:
+        """
+        Realizar petición XML a PrestaShop (sin convertir a JSON)
+        
+        Args:
+            endpoint: Endpoint de la API
+            method: Método HTTP
+            data: Datos XML para POST/PUT
+            
+        Returns:
+            Respuesta XML como string
+        """
+        url = f"{self.api_url}/{endpoint}"
+        headers = {'Content-Type': 'application/xml'} if data else {}
+        
+        response = requests.request(
+            method=method,
+            url=url,
+            auth=self.auth,
+            data=data,
+            headers=headers,
+            timeout=30,
+            verify=True
+        )
+        response.raise_for_status()
+        return response.text
+    
     def test_connection(self) -> bool:
         """
         Probar conexión con la API
@@ -262,6 +289,45 @@ class PrestashopAPIService:
             return self._extract_multilang_field(field_data[0])
         
         return ''
+
+    def get_manufacturers(self, limit: int = 500, offset: int = 0) -> List[Dict[str, Any]]:
+        """
+        Obtener fabricantes/marcas de PrestaShop
+        
+        Args:
+            limit: Número máximo de fabricantes a obtener
+            offset: Offset para paginación
+            
+        Returns:
+            Lista de fabricantes con {id, name}
+        """
+        params = {
+            'display': 'full',
+            'limit': f'{offset},{limit}'
+        }
+        
+        response = self._make_request('manufacturers', params=params)
+        
+        manufacturers = []
+        if 'manufacturers' in response and isinstance(response['manufacturers'], list):
+            manufacturers = response['manufacturers']
+        elif 'manufacturers' in response and isinstance(response['manufacturers'], dict):
+            manufacturers = [response['manufacturers']]
+        
+        # Mapear a estructura simple
+        result = []
+        for manu in manufacturers:
+            try:
+                result.append({
+                    'id': int(manu.get('id', 0)),
+                    'name': self._extract_multilang_field(manu.get('name', ''))
+                })
+            except Exception as e:
+                print(f"[PrestaShop] Error parsing manufacturer: {str(e)}")
+                continue
+        
+        return result
+
     
     def get_products(self, limit: int = 100, offset: int = 0, display: str = 'full') -> List[Dict[str, Any]]:
         """
@@ -836,7 +902,9 @@ class PrestashopAPIService:
     def update_product_active(self, product_id: int, active: bool) -> bool:
         """
         Actualizar el estado activo/inactivo de un producto en PrestaShop
-        Usa el endpoint stock_availables que es más simple
+        Compatible con PrestaShop 1.7.x y 8.x
+        
+        Usa el método recomendado por PrestaShop: obtener esquema blank, modificar y enviar PUT
         
         Args:
             product_id: ID del producto en PrestaShop
@@ -845,44 +913,51 @@ class PrestashopAPIService:
         Returns:
             True si se actualizó correctamente
         """
+        active_value = "1" if active else "0"
+        print(f"[PrestaShop] Updating product {product_id} active to {active_value}")
+        
         try:
-            # Método alternativo: actualizar usando PATCH el campo específico
-            # PrestaShop requiere el producto completo, así que obtenemos primero
-            response = self._make_request(f'products/{product_id}')
+            # Método simplificado: obtener XML completo y modificar solo active
+            # Obtener producto completo en formato XML
+            url = f"{self.api_url}/products/{product_id}"
+            response = requests.get(url, auth=self.auth, timeout=30, verify=True)
             
-            if 'product' not in response:
+            if response.status_code != 200:
+                print(f"[PrestaShop] Failed to get product: {response.status_code}")
                 return False
             
-            product_xml = response['product']
+            # Parse XML
+            product_xml = response.text
+            product_dict = xmltodict.parse(product_xml)
             
-            # Modificar el campo active en el XML
-            active_value = "1" if active else "0"
-            
-            # Construir XML mínimo que PrestaShop acepta
-            xml_data = f'''<?xml version="1.0" encoding="UTF-8"?>
-<prestashop xmlns:xlink="http://www.w3.org/1999/xlink">
-<product>
-    <id>{product_id}</id>
-    <active>{active_value}</active>
-</product>
-</prestashop>'''
-            
-            # Intentar actualizar
-            try:
-                update_response = self._make_request(
-                    f'products/{product_id}',
-                    method='PUT',
-                    data=xml_data
+            # Modificar active
+            if 'prestashop' in product_dict and 'product' in product_dict['prestashop']:
+                product_dict['prestashop']['product']['active'] = active_value
+                
+                # Convertir a XML
+                updated_xml = xmltodict.unparse(product_dict, encoding='utf-8')
+                
+                # PUT
+                put_response = requests.put(
+                    url,
+                    auth=self.auth,
+                    data=updated_xml.encode('utf-8'),
+                    headers={'Content-Type': 'application/xml'},
+                    timeout=30,
+                    verify=True
                 )
-                return 'product' in update_response
-            except Exception as update_error:
-                # Si falla con XML mínimo, usar product completo
-                # (esto es necesario porque algunos PrestaShop requieren todos los campos)
-                print(f"Update failed: {update_error}")
-                return False
+                
+                if put_response.status_code in [200, 201]:
+                    print(f"[PrestaShop] Product {product_id} updated successfully")
+                    return True
+                else:
+                    print(f"[PrestaShop] PUT failed: {put_response.status_code} - {put_response.text[:300]}")
+                    return False
             
+            return False
+                
         except Exception as e:
-            print(f"Error updating product active state: {e}")
+            print(f"[PrestaShop] Error updating product: {str(e)}")
             return False
 
 

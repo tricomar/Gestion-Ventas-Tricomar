@@ -1080,11 +1080,35 @@ async def sync_categories_resource(ps_service, integration_id: str, account_id: 
 
 
 async def sync_products_resource(ps_service, integration_id: str, account_id: str, store_name: str, store_code: str, store_id: str = None) -> int:
-    """Sincronizar productos (simplificado)"""
+    """Sincronizar productos con todos los campos: marca, categoría, precio, stock, publicación"""
     from services.category_sync_service import CategorySyncService
     
-    category_sync = CategorySyncService(ps_service, account_id, store_name, integration_id, store_id)
+    print(f"[Sync] Iniciando sincronización de productos...")
+    
+    # Obtener manufacturers (marcas) una sola vez
+    manufacturers_map = {}
+    try:
+        manufacturers = ps_service.get_manufacturers(limit=500)
+        manufacturers_map = {m['id']: m['name'] for m in manufacturers}
+        print(f"[Sync] {len(manufacturers_map)} marcas cargadas")
+    except Exception as e:
+        print(f"[Sync] Error cargando manufacturers: {e}")
+    
+    # Obtener categorías locales para mapeo
+    categories_map = {}
+    try:
+        local_categories = await db.categories.find(
+            {'account_id': account_id}, 
+            {'_id': 0, 'prestashop_id': 1, 'name': 1}
+        ).to_list(1000)
+        categories_map = {int(c['prestashop_id']): c['name'] for c in local_categories if c.get('prestashop_id')}
+        print(f"[Sync] {len(categories_map)} categorías locales mapeadas")
+    except Exception as e:
+        print(f"[Sync] Error cargando categorías: {e}")
+    
+    # Obtener productos de PrestaShop
     ps_products = ps_service.get_products(limit=500)
+    print(f"[Sync] {len(ps_products)} productos obtenidos de PrestaShop")
     
     synced_count = 0
     for ps_prod in ps_products:
@@ -1092,45 +1116,87 @@ async def sync_products_resource(ps_service, integration_id: str, account_id: st
         if prod_id <= 0:
             continue
         
+        # 1. Nombre (multiidioma)
         name = ps_prod.get('name', {})
         if isinstance(name, dict):
-            name = name.get('language', {}).get('value', f'Producto {prod_id}')
+            if 'language' in name:
+                lang = name['language']
+                if isinstance(lang, list) and len(lang) > 0:
+                    name = lang[0].get('value', f'Producto {prod_id}')
+                elif isinstance(lang, dict):
+                    name = lang.get('value', f'Producto {prod_id}')
+                else:
+                    name = f'Producto {prod_id}'
+            else:
+                name = name.get('value', f'Producto {prod_id}')
         elif not name:
             name = f'Producto {prod_id}'
         
+        # 2. SKU/Reference
         sku = ps_prod.get('reference', f"PS-{prod_id}-{str(uuid4())[:8]}")
         
-        # Obtener stock de PrestaShop
+        # 3. Precio (convertir a ENTERO según handoff)
+        price = float(ps_prod.get('price', 0))
+        sale_price = round(price)  # Redondear a entero
+        
+        # 4. Marca (manufacturer)
+        id_manufacturer = int(ps_prod.get('id_manufacturer', 0))
+        brand = manufacturers_map.get(id_manufacturer, None)
+        
+        # 5. Categoría principal
+        id_category_default = int(ps_prod.get('id_category_default', 0))
+        category = categories_map.get(id_category_default, None)
+        
+        # 6. Stock disponible
         stock_quantity = ps_prod.get('quantity', 0)
         if isinstance(stock_quantity, dict):
             stock_quantity = int(stock_quantity.get('quantity', 0))
         else:
             stock_quantity = int(stock_quantity) if stock_quantity else 0
         
-        # Buscar producto local existente
-        local_product = await db.products.find_one({'sku': sku}, {'_id': 0})
+        # 7. Estado de publicación (active: 0|1)
+        active = ps_prod.get('active', '0')
+        ecommerce_active = active == '1' or active == 1 or active is True
+        
+        # 8. Fecha de vencimiento - OPCIONAL (no existe en PrestaShop estándar)
+        # Se deja como None para que otras plataformas (WooCommerce, Shopify) puedan usarlo
+        expiry_date = None
+        
+        # Buscar producto local existente por SKU
+        local_product = await db.products.find_one({'sku': sku, 'account_id': account_id}, {'_id': 0})
         
         product_data = {
             'name': name,
             'sku': sku,
             'cost_price': 0,
-            'sale_price': float(ps_prod.get('price', 0)),
+            'sale_price': sale_price,
             'store': store_code,
-            'category': None,
-            'brand': None,
-            'stock': stock_quantity
+            'store_id': store_id,
+            'category': category,
+            'brand': brand,
+            'stock': stock_quantity,
+            'ecommerce_active': ecommerce_active,
+            'expiry_date': expiry_date,
+            'prestashop_id': prod_id,
+            'prestashop_integration_id': integration_id,
+            'account_id': account_id
         }
         
         if local_product:
-            await db.products.update_one({'sku': sku}, {'$set': product_data})
+            # Actualizar producto existente
+            await db.products.update_one(
+                {'sku': sku, 'account_id': account_id}, 
+                {'$set': product_data}
+            )
         else:
+            # Crear nuevo producto
             product_data['id'] = str(uuid4())
-            product_data['account_id'] = account_id
             product_data['created_at'] = datetime.now(timezone.utc).isoformat()
             await db.products.insert_one(product_data)
         
         synced_count += 1
     
+    print(f"[Sync] {synced_count} productos sincronizados correctamente")
     return synced_count
 
 

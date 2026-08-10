@@ -11,9 +11,13 @@ class ProductBase(BaseModel):
     sku: Optional[str] = None
     brand: Optional[str] = None  # Marca del producto
     barcode: Optional[str] = None  # Código de barra
-    expiry_date: Optional[str] = None  # Fecha de vencimiento (YYYY-MM-DD)
+    expiry_date: Optional[str] = None  # Fecha de vencimiento (YYYY-MM-DD) - Opcional, para WooCommerce/Shopify
     category: Optional[str] = None
     stock: Optional[int] = 0  # Stock disponible
+    ecommerce_active: Optional[bool] = None  # Estado de publicación en ecommerce (PrestaShop/WooCommerce)
+    prestashop_id: Optional[int] = None  # ID del producto en PrestaShop
+    prestashop_integration_id: Optional[str] = None  # ID de integración para limpieza
+    store_id: Optional[str] = None  # ID de tienda para filtrado multi-tenant
     
     @field_validator('sku')
     @classmethod
