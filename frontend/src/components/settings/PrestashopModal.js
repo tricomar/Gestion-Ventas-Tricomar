@@ -125,6 +125,20 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
   
   const [syncing, setSyncing] = useState(false);
   const [syncResults, setSyncResults] = useState({});
+  
+  // Estados para sincronización por lotes profesional
+  const [batchSyncing, setBatchSyncing] = useState(false);
+  const [batchProgress, setBatchProgress] = useState({
+    status: 'idle',
+    progress_percentage: 0,
+    current_batch: 0,
+    total_batches: 0,
+    synced_products: 0,
+    failed_products: 0,
+    total_products: 0,
+    job_id: null
+  });
+  const [showBatchReport, setShowBatchReport] = useState(false);
 
   useEffect(() => {
     if (integration) {
@@ -310,6 +324,140 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
       setSyncing(false);
     }
   };
+
+  // Sincronización por lotes profesional (para productos)
+  const handleBatchSync = async () => {
+    if (!integrationId) return;
+    
+    setBatchSyncing(true);
+    setBatchProgress({
+      status: 'starting',
+      progress_percentage: 0,
+      current_batch: 0,
+      total_batches: 0,
+      synced_products: 0,
+      failed_products: 0,
+      total_products: 0,
+      job_id: null
+    });
+    
+    try {
+      // Iniciar sincronización por lotes
+      const response = await axios.post(
+        `${API}/integrations/prestashop/${integrationId}/sync-batch`,
+        {
+          batch_size: 100,
+          pause_seconds: 0.5,
+          max_products: null // null = todos los productos
+        }
+      );
+      
+      const jobId = response.data.job_id;
+      setBatchProgress(prev => ({ ...prev, job_id: jobId, status: 'running' }));
+      
+      toast.success('Sincronización por lotes iniciada');
+      
+      // Polling para verificar progreso
+      const pollInterval = setInterval(async () => {
+        try {
+          const progressResponse = await axios.get(
+            `${API}/integrations/prestashop/${integrationId}/sync-progress`
+          );
+          
+          const progress = progressResponse.data;
+          
+          if (progress.status === 'not_started') {
+            return;
+          }
+          
+          setBatchProgress({
+            status: progress.status,
+            progress_percentage: progress.progress_percentage || 0,
+            current_batch: progress.current_batch || 0,
+            total_batches: progress.total_batches || 0,
+            synced_products: progress.synced_products || 0,
+            failed_products: progress.failed_products || 0,
+            total_products: progress.total_products || 0,
+            job_id: progress.id,
+            errors_count: progress.errors_count || 0,
+            incomplete_count: progress.incomplete_count || 0,
+            report_path: progress.report_path
+          });
+          
+          if (progress.status === 'completed') {
+            clearInterval(pollInterval);
+            setBatchSyncing(false);
+            
+            const message = `✓ Sincronización completada: ${progress.synced_products} productos sincronizados`;
+            toast.success(message, { duration: 5000 });
+            
+            // Mostrar opción de descargar reporte
+            if (progress.errors_count > 0 || progress.incomplete_count > 0) {
+              setShowBatchReport(true);
+            }
+            
+            // Recargar categorías si corresponde
+            window.dispatchEvent(new CustomEvent('reloadCategories'));
+          } else if (progress.status === 'error') {
+            clearInterval(pollInterval);
+            setBatchSyncing(false);
+            toast.error(`Error en sincronización: ${progress.error_message || 'Error desconocido'}`);
+          }
+        } catch (error) {
+          console.error('Error polling batch progress:', error);
+        }
+      }, 2000); // Polling cada 2 segundos
+      
+      // Timeout de seguridad (30 minutos para muchos productos)
+      setTimeout(() => {
+        clearInterval(pollInterval);
+        if (batchSyncing) {
+          setBatchSyncing(false);
+          toast.warning('Sincronización tomó demasiado tiempo. Verifica el progreso manualmente.');
+        }
+      }, 1800000); // 30 minutos
+      
+    } catch (error) {
+      let errorMsg = 'Error al iniciar sincronización por lotes';
+      
+      if (error.response?.data) {
+        const data = error.response.data;
+        if (typeof data.detail === 'string') {
+          errorMsg = data.detail;
+        } else if (data.message) {
+          errorMsg = data.message;
+        }
+      }
+      
+      toast.error(errorMsg);
+      setBatchSyncing(false);
+    }
+  };
+  
+  const downloadBatchReport = async () => {
+    if (!batchProgress.job_id) return;
+    
+    try {
+      const response = await axios.get(
+        `${API}/sync-reports/${batchProgress.job_id}/download`,
+        { responseType: 'blob' }
+      );
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `sync_report_${batchProgress.job_id}.json`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      
+      toast.success('Reporte descargado');
+    } catch (error) {
+      toast.error('Error descargando reporte');
+    }
+  };
+
+
 
   const handleToggleResource = (resourceId) => {
     setSyncResources(prev => ({
@@ -664,9 +812,31 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
                   </button>
                   
                   <div className="flex gap-3">
+                    {/* Botón de Sincronización por Lotes (Profesional) */}
+                    {syncResources.products && (
+                      <button
+                        onClick={handleBatchSync}
+                        disabled={batchSyncing || syncing}
+                        className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white border-2 border-slate-900 rounded-xl font-bold hover:from-green-600 hover:to-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                        style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
+                      >
+                        {batchSyncing ? (
+                          <>
+                            <Loader className="w-5 h-5 animate-spin" />
+                            Sincronizando...
+                          </>
+                        ) : (
+                          <>
+                            <Package className="w-5 h-5" />
+                            Sincronización Profesional
+                          </>
+                        )}
+                      </button>
+                    )}
+                    
                     <button
                       onClick={handleSyncResources}
-                      disabled={syncing || Object.keys(syncResources).filter(k => syncResources[k]).length === 0}
+                      disabled={syncing || batchSyncing || Object.keys(syncResources).filter(k => syncResources[k]).length === 0}
                       className="flex items-center gap-2 px-6 py-3 bg-pink-500 text-white border-2 border-slate-900 rounded-xl font-bold hover:bg-pink-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                       style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
                     >
@@ -678,12 +848,124 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
                       ) : (
                         <>
                           <RefreshCw className="w-5 h-5" />
-                          Sincronizar Ahora
+                          Sincronizar Rápida
                         </>
                       )}
                     </button>
                   </div>
                 </div>
+                
+                {/* Barra de Progreso de Sincronización por Lotes */}
+                {batchSyncing && (
+                  <div className="mt-6 p-6 bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-600 rounded-xl">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="font-bold text-lg text-slate-900">Sincronización en Progreso</h3>
+                      <div className="text-2xl font-bold text-green-600">
+                        {batchProgress.progress_percentage}%
+                      </div>
+                    </div>
+                    
+                    {/* Barra de progreso visual */}
+                    <div className="w-full h-6 bg-slate-200 rounded-full overflow-hidden mb-4 border-2 border-slate-900">
+                      <div 
+                        className="h-full bg-gradient-to-r from-green-500 to-emerald-500 transition-all duration-500 ease-out flex items-center justify-end pr-2"
+                        style={{ width: `${batchProgress.progress_percentage}%` }}
+                      >
+                        {batchProgress.progress_percentage > 10 && (
+                          <span className="text-white font-bold text-sm">
+                            {batchProgress.progress_percentage}%
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Estadísticas detalladas */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                      <div className="bg-white p-3 rounded-lg border-2 border-slate-900">
+                        <div className="text-xs text-slate-600 mb-1">Lote Actual</div>
+                        <div className="text-xl font-bold text-slate-900">
+                          {batchProgress.current_batch} / {batchProgress.total_batches}
+                        </div>
+                      </div>
+                      
+                      <div className="bg-white p-3 rounded-lg border-2 border-slate-900">
+                        <div className="text-xs text-slate-600 mb-1">Total Productos</div>
+                        <div className="text-xl font-bold text-slate-900">
+                          {batchProgress.total_products}
+                        </div>
+                      </div>
+                      
+                      <div className="bg-white p-3 rounded-lg border-2 border-slate-900">
+                        <div className="text-xs text-green-600 mb-1">✓ Sincronizados</div>
+                        <div className="text-xl font-bold text-green-600">
+                          {batchProgress.synced_products}
+                        </div>
+                      </div>
+                      
+                      <div className="bg-white p-3 rounded-lg border-2 border-slate-900">
+                        <div className="text-xs text-red-600 mb-1">✗ Fallidos</div>
+                        <div className="text-xl font-bold text-red-600">
+                          {batchProgress.failed_products}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Mensaje de estado */}
+                    <div className="text-center text-sm text-slate-700 font-medium">
+                      {batchProgress.total_batches > 0 && (
+                        <p>
+                          Procesando lote {batchProgress.current_batch} de {batchProgress.total_batches}: 
+                          <span className="font-bold text-green-600 ml-2">
+                            {batchProgress.synced_products}/{batchProgress.total_products} productos
+                          </span>
+                        </p>
+                      )}
+                      {batchProgress.status === 'starting' && (
+                        <p className="text-blue-600 font-bold">Iniciando sincronización...</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Reporte Final */}
+                {showBatchReport && !batchSyncing && (
+                  <div className="mt-6 p-6 bg-gradient-to-br from-yellow-50 to-orange-50 border-2 border-yellow-600 rounded-xl">
+                    <h3 className="font-bold text-lg text-slate-900 mb-4">📊 Reporte de Sincronización</h3>
+                    
+                    <div className="space-y-3">
+                      {batchProgress.errors_count > 0 && (
+                        <div className="p-4 bg-red-50 border-2 border-red-600 rounded-lg">
+                          <p className="text-red-900 font-bold">
+                            ⚠️ {batchProgress.errors_count} productos fallaron
+                          </p>
+                          <p className="text-sm text-red-700 mt-1">
+                            Revisa el reporte para ver detalles
+                          </p>
+                        </div>
+                      )}
+                      
+                      {batchProgress.incomplete_count > 0 && (
+                        <div className="p-4 bg-orange-50 border-2 border-orange-600 rounded-lg">
+                          <p className="text-orange-900 font-bold">
+                            📝 {batchProgress.incomplete_count} productos con datos incompletos
+                          </p>
+                          <p className="text-sm text-orange-700 mt-1">
+                            (Sin imagen, descripción, marca o categoría)
+                          </p>
+                        </div>
+                      )}
+                      
+                      <button
+                        onClick={downloadBatchReport}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-500 text-white border-2 border-slate-900 rounded-lg font-bold hover:bg-blue-600 transition-all"
+                        style={{ boxShadow: '3px 3px 0px 0px rgba(15,23,42,1)' }}
+                      >
+                        <FileText className="w-5 h-5" />
+                        Descargar Reporte Completo (JSON)
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>

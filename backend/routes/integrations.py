@@ -2508,3 +2508,214 @@ async def sync_product_stock_to_prestashop(
             detail=f"Error sincronizando stock: {str(e)}"
         )
 
+
+
+# ============================================================================
+# ENDPOINTS DE SINCRONIZACIÓN POR LOTES PROFESIONAL
+# ============================================================================
+
+@router.post("/prestashop/{integration_id}/sync-batch")
+async def sync_products_batch(
+    integration_id: str,
+    background_tasks: BackgroundTasks,
+    batch_size: int = 100,
+    pause_seconds: float = 0.5,
+    max_products: Optional[int] = None,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Sincronizar productos de PrestaShop en lotes pequeños
+    
+    Args:
+        integration_id: ID de la integración PrestaShop
+        batch_size: Tamaño de cada lote (default: 100)
+        pause_seconds: Pausa entre lotes en segundos (default: 0.5)
+        max_products: Máximo de productos a sincronizar (None = todos)
+    
+    Returns:
+        job_id para consultar progreso
+    """
+    from services.batch_sync_service import BatchSyncService
+    
+    # Verificar que la integración existe y pertenece a la cuenta
+    integration = await db.integrations.find_one({
+        'id': integration_id,
+        'account_id': current_user.account_id
+    }, {'_id': 0})
+    
+    if not integration:
+        raise HTTPException(status_code=404, detail="Integración no encontrada")
+    
+    # Crear servicio PrestaShop
+    ps_service = PrestashopAPIService(
+        api_url=integration['shop_url'] + '/api',
+        api_key=integration['api_key']
+    )
+    
+    # Obtener store_id
+    store_id = integration.get('store_id')
+    if not store_id:
+        raise HTTPException(status_code=400, detail="La integración no tiene store_id configurado")
+    
+    # Crear job ID
+    job_id = str(uuid4())
+    
+    # Inicializar progreso en DB
+    await db.sync_progress.insert_one({
+        'id': job_id,
+        'integration_id': integration_id,
+        'account_id': current_user.account_id,
+        'status': 'running',
+        'progress_percentage': 0,
+        'current_batch': 0,
+        'total_batches': 0,
+        'synced_products': 0,
+        'failed_products': 0,
+        'total_products': 0,
+        'created_at': datetime.now(timezone.utc).isoformat(),
+        'updated_at': datetime.now(timezone.utc).isoformat()
+    })
+    
+    # Ejecutar sincronización en background
+    async def run_batch_sync():
+        batch_service = BatchSyncService(
+            ps_service=ps_service,
+            db=db,
+            integration_id=integration_id,
+            account_id=current_user.account_id,
+            store_id=store_id
+        )
+        
+        try:
+            result = await batch_service.sync_products_in_batches(
+                batch_size=batch_size,
+                pause_seconds=pause_seconds,
+                max_products=max_products
+            )
+            
+            # Actualizar estado final
+            await db.sync_progress.update_one(
+                {'id': job_id},
+                {
+                    '$set': {
+                        'status': result['status'],
+                        'progress_percentage': 100,
+                        'synced_products': result['synced_products'],
+                        'failed_products': result['failed_products'],
+                        'total_products': result['total_products'],
+                        'errors_count': len(result['errors']),
+                        'incomplete_count': len(result['incomplete_data']),
+                        'report_path': batch_service.sync_log_path,
+                        'updated_at': datetime.now(timezone.utc).isoformat()
+                    }
+                }
+            )
+        except Exception as e:
+            await db.sync_progress.update_one(
+                {'id': job_id},
+                {
+                    '$set': {
+                        'status': 'error',
+                        'error_message': str(e),
+                        'updated_at': datetime.now(timezone.utc).isoformat()
+                    }
+                }
+            )
+    
+    background_tasks.add_task(run_batch_sync)
+    
+    return {
+        'success': True,
+        'job_id': job_id,
+        'message': f'Sincronización por lotes iniciada (batch_size={batch_size})'
+    }
+
+
+@router.get("/prestashop/{integration_id}/sync-progress")
+async def get_sync_progress(
+    integration_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Obtener progreso de sincronización en tiempo real
+    
+    Args:
+        integration_id: ID de la integración
+    
+    Returns:
+        Estado actual de la sincronización
+    """
+    # Buscar progreso más reciente para esta integración
+    progress = await db.sync_progress.find_one(
+        {
+            'integration_id': integration_id,
+            'account_id': current_user.account_id
+        },
+        {'_id': 0},
+        sort=[('created_at', -1)]
+    )
+    
+    if not progress:
+        return {
+            'status': 'not_started',
+            'message': 'No hay sincronización en progreso'
+        }
+    
+    return progress
+
+
+@router.get("/sync-reports/{job_id}/download")
+async def download_sync_report(
+    job_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Descargar reporte de sincronización en formato JSON
+    
+    Args:
+        job_id: ID del job de sincronización
+    
+    Returns:
+        Archivo JSON con reporte detallado
+    """
+    from fastapi.responses import FileResponse
+    import os
+    
+    # Buscar el progreso/reporte
+    progress = await db.sync_progress.find_one({
+        'id': job_id,
+        'account_id': current_user.account_id
+    }, {'_id': 0})
+    
+    if not progress:
+        raise HTTPException(status_code=404, detail="Reporte no encontrado")
+    
+    report_path = progress.get('report_path')
+    
+    if not report_path or not os.path.exists(report_path):
+        raise HTTPException(status_code=404, detail="Archivo de reporte no encontrado")
+    
+    return FileResponse(
+        path=report_path,
+        media_type='application/json',
+        filename=f'sync_report_{job_id}.json'
+    )
+
+
+@router.get("/sync-reports/list")
+async def list_sync_reports(
+    current_user: User = Depends(get_current_user),
+    limit: int = 20
+):
+    """
+    Listar reportes de sincronización disponibles
+    
+    Returns:
+        Lista de reportes con resumen
+    """
+    reports = await db.sync_reports.find(
+        {'account_id': current_user.account_id},
+        {'_id': 0}
+    ).sort('created_at', -1).limit(limit).to_list(limit)
+    
+    return reports
