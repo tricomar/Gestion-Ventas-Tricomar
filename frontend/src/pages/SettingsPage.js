@@ -258,6 +258,7 @@ const SettingsPage = () => {
     try {
       const response = await axios.get(`${API}/categories`);
       setHierarchicalCategories(response.data);
+      console.log(`Categorías cargadas: ${response.data.length} total`);
     } catch (error) {
       console.error('Error fetching categories:', error);
       toast.error('Error al cargar categorías');
