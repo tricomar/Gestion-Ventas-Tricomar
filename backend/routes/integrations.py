@@ -1116,24 +1116,51 @@ async def sync_products_resource(ps_service, integration_id: str, account_id: st
         print(f"[Sync] Error cargando categorías: {e}")
     
     # Obtener productos de PrestaShop con el límite configurado
-    # Nota: PrestaShop puede fallar con límites muy altos (>1000), en ese caso se reduce automáticamente
+    # PrestaShop tiene límites internos (~500-1000 productos por petición)
+    # Si se necesita más, hacer paginación
     ps_products = []
-    try:
-        ps_products = ps_service.get_products(limit=max_products)
-        print(f"[Sync] {len(ps_products)} productos obtenidos de PrestaShop")
-    except Exception as e:
-        print(f"[Sync] Error con límite {max_products}: {e}")
-        # Si falla, intentar con 500 (límite seguro)
-        if max_products > 500:
-            print(f"[Sync] Reintentando con límite reducido a 500...")
-            try:
-                ps_products = ps_service.get_products(limit=500)
-                print(f"[Sync] {len(ps_products)} productos obtenidos con límite reducido")
-            except Exception as e2:
-                print(f"[Sync] Error crítico: {e2}")
-                raise
-        else:
+    batch_size = 500  # Tamaño de lote seguro para PrestaShop
+    
+    if max_products <= batch_size:
+        # Una sola petición
+        try:
+            ps_products = ps_service.get_products(limit=max_products)
+            print(f"[Sync] {len(ps_products)} productos obtenidos de PrestaShop")
+        except Exception as e:
+            print(f"[Sync] Error obteniendo productos: {e}")
             raise
+    else:
+        # Paginación: múltiples peticiones de batch_size
+        print(f"[Sync] Solicitando {max_products} productos en lotes de {batch_size}...")
+        offset = 0
+        total_batches = (max_products + batch_size - 1) // batch_size  # Redondear hacia arriba
+        batch_num = 0
+        
+        while len(ps_products) < max_products and batch_num < total_batches:
+            try:
+                batch_num += 1
+                print(f"[Sync] Lote {batch_num}/{total_batches}: obteniendo productos {offset}-{offset+batch_size}...")
+                batch = ps_service.get_products(limit=batch_size, offset=offset)
+                
+                if not batch or len(batch) == 0:
+                    print(f"[Sync] No hay más productos disponibles")
+                    break
+                
+                ps_products.extend(batch)
+                offset += len(batch)
+                print(f"[Sync] Acumulados: {len(ps_products)} productos")
+                
+                # Si el lote devolvió menos de batch_size, ya no hay más productos
+                if len(batch) < batch_size:
+                    print(f"[Sync] Último lote recibido ({len(batch)} productos)")
+                    break
+                    
+            except Exception as e:
+                print(f"[Sync] Error en lote {batch_num}: {e}")
+                # Continuar con los productos que ya tenemos
+                break
+        
+        print(f"[Sync] Total obtenido: {len(ps_products)} productos de PrestaShop")
     
     synced_count = 0
     for ps_prod in ps_products:
