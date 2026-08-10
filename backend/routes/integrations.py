@@ -2538,7 +2538,7 @@ async def sync_products_batch(
     from services.batch_sync_service import BatchSyncService
     
     # Verificar que la integración existe y pertenece a la cuenta
-    integration = await db.integrations.find_one({
+    integration = await db.prestashop_integrations.find_one({
         'id': integration_id,
         'account_id': current_user.account_id
     }, {'_id': 0})
