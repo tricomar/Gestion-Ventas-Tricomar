@@ -163,9 +163,9 @@ const SettingsPage = () => {
     }
   }, [settings, categoriesLoaded]);
 
-  // Load hierarchical categories when inventory tab is opened
+  // Load hierarchical categories when inventory tab OR categories tab is opened
   useEffect(() => {
-    if (activeTab === 'inventory' && isSupervisor) {
+    if ((activeTab === 'inventory' || activeTab === 'categories') && isSupervisor) {
       fetchHierarchicalCategories();
     }
   }, [activeTab, isSupervisor]);
