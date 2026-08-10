@@ -172,8 +172,12 @@ const SettingsPage = () => {
 
   // Escuchar evento global de recarga de categorías
   useEffect(() => {
-    const handleReloadCategories = () => {
+    const handleReloadCategories = async () => {
       console.log('📢 Evento de recarga de categorías recibido');
+      // Esperar 3 segundos para que el backend termine de copiar las categorías
+      console.log('⏳ Esperando 3 segundos para que el backend complete la copia...');
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      console.log('✅ Recargando categorías ahora...');
       fetchHierarchicalCategories();
     };
 
