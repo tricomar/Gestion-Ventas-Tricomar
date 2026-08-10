@@ -10,7 +10,7 @@ const API = `${BACKEND_URL}/api`;
 
 const StoresTab = () => {
   const { user } = useAuth();
-  const { account, refetch: refetchAccount } = useAccount();
+  const { account, refreshAccount } = useAccount();
   const stores = account?.stores || [];
   const [storeNames, setStoreNames] = useState({});
   const [storeCodes, setStoreCodes] = useState({});
@@ -47,7 +47,7 @@ const StoresTab = () => {
       });
 
       toast.success('Tiendas/Cajas actualizadas correctamente');
-      refetchAccount();
+      refreshAccount();
     } catch (error) {
       toast.error('Error al guardar cambios');
       console.error('Error saving store names:', error);
@@ -97,7 +97,7 @@ const StoresTab = () => {
       setNewStoreName('');
       setNewStoreCode('');
       setShowAddForm(false);
-      refetchAccount();
+      refreshAccount();
     } catch (error) {
       toast.error('Error al agregar tienda');
       console.error('Error adding store:', error);
@@ -135,7 +135,7 @@ const StoresTab = () => {
       });
 
       toast.success('Tienda eliminada exitosamente');
-      refetchAccount();
+      refreshAccount();
     } catch (error) {
       toast.error('Error al eliminar tienda');
       console.error('Error deleting store:', error);
