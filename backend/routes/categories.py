@@ -75,7 +75,8 @@ async def create_category(
         level=level,
         account_id=current_user.account_id,
         source=category_input.source,
-        store=category_input.store
+        store=category_input.store,
+        store_id=category_input.store_id
     )
     
     # Guardar en base de datos

@@ -284,29 +284,107 @@ async def sync_categories(
             
             synced_count += 1
         
-        # SINCRONIZAR CATEGORÍAS A SETTINGS LOCAL
+        # SINCRONIZAR CATEGORÍAS A LA COLECCIÓN CATEGORIES (para UI)
+        # Obtener integración para store_id
+        integration_doc = await db.prestashop_integrations.find_one(
+            {'id': integration_id},
+            {'_id': 0}
+        )
+        
+        if not integration_doc:
+            raise HTTPException(status_code=404, detail="Integración no encontrada")
+        
+        store_id = integration_doc.get('store_id')
+        store_name = integration_doc.get('store_name')
+        
         # Obtener todas las categorías sincronizadas
-        all_categories = await db.prestashop_categories.find(
+        all_ps_categories = await db.prestashop_categories.find(
             {'account_id': current_user.account_id, 'integration_id': integration_id, 'active': True},
             {'_id': 0}
         ).to_list(1000)
         
-        # Extraer nombres de categorías
-        category_names = [cat.get('name') for cat in all_categories if cat.get('name')]
+        # Crear mapa de prestashop_id a categoría para resolver jerarquías
+        ps_cat_map = {cat['prestashop_id']: cat for cat in all_ps_categories}
         
+        # Sincronizar a colección categories
+        for ps_cat in all_ps_categories:
+            prestashop_id = ps_cat['prestashop_id']
+            parent_ps_id = ps_cat.get('parent_id', 0)
+            
+            # Buscar si ya existe en categories (por account_id, store_id y prestashop_id)
+            existing_cat = await db.categories.find_one(
+                {
+                    'account_id': current_user.account_id,
+                    'store_id': store_id,
+                    'prestashop_id': prestashop_id
+                },
+                {'_id': 0}
+            )
+            
+            # Calcular level basado en jerarquía de PrestaShop
+            level = 0
+            parent_local_id = None
+            
+            if parent_ps_id and parent_ps_id > 0 and parent_ps_id in ps_cat_map:
+                # Buscar parent en la colección categories
+                parent_cat = await db.categories.find_one(
+                    {
+                        'account_id': current_user.account_id,
+                        'store_id': store_id,
+                        'prestashop_id': parent_ps_id
+                    },
+                    {'_id': 0}
+                )
+                
+                if parent_cat:
+                    parent_local_id = parent_cat['id']
+                    level = parent_cat.get('level', 0) + 1
+            
+            # Limitar a máximo 4 niveles (0, 1, 2, 3)
+            level = min(level, 3)
+            
+            category_doc = {
+                'account_id': current_user.account_id,
+                'store_id': store_id,
+                'name': ps_cat['name'],
+                'parent_id': parent_local_id,
+                'level': level,
+                'source': 'prestashop',
+                'store': store_name,  # Nombre de tienda para compatibilidad legacy
+                'prestashop_id': prestashop_id,
+                'prestashop_parent_id': parent_ps_id,
+                'integration_id': integration_id,
+                'updated_at': datetime.now(timezone.utc).isoformat()
+            }
+            
+            if existing_cat:
+                # Actualizar categoría existente
+                await db.categories.update_one(
+                    {
+                        'account_id': current_user.account_id,
+                        'store_id': store_id,
+                        'prestashop_id': prestashop_id
+                    },
+                    {'$set': category_doc}
+                )
+            else:
+                # Crear nueva categoría
+                category_doc['id'] = str(uuid4())
+                category_doc['created_at'] = datetime.now(timezone.utc).isoformat()
+                await db.categories.insert_one(category_doc)
+        
+        # También actualizar settings legacy para compatibilidad (opcional)
+        category_names = [cat.get('name') for cat in all_ps_categories if cat.get('name')]
         if category_names:
-            # Obtener settings actuales
             settings = await db.settings.find_one(
                 get_tenant_filter(current_user.dict(), {}),
                 {'_id': 0}
             )
             
             if settings:
-                # Combinar categorías existentes con las nuevas (sin duplicados)
                 existing_categories = settings.get('product_categories', [])
                 combined_categories = list(set(existing_categories + category_names))
                 
-                # Actualizar settings con categorías combinadas
                 await db.settings.update_one(
                     get_tenant_filter(current_user.dict(), {}),
                     {'$set': {'product_categories': combined_categories}}

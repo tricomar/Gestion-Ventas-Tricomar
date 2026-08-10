@@ -524,12 +524,13 @@ const IntegrationsTab = () => {
           onClose={() => {
             setShowPrestashopModal(false);
             setSelectedIntegration(null);
+            // Refrescar al cerrar también por si hubo cambios
+            fetchIntegrations();
           }}
           integration={selectedIntegration}
           onSuccess={() => {
+            // Refrescar inmediatamente al éxito
             fetchIntegrations();
-            setShowPrestashopModal(false);
-            setSelectedIntegration(null);
           }}
           stores={stores}
         />

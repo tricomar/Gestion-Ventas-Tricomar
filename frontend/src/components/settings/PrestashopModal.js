@@ -197,6 +197,10 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
       setIntegrationId(response.data.integration_id);
       setConnectionStatus('connected');
       toast.success('Integración configurada exitosamente');
+      
+      // Refrescar lista de integraciones inmediatamente
+      onSuccess();
+      
       setStep(2); // Pasar a sincronización
     } catch (error) {
       // Manejar diferentes tipos de errores
