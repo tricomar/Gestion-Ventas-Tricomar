@@ -8,6 +8,18 @@ const CategoryTree = ({ categories = [], onAdd, onEdit, onDelete }) => {
   const [addingTo, setAddingTo] = useState(null);
   const [newCategoryName, setNewCategoryName] = useState('');
 
+  // Auto-expandir categorías raíz al cargar
+  React.useEffect(() => {
+    if (categories && categories.length > 0) {
+      const roots = categories.filter(cat => !cat.parent_id || cat.parent_id === null);
+      if (roots.length > 0) {
+        const rootIds = roots.map(cat => cat.id);
+        setExpandedNodes(new Set(rootIds));
+      }
+    }
+  }, [categories]);
+
+
   // Agrupar categorías por tienda/fuente
   const groupByStore = (items) => {
     const groups = {};
