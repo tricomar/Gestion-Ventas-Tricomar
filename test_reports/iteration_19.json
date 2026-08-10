@@ -1,0 +1,28 @@
+{
+  "summary": "End-to-end validation of PrestaShop categories sync flow after 'Borrar contenido sincronizado' and resync. Backend endpoints, DB persistence, and UI rendering all verified working. Categories now appear correctly in Configuración → Categorías with auto-expanded hierarchy.",
+  "tested_scope": ["backend", "frontend", "integration"],
+  "passed": [
+    "POST /api/auth/login (hola@tricomar.cl) -> 200 with token",
+    "DELETE /api/integrations/prestashop/{integration_id}/clear-data -> 200 success, removed 131 prestashop_categories, 0 local_categories (manual preserved)",
+    "POST /api/integrations/prestashop/{integration_id}/sync-categories -> 200, synced_count=131, message '131 categorías sincronizadas exitosamente'",
+    "DB after resync: categories collection contains 126 docs (122 source=prestashop + 4 source=manual); prestashop_categories collection has 131",
+    "Prestashop categories have correct integration_id, store_id, prestashop_id, parent_id, level fields",
+    "GET /api/categories -> 200 returns 126 items (122 prestashop + 4 manual); roots include 'Raíz' (prestashop) and 'T1' (manual)",
+    "Frontend login -> Configuración -> Categorías tab renders CategoryTree with hierarchical prestashop categories",
+    "Auto-expand works: console shows 'Auto-expandiendo 4 nodos (raíces + segundo nivel)' and UI shows 'Raíz' + 'Toda la Tienda' expanded, exposing Dropship, Grow Shop, Home & Garden, Lifestyle, Liquidación Verano, etc.",
+    "Frontend console: 'Categorías cargadas: 126 total (Tienda 1: 122, manual: 4)' confirming data reaches the component",
+    "Manual categories (T1, Cat Sub, Sub 2, Sub 3) NOT deleted by clear-data (source=manual preserved)"
+  ],
+  "failed": [],
+  "action_items": [],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "retest_needed": false,
+  "full_testing_deferred": true,
+  "evidence": {
+    "clear_data_response": "{success:true, prestashop_categories:131, local_categories:0}",
+    "sync_response": "{success:true, synced_count:131}",
+    "db_after": "categories=126 (prestashop=122, manual=4); prestashop_categories=131",
+    "ui_screenshot": "/app/.screenshots/cat_final.png shows Raíz + Toda la Tienda expanded with children",
+    "browser_console": "Auto-expandiendo 4 nodos (raíces + segundo nivel); Categorías cargadas: 126 total (Tienda 1: 122, manual: 4)"
+  }
+}
