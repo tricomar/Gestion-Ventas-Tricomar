@@ -355,6 +355,40 @@ class PrestashopAPIService:
             products = [response['products']]
         
         return products
+
+    def get_products_by_id_range(self, min_id: int = 0, limit: int = 500, display: str = 'full') -> List[Dict[str, Any]]:
+        """
+        Obtener productos de PrestaShop usando filtro de ID (más eficiente que offset)
+        
+        Args:
+            min_id: ID mínimo para filtrar (id > min_id, EXCLUSIVO)
+            limit: Número máximo de productos a obtener
+            display: Campos a obtener ('full' o lista de campos específicos)
+            
+        Returns:
+            Lista de productos
+        """
+        params = {
+            'display': display,
+            'limit': str(limit),
+            'sort': 'id_ASC'  # Ordenar por ID ascendente
+        }
+        
+        # Filtrar por ID MAYOR ESTRICTO que min_id (usando > en lugar de >=)
+        if min_id > 0:
+            # Formato: [min_id+1|max_value] para excluir el último ID procesado
+            params['filter[id]'] = f'>[{min_id}]'
+        
+        response = self._make_request('products', params=params)
+        
+        products = []
+        if 'products' in response and isinstance(response['products'], list):
+            products = response['products']
+        elif 'products' in response and isinstance(response['products'], dict):
+            products = [response['products']]
+        
+        return products
+
     
     def get_product_stock(self, product_id: int) -> Optional[int]:
         """

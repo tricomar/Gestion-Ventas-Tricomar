@@ -1082,26 +1082,40 @@ async def sync_categories_resource(ps_service, integration_id: str, account_id: 
 async def sync_products_resource(ps_service, integration_id: str, account_id: str, store_name: str, store_code: str, store_id: str = None) -> int:
     """Sincronizar productos con todos los campos: marca, categoría, precio, stock, publicación"""
     from services.category_sync_service import CategorySyncService
+    import logging
     
-    print(f"[Sync] Iniciando sincronización de productos...")
+    # Configurar logging a archivo PERSISTENTE
+    logger = logging.getLogger('sync_products')
+    logger.setLevel(logging.DEBUG)
+    if not logger.handlers:
+        fh = logging.FileHandler('/app/sync_products_debug.log')
+        fh.setLevel(logging.DEBUG)
+        formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+        fh.setFormatter(formatter)
+        logger.addHandler(fh)
+    
+    logger.info("="*60)
+    logger.info("INICIANDO SINCRONIZACIÓN DE PRODUCTOS")
+    logger.info(f"Account ID: {account_id}")
+    logger.info(f"Integration ID: {integration_id}")
     
     # Obtener límite de productos desde la cuenta
     try:
         account = await db.accounts.find_one({'id': account_id}, {'_id': 0, 'max_products_sync': 1})
         max_products = account.get('max_products_sync', 500) if account else 500
-        print(f"[Sync] Límite de productos configurado: {max_products}")
+        logger.info(f"Límite configurado en cuenta: {max_products}")
     except Exception as e:
         max_products = 500
-        print(f"[Sync] Error obteniendo límite, usando 500: {e}")
+        logger.error(f"Error obteniendo límite, usando 500: {e}")
     
     # Obtener manufacturers (marcas) una sola vez
     manufacturers_map = {}
     try:
         manufacturers = ps_service.get_manufacturers(limit=500)
         manufacturers_map = {m['id']: m['name'] for m in manufacturers}
-        print(f"[Sync] {len(manufacturers_map)} marcas cargadas")
+        logger.info(f"{len(manufacturers_map)} marcas cargadas")
     except Exception as e:
-        print(f"[Sync] Error cargando manufacturers: {e}")
+        logger.error(f"Error cargando manufacturers: {e}")
     
     # Obtener categorías locales para mapeo
     categories_map = {}
@@ -1111,9 +1125,9 @@ async def sync_products_resource(ps_service, integration_id: str, account_id: st
             {'_id': 0, 'prestashop_id': 1, 'name': 1}
         ).to_list(1000)
         categories_map = {int(c['prestashop_id']): c['name'] for c in local_categories if c.get('prestashop_id')}
-        print(f"[Sync] {len(categories_map)} categorías locales mapeadas")
+        logger.info(f"{len(categories_map)} categorías locales mapeadas")
     except Exception as e:
-        print(f"[Sync] Error cargando categorías: {e}")
+        logger.error(f"Error cargando categorías: {e}")
     
     # Obtener productos de PrestaShop con el límite configurado
     # PrestaShop tiene límites internos (~500-1000 productos por petición)
@@ -1121,46 +1135,61 @@ async def sync_products_resource(ps_service, integration_id: str, account_id: st
     ps_products = []
     batch_size = 500  # Tamaño de lote seguro para PrestaShop
     
+    logger.info(f"Comparando: max_products={max_products} vs batch_size={batch_size}")
+    
     if max_products <= batch_size:
         # Una sola petición
+        logger.info(f"UNA SOLA PETICIÓN: solicitando {max_products} productos")
         try:
             ps_products = ps_service.get_products(limit=max_products)
-            print(f"[Sync] {len(ps_products)} productos obtenidos de PrestaShop")
+            logger.info(f"✓ {len(ps_products)} productos obtenidos de PrestaShop")
         except Exception as e:
-            print(f"[Sync] Error obteniendo productos: {e}")
+            logger.error(f"Error obteniendo productos: {e}", exc_info=True)
             raise
     else:
-        # Paginación: múltiples peticiones de batch_size
-        print(f"[Sync] Solicitando {max_products} productos en lotes de {batch_size}...")
-        offset = 0
-        total_batches = (max_products + batch_size - 1) // batch_size  # Redondear hacia arriba
+        # Paginación: múltiples peticiones de batch_size usando filtros de ID
+        logger.info(f"PAGINACIÓN: solicitando {max_products} productos en lotes de {batch_size}")
+        logger.info(f"Usando filtro de ID en lugar de offset (más eficiente)")
+        
+        last_id = 0  # Empezar desde ID 0
+        total_batches = (max_products + batch_size - 1) // batch_size
         batch_num = 0
+        
+        logger.info(f"Total de lotes calculados: {total_batches}")
         
         while len(ps_products) < max_products and batch_num < total_batches:
             try:
                 batch_num += 1
-                print(f"[Sync] Lote {batch_num}/{total_batches}: obteniendo productos {offset}-{offset+batch_size}...")
-                batch = ps_service.get_products(limit=batch_size, offset=offset)
+                logger.info(f"--- LOTE {batch_num}/{total_batches} ---")
+                logger.info(f"Solicitando productos con ID > {last_id}, limit={batch_size}")
+                
+                batch = ps_service.get_products_by_id_range(min_id=last_id, limit=batch_size)
+                logger.info(f"Recibidos {len(batch)} productos en este lote")
                 
                 if not batch or len(batch) == 0:
-                    print(f"[Sync] No hay más productos disponibles")
+                    logger.warning(f"Lote vacío recibido, no hay más productos")
                     break
                 
+                # Obtener el último ID del lote
+                if batch:
+                    last_product = batch[-1]
+                    last_id = int(last_product.get('id', last_id))
+                    logger.info(f"Último ID del lote: {last_id}")
+                
                 ps_products.extend(batch)
-                offset += len(batch)
-                print(f"[Sync] Acumulados: {len(ps_products)} productos")
+                logger.info(f"Acumulados hasta ahora: {len(ps_products)} productos")
                 
                 # Si el lote devolvió menos de batch_size, ya no hay más productos
                 if len(batch) < batch_size:
-                    print(f"[Sync] Último lote recibido ({len(batch)} productos)")
+                    logger.info(f"Último lote (solo {len(batch)} productos), finalizando paginación")
                     break
                     
             except Exception as e:
-                print(f"[Sync] Error en lote {batch_num}: {e}")
+                logger.error(f"Error en lote {batch_num}: {e}", exc_info=True)
                 # Continuar con los productos que ya tenemos
                 break
         
-        print(f"[Sync] Total obtenido: {len(ps_products)} productos de PrestaShop")
+        logger.info(f"PAGINACIÓN COMPLETADA: {len(ps_products)} productos totales obtenidos")
     
     synced_count = 0
     for ps_prod in ps_products:
@@ -1248,7 +1277,8 @@ async def sync_products_resource(ps_service, integration_id: str, account_id: st
         
         synced_count += 1
     
-    print(f"[Sync] {synced_count} productos sincronizados correctamente")
+    logger.info(f"SINCRONIZACIÓN COMPLETADA: {synced_count} productos procesados")
+    logger.info("="*60)
     return synced_count
 
 
