@@ -1086,9 +1086,13 @@ async def sync_products_resource(ps_service, integration_id: str, account_id: st
     print(f"[Sync] Iniciando sincronización de productos...")
     
     # Obtener límite de productos desde la cuenta
-    account = await db.accounts.find_one({'id': account_id}, {'_id': 0})
-    max_products = account.get('max_products_sync', 500) if account else 500
-    print(f"[Sync] Límite de productos para esta cuenta: {max_products}")
+    try:
+        account = await db.accounts.find_one({'id': account_id}, {'_id': 0, 'max_products_sync': 1})
+        max_products = account.get('max_products_sync', 500) if account else 500
+        print(f"[Sync] Límite de productos configurado: {max_products}")
+    except Exception as e:
+        max_products = 500
+        print(f"[Sync] Error obteniendo límite, usando 500: {e}")
     
     # Obtener manufacturers (marcas) una sola vez
     manufacturers_map = {}
@@ -1111,9 +1115,25 @@ async def sync_products_resource(ps_service, integration_id: str, account_id: st
     except Exception as e:
         print(f"[Sync] Error cargando categorías: {e}")
     
-    # Obtener productos de PrestaShop con límite de la cuenta
-    ps_products = ps_service.get_products(limit=max_products)
-    print(f"[Sync] {len(ps_products)} productos obtenidos de PrestaShop")
+    # Obtener productos de PrestaShop con el límite configurado
+    # Nota: PrestaShop puede fallar con límites muy altos (>1000), en ese caso se reduce automáticamente
+    ps_products = []
+    try:
+        ps_products = ps_service.get_products(limit=max_products)
+        print(f"[Sync] {len(ps_products)} productos obtenidos de PrestaShop")
+    except Exception as e:
+        print(f"[Sync] Error con límite {max_products}: {e}")
+        # Si falla, intentar con 500 (límite seguro)
+        if max_products > 500:
+            print(f"[Sync] Reintentando con límite reducido a 500...")
+            try:
+                ps_products = ps_service.get_products(limit=500)
+                print(f"[Sync] {len(ps_products)} productos obtenidos con límite reducido")
+            except Exception as e2:
+                print(f"[Sync] Error crítico: {e2}")
+                raise
+        else:
+            raise
     
     synced_count = 0
     for ps_prod in ps_products:
