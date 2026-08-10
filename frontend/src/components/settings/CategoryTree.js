@@ -12,9 +12,20 @@ const CategoryTree = ({ categories = [], onAdd, onEdit, onDelete }) => {
   React.useEffect(() => {
     if (categories && categories.length > 0) {
       const roots = categories.filter(cat => !cat.parent_id || cat.parent_id === null);
-      if (roots.length > 0) {
-        const rootIds = roots.map(cat => cat.id);
-        setExpandedNodes(new Set(rootIds));
+      const allIds = new Set();
+      
+      // Expandir raíces
+      roots.forEach(root => allIds.add(root.id));
+      
+      // Expandir hijos de raíces (segundo nivel)
+      const secondLevel = categories.filter(cat => {
+        return roots.some(root => root.id === cat.parent_id);
+      });
+      secondLevel.forEach(cat => allIds.add(cat.id));
+      
+      if (allIds.size > 0) {
+        setExpandedNodes(allIds);
+        console.log(`Auto-expandiendo ${allIds.size} nodos (raíces + segundo nivel)`);
       }
     }
   }, [categories]);
