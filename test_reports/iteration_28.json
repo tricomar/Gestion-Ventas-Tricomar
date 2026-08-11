@@ -1,0 +1,24 @@
+{
+  "summary": "Retest of iteration_27 fixes for Fase 2 Bidirectional Stock Sync. Both corrections applied and verified via live API against tricomar.cl integration. sync-from-ps now accepts JSON object body {product_ids:[...]} and returns 200; sync-to-ps returns proper 404 for missing product (previously 500). All previously-passing checks continue to pass. Full E2E product sync still blocked by empty product DB (out of scope for this retest).",
+  "tested_scope": ["backend", "auth", "integration"],
+  "passed": [
+    "Login hola@tricomar.cl -> token OK",
+    "CORRECCIÓN 1: POST /stock/sync-from-ps with {\"product_ids\":[999999]} -> HTTP 200, {success:true, synced_count:0, conflicts_detected:0, errors:[], timestamp}",
+    "POST /stock/sync-from-ps with empty {} body -> HTTP 200 (backward compatible for full sync)",
+    "Schema change confirmed: raw array [1,2,3] now correctly rejected with 422 model_attributes_type (expected new behavior after Pydantic model wrap)",
+    "CORRECCIÓN 2: POST /stock/sync-to-ps?product_id=nonexistent&quantity=10 -> HTTP 404 {detail:'Producto no encontrado'} (was 500 in iter_27)",
+    "Regression: POST /stock/sync-to-ps negative quantity -> HTTP 400 'La cantidad no puede ser negativa'",
+    "Regression: POST /stock/sync-to-ps invalid integration id -> HTTP 404 'Integración no encontrada'",
+    "Regression: GET /stock/conflicts -> HTTP 200, correct shop_url multi-tenant isolation",
+    "Auth: sync-from-ps without Bearer -> HTTP 403"
+  ],
+  "failed": [],
+  "action_items": [
+    "The 'no está sincronizado con PrestaShop' -> 400 mapping could not be exercised because DB still has no products with prestashop_id assigned. Code path is in place (line 2887-2894) but requires a product in DB to verify end-to-end. Non-blocking.",
+    "E2E real PrestaShop XML PUT (id_shop multi-shop) still pending until at least one product is synced into DB."
+  ],
+  "success_rate": {"backend": "100%", "frontend": "N/A (skipped per request)"},
+  "retest_needed": false,
+  "full_testing_deferred": true,
+  "notes": "Both issues from iteration_27 (MEDIUM: body schema; LOW: error mapping) are resolved. Backend hot-reload picked up changes without manual restart."
+}

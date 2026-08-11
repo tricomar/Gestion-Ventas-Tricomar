@@ -1,0 +1,41 @@
+{
+  "summary": "Fase 2 Bidirectional Stock Sync backend validation. Tested 4 new endpoints (sync-from-ps, sync-to-ps, resolve-conflict, conflicts) against both PrestaShop integrations (tricomar.cl and tricomarpets.cl). All endpoints exist, authenticate correctly, validate inputs, and return proper structures. Service PrestashopStockSyncService imports/instantiates correctly (verified via live endpoint execution). Multi-tenant isolation confirmed - each integration returns its own shop_url. DB has no products yet, so full E2E product sync flow not exercised, but all edge cases and plumbing validated.",
+  "tested_scope": ["backend", "auth", "integration"],
+  "passed": [
+    "Login as hola@tricomar.cl returns token (field is 'token', not 'access_token')",
+    "GET /api/integrations/prestashop/{tricomar_id}/stock/conflicts -> 200, structure {conflicts:[], total_conflicts:0, integration_id, shop_url:'https://tricomar.cl'}",
+    "GET /api/integrations/prestashop/{tricomarpets_id}/stock/conflicts -> 200, structure with shop_url:'https://tricomarpets.cl' (multi-tenant isolation confirmed)",
+    "GET /stock/conflicts with invalid integration_id -> 404 'Integración no encontrada'",
+    "POST /stock/sync-to-ps with quantity=-5 -> 400 'La cantidad no puede ser negativa'",
+    "POST /stock/sync-to-ps with invalid integration -> 404",
+    "POST /stock/sync-to-ps with non-existent product -> error 'Producto no encontrado'",
+    "POST /stock/resolve-conflict validates integration (404), product existence (404), and custom_quantity",
+    "POST /stock/sync-from-ps -> 200 {success:true, synced_count:0, conflicts_detected:0, errors:[], timestamp} (both with empty body and raw array body)",
+    "Auth required: all endpoints return 403 without Bearer token",
+    "PrestashopStockSyncService imports and instantiates without error (endpoints executing prove this)",
+    "Both PrestaShop integrations (tricomar.cl id=38b5bca6..., tricomarpets.cl id=252d6da9...) reachable and return distinct shop_urls -> multi-tenant OK"
+  ],
+  "failed": [
+    {
+      "area": "POST /stock/sync-to-ps error mapping",
+      "issue": "When product not found, endpoint returns HTTP 500 with detail 'Producto no encontrado' instead of 404. Any non-success result from service is mapped to 500 (line 2877-2878). Business errors like 'Producto no encontrado' or 'Producto no está sincronizado con PrestaShop' should return 404/400.",
+      "evidence": "curl POST sync-to-ps?product_id=nonexistent-prod-999&quantity=10 -> HTTP=500 {\"detail\":\"Producto no encontrado\"}",
+      "priority": "LOW"
+    },
+    {
+      "area": "POST /stock/sync-from-ps body schema",
+      "issue": "product_ids is declared as function param without Body() wrapper, so FastAPI expects raw JSON array [1,2,3] as body. Sending {\"product_ids\":[...]} yields 422 'Input should be a valid list'. Frontend will likely send object form; suggest wrapping in Pydantic BaseModel with product_ids field or Body(embed=True).",
+      "evidence": "curl -d '{\"product_ids\":[999999999]}' -> 422; curl -d '[999999999]' -> 200",
+      "priority": "MEDIUM"
+    }
+  ],
+  "action_items": [
+    "Consider mapping business errors in sync-to-ps to 404/400 instead of blanket 500 (routes/integrations.py line 2877)",
+    "Wrap product_ids in Pydantic model or use Body(embed=True) so frontend can POST {\"product_ids\":[...]} to sync-from-ps",
+    "E2E sync test still pending until at least one product with prestashop_id is present in DB (user should sync SKU TPTRBRO001U first via existing product-sync flow)"
+  ],
+  "success_rate": {"backend": "90%", "frontend": "N/A (skipped per request)"},
+  "retest_needed": false,
+  "full_testing_deferred": true,
+  "notes": "DB confirmed empty of products, so sync loops returned synced_count=0 as expected. Once a product with prestashop_id exists, re-run sync-to-ps and resolve-conflict to validate real PrestaShop XML PUT with id_shop multi-shop fix. Login response uses 'token' key (not 'access_token'). test_credentials.md lists account_id acc_cd0a3e485753 but actual login returns acc_06ca10fb49e1 - minor doc drift, non-blocking."
+}

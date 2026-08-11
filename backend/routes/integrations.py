@@ -2788,11 +2788,16 @@ async def list_sync_reports(
 # FASE 2: SINCRONIZACIÓN BIDIRECCIONAL DE STOCK
 # ============================================================================
 
+class SyncFromPrestashopRequest(BaseModel):
+    """Request para sincronizar stock desde PrestaShop"""
+    product_ids: Optional[List[int]] = None
+
+
 @router.post("/prestashop/{integration_id}/stock/sync-from-ps")
 async def sync_stock_from_prestashop(
     integration_id: str,
-    current_user: User = Depends(get_current_user),
-    product_ids: Optional[List[int]] = None
+    request: SyncFromPrestashopRequest,
+    current_user: User = Depends(get_current_user)
 ):
     """
     Sincronizar stock desde PrestaShop hacia Negocio Feliz (PrestaShop → NF)
@@ -2800,7 +2805,7 @@ async def sync_stock_from_prestashop(
     
     Args:
         integration_id: ID de integración PrestaShop
-        product_ids: Lista de IDs de productos (opcional, None = todos)
+        request.product_ids: Lista de IDs de productos (opcional, None = todos)
     """
     from services.prestashop_stock_service import PrestashopStockSyncService
     
@@ -2821,7 +2826,7 @@ async def sync_stock_from_prestashop(
     result = await stock_service.sync_from_prestashop(
         account_id=current_user.account_id,
         integration_id=integration_id,
-        product_ids=product_ids,
+        product_ids=request.product_ids,
         shop_id=None  # TODO: obtener de integración si es multi-shop
     )
     
@@ -2875,7 +2880,14 @@ async def sync_stock_to_prestashop_v2(
     )
     
     if not result['success']:
-        raise HTTPException(status_code=500, detail=result.get('error', 'Error al sincronizar'))
+        error_msg = result.get('error', 'Error al sincronizar')
+        # Mapear errores de negocio a códigos HTTP apropiados
+        if 'no encontrado' in error_msg.lower() or 'not found' in error_msg.lower():
+            raise HTTPException(status_code=404, detail=error_msg)
+        elif 'no está sincronizado' in error_msg.lower() or 'no existe' in error_msg.lower():
+            raise HTTPException(status_code=400, detail=error_msg)
+        else:
+            raise HTTPException(status_code=500, detail=error_msg)
     
     return result
 
