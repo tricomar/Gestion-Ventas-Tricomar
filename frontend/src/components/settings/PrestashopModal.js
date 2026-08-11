@@ -728,6 +728,21 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
 
             {step === 2 && (
               <div className="space-y-6">
+                {/* Badge de estado de Webhook */}
+                {integration?.webhook_active && (
+                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-600 rounded-xl p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+                      <div>
+                        <h4 className="font-bold text-green-900">Webhook Activo</h4>
+                        <p className="text-sm text-green-800">
+                          Las órdenes y cambios de stock se sincronizan automáticamente en tiempo real desde PrestaShop.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
                 {/* Navegación de etapas - permite volver a etapas anteriores */}
                 {(completedStages.stage1 || completedStages.stage2) && (
                   <div className="bg-slate-100 border-2 border-slate-900 rounded-xl p-4">

@@ -15,6 +15,7 @@ class PrestashopIntegration(BaseModel):
     shop_url: str  # URL de la tienda PrestaShop (ej: https://tricomarpets.cl)
     api_key: str  # API Key encriptada
     is_active: bool = True
+    webhook_active: bool = False  # ✅ Detección de webhook configurado
     last_sync_products: Optional[datetime] = None
     last_sync_categories: Optional[datetime] = None
     last_sync_stock: Optional[datetime] = None
