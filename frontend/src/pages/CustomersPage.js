@@ -448,6 +448,7 @@ const CustomersPage = () => {
               </button>
             </div>
           </div>
+        )}
         </div>
         )}
       </div>
