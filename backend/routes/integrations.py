@@ -2612,7 +2612,8 @@ async def sync_products_batch(
             db=db,
             integration_id=integration_id,
             account_id=current_user.account_id,
-            store_id=store_id
+            store_id=store_id,
+            job_id=job_id  # ✅ Pasar job_id para tracking
         )
         
         try:
@@ -2663,6 +2664,7 @@ async def sync_products_batch(
 @router.get("/prestashop/{integration_id}/sync-progress")
 async def get_sync_progress(
     integration_id: str,
+    job_id: Optional[str] = None,
     current_user: User = Depends(get_current_user)
 ):
     """
@@ -2670,19 +2672,30 @@ async def get_sync_progress(
     
     Args:
         integration_id: ID de la integración
+        job_id: (Opcional) ID específico del job a consultar
     
     Returns:
         Estado actual de la sincronización
     """
-    # Buscar progreso más reciente para esta integración
-    progress = await db.sync_progress.find_one(
-        {
-            'integration_id': integration_id,
-            'account_id': current_user.account_id
-        },
-        {'_id': 0},
-        sort=[('created_at', -1)]
-    )
+    # Si se proporciona job_id, buscar ese job específico
+    if job_id:
+        progress = await db.sync_progress.find_one(
+            {
+                'id': job_id,
+                'account_id': current_user.account_id
+            },
+            {'_id': 0}
+        )
+    else:
+        # Buscar progreso más reciente para esta integración
+        progress = await db.sync_progress.find_one(
+            {
+                'integration_id': integration_id,
+                'account_id': current_user.account_id
+            },
+            {'_id': 0},
+            sort=[('created_at', -1)]
+        )
     
     if not progress:
         return {

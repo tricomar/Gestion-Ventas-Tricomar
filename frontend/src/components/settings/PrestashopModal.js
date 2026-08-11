@@ -425,7 +425,7 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
       const pollInterval = setInterval(async () => {
         try {
           const progressResponse = await axios.get(
-            `${API}/integrations/prestashop/${integrationId}/sync-progress`
+            `${API}/integrations/prestashop/${integrationId}/sync-progress?job_id=${jobId}`
           );
           
           const progress = progressResponse.data;

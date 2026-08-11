@@ -21,12 +21,13 @@ logger.setLevel(logging.INFO)
 class BatchSyncService:
     """Servicio para sincronizar productos en lotes pequeños"""
     
-    def __init__(self, ps_service, db, integration_id: str, account_id: str, store_id: str):
+    def __init__(self, ps_service, db, integration_id: str, account_id: str, store_id: str, job_id: str = None):
         self.ps_service = ps_service
         self.db = db
         self.integration_id = integration_id
         self.account_id = account_id
         self.store_id = store_id
+        self.job_id = job_id  # ✅ Agregar job_id para tracking preciso
         self.sync_log_path = f'/app/sync_reports/sync_{integration_id}_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
         
     async def sync_products_in_batches(
@@ -420,8 +421,11 @@ class BatchSyncService:
     async def _update_sync_progress(self, result: Dict[str, Any]):
         """Actualizar progreso en DB para que el frontend pueda consultarlo"""
         try:
+            # Usar job_id si está disponible, sino integration_id como fallback
+            query_filter = {'id': self.job_id} if self.job_id else {'integration_id': self.integration_id}
+            
             await self.db.sync_progress.update_one(
-                {'integration_id': self.integration_id},
+                query_filter,
                 {
                     '$set': {
                         'integration_id': self.integration_id,
@@ -436,7 +440,7 @@ class BatchSyncService:
                         'updated_at': datetime.now(timezone.utc).isoformat()
                     }
                 },
-                upsert=True
+                upsert=False  # No crear si no existe, debe existir desde el inicio
             )
         except Exception as e:
             logger.error(f"Error actualizando progreso: {e}")
