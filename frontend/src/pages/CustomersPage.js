@@ -265,7 +265,7 @@ const CustomersPage = () => {
             </button>
           </div>
         ) : (
-          <>
+          <div className="relative">
             {/* Barra flotante de acciones masivas */}
             {selectedCustomers.length > 0 && (
               <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4">
@@ -449,6 +449,7 @@ const CustomersPage = () => {
               </button>
             </div>
           </div>
+        </div>
         )}
       </div>
 
