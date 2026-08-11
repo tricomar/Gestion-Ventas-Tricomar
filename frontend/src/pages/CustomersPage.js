@@ -5,6 +5,7 @@ import { Users, Plus, Edit2, Trash2, Eye, Phone, MapPin, TrendingUp, Home, Searc
 import { useNavigate } from 'react-router-dom';
 import CustomerForm from '../components/CustomerForm';
 import CustomerDetailPanel from '../components/CustomerDetailPanel';
+import BulkDeleteConfirmModal from '../components/BulkDeleteConfirmModal';
 import { useSettings } from '../context/SettingsContext';
 import { useStores } from '../hooks/useStores';
 
@@ -22,6 +23,11 @@ const CustomersPage = () => {
   const [filterStore, setFilterStore] = useState('Todas');
   const [showDetailPanel, setShowDetailPanel] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState(null);
+  
+  // Multi-select for bulk delete
+  const [selectedCustomers, setSelectedCustomers] = useState([]);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   // Búsqueda y paginación
   const [searchQuery, setSearchQuery] = useState('');
@@ -99,6 +105,55 @@ const CustomersPage = () => {
   const handleStoreFilter = (storeId) => {
     setFilterStore(storeId);
     setCurrentPage(1); // Resetear a página 1 al cambiar filtro
+  };
+
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      const allIds = customers.map(c => c.id);
+      setSelectedCustomers(allIds);
+    } else {
+      setSelectedCustomers([]);
+    }
+  };
+
+  const handleSelectCustomer = (customerId) => {
+    setSelectedCustomers(prev => {
+      const newSelection = prev.includes(customerId)
+        ? prev.filter(id => id !== customerId)
+        : [...prev, customerId];
+      return newSelection;
+    });
+  };
+
+  const handleOpenDeleteModal = () => {
+    setShowDeleteModal(true);
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedCustomers.length === 0) return;
+
+    setIsDeleting(true);
+    
+    try {
+      await Promise.all(
+        selectedCustomers.map(customerId => 
+          axios.delete(`${API}/customers/${customerId}`)
+        )
+      );
+      
+      toast.success(`✓ ${selectedCustomers.length} cliente${selectedCustomers.length > 1 ? 's eliminados' : ' eliminado'} exitosamente`, {
+        duration: 4000
+      });
+      
+      setSelectedCustomers([]);
+      setShowDeleteModal(false);
+      fetchCustomers();
+    } catch (error) {
+      toast.error('Error al eliminar clientes');
+      console.error('Error deleting customers:', error);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -210,11 +265,53 @@ const CustomersPage = () => {
             </button>
           </div>
         ) : (
-          <div className="bg-white border-2 border-slate-900 rounded-xl overflow-hidden" style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}>
-            <div className="overflow-x-auto">
-              <table className="w-full">
+          <>
+            {/* Barra flotante de acciones masivas */}
+            {selectedCustomers.length > 0 && (
+              <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4">
+                <div 
+                  className="bg-slate-900 text-white border-4 border-white rounded-2xl px-6 py-4 flex items-center gap-6"
+                  style={{ 
+                    boxShadow: '0 10px 40px rgba(0,0,0,0.3), 0 0 0 4px rgba(15,23,42,1)',
+                    minWidth: '400px'
+                  }}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-lime-400 text-slate-900 rounded-full flex items-center justify-center font-black text-lg border-2 border-white">
+                      {selectedCustomers.length}
+                    </div>
+                    <span className="font-bold text-base">
+                      {selectedCustomers.length} cliente{selectedCustomers.length > 1 ? 's' : ''} seleccionado{selectedCustomers.length > 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  
+                  <div className="flex gap-3 ml-auto">
+                    <button
+                      onClick={handleOpenDeleteModal}
+                      className="flex items-center gap-2 px-5 py-2.5 bg-red-500 hover:bg-red-600 rounded-lg font-bold transition-colors border-2 border-white"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Eliminar ({selectedCustomers.length})
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="bg-white border-2 border-slate-900 rounded-xl overflow-hidden" style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}>
+              <div className="overflow-x-auto">
+                <table className="w-full">
                 <thead className="bg-slate-900 text-white">
                   <tr>
+                    <th className="px-4 py-3 text-center" style={{ width: '50px' }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedCustomers.length === customers.length && customers.length > 0}
+                        onChange={handleSelectAll}
+                        className="w-5 h-5 rounded border-2 border-white cursor-pointer"
+                        title="Seleccionar todos"
+                      />
+                    </th>
                     <th className="px-6 py-3 text-left text-xs font-bold uppercase">Cliente</th>
                     <th className="px-6 py-3 text-left text-xs font-bold uppercase">Contacto</th>
                     <th className="px-6 py-3 text-left text-xs font-bold uppercase">Tienda/Caja</th>
@@ -227,6 +324,14 @@ const CustomersPage = () => {
                 <tbody>
                   {customers.map((customer, index) => (
                     <tr key={customer.id} className={`border-t-2 border-slate-200 ${index % 2 === 0 ? 'bg-white' : 'bg-slate-50'}`}>
+                      <td className="px-4 py-4 text-center">
+                        <input
+                          type="checkbox"
+                          checked={selectedCustomers.includes(customer.id)}
+                          onChange={() => handleSelectCustomer(customer.id)}
+                          className="w-5 h-5 rounded border-2 border-slate-900 cursor-pointer"
+                        />
+                      </td>
                       <td className="px-6 py-4">
                         <div className="font-bold text-slate-900">{customer.name}</div>
                         {customer.address && (
@@ -372,6 +477,17 @@ const CustomersPage = () => {
           setSelectedCustomerId(null);
         }}
       />
+
+      {/* Bulk Delete Modal */}
+      {showDeleteModal && (
+        <BulkDeleteConfirmModal
+          itemCount={selectedCustomers.length}
+          itemType="cliente"
+          onConfirm={handleBulkDelete}
+          onCancel={() => setShowDeleteModal(false)}
+          isDeleting={isDeleting}
+        />
+      )}
     </div>
   );
 };
