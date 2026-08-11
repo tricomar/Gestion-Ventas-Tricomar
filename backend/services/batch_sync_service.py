@@ -75,19 +75,22 @@ class BatchSyncService:
             categories_map = await self._load_categories()
             logger.info(f"Pre-carga completa: {len(manufacturers_map)} marcas, {len(categories_map)} categorías")
             
-            # 2. Determinar total de productos disponibles
-            first_batch = self.ps_service.get_products(limit=1, offset=0)
-            if not first_batch:
+            # 2. Contar productos REALES sin límite
+            logger.info("Contando productos totales en PrestaShop...")
+            total_available = await self._count_all_products_reliable(batch_size)
+            
+            if total_available == 0:
                 result['status'] = 'completed'
                 result['message'] = 'No hay productos disponibles en PrestaShop'
                 return result
             
-            # Estimar total (PrestaShop no da el total exactamente, así que iteramos)
-            logger.info("Calculando total de productos disponibles...")
-            total_available = await self._count_available_products(batch_size)
+            logger.info(f"✓ Total de productos detectados en PrestaShop: {total_available}")
             
+            # Aplicar límite si existe
             if max_products:
                 total_to_sync = min(total_available, max_products)
+                if total_to_sync < total_available:
+                    logger.info(f"⚠️  Límite aplicado: se sincronizarán {total_to_sync} de {total_available} productos")
             else:
                 total_to_sync = total_available
             
@@ -95,8 +98,11 @@ class BatchSyncService:
             
             result['total_products'] = total_to_sync
             result['total_batches'] = total_batches
+            result['products_updated'] = 0  # Nuevos campos para tracking
+            result['products_created'] = 0
+            result['products_skipped'] = 0
             
-            logger.info(f"Total productos a sincronizar: {total_to_sync} en {total_batches} lotes")
+            logger.info(f"📦 Iniciando sincronización: {total_to_sync} productos en {total_batches} lotes de {batch_size}")
             
             # 3. Sincronizar por lotes usando filtro por ID (más confiable que offset)
             last_id = 0
@@ -132,6 +138,14 @@ class BatchSyncService:
                             
                             if sync_result['success']:
                                 result['synced_products'] += 1
+                                
+                                # Contabilizar tipo de operación
+                                if sync_result.get('is_skipped'):
+                                    result['products_skipped'] += 1
+                                elif sync_result.get('is_update'):
+                                    result['products_updated'] += 1
+                                else:
+                                    result['products_created'] += 1
                             else:
                                 result['failed_products'] += 1
                                 result['errors'].append(sync_result['error'])
@@ -180,16 +194,43 @@ class BatchSyncService:
                     if batch_products:
                         last_id = max(int(p.get('id', last_id)) for p in batch_products)
             
-            # 4. Finalizar
+            # 4. Finalizar y generar mensaje detallado
             end_time = datetime.now(timezone.utc)
             result['end_time'] = end_time.isoformat()
-            result['duration_seconds'] = (end_time - start_time).total_seconds()
+            duration_seconds = (end_time - start_time).total_seconds()
+            result['duration_seconds'] = duration_seconds
             result['status'] = 'completed'
+            result['progress_percentage'] = 100
+            result['total_available'] = total_available
+            
+            # Comparación con total esperado
+            total_processed = result['synced_products'] + result['failed_products']
+            completeness_pct = (total_processed / total_to_sync * 100) if total_to_sync > 0 else 0
+            
+            # Mensaje final detallado
+            message_parts = [
+                f"✓ Sincronización completada en {duration_seconds:.1f}s",
+                f"📊 Total procesado: {total_processed}/{total_to_sync} ({completeness_pct:.1f}%)",
+                f"✨ Creados: {result['products_created']}",
+                f"🔄 Actualizados: {result['products_updated']}",
+                f"⏩ Omitidos: {result['products_skipped']}",
+                f"❌ Fallidos: {result['failed_products']}"
+            ]
+            
+            if total_processed < total_to_sync:
+                message_parts.append(f"⚠️  Faltan {total_to_sync - total_processed} productos")
+            
+            if total_available > total_to_sync:
+                message_parts.append(f"ℹ️  Total disponible: {total_available}")
+            
+            result['message'] = " | ".join(message_parts)
+            
+            logger.info("="*80)
+            logger.info(result['message'])
+            logger.info("="*80)
             
             # 5. Generar reporte
             await self._generate_report(result)
-            
-            logger.info(f"Sincronización completada: {result['synced_products']} exitosos, {result['failed_products']} fallidos")
             
             return result
             
@@ -226,43 +267,68 @@ class BatchSyncService:
             logger.error(f"Error cargando categorías: {e}")
         return categories_map
     
-    async def _count_available_products(self, batch_size: int) -> int:
-        """Contar productos disponibles en PrestaShop usando filtro por ID"""
+    async def _count_all_products_reliable(self, batch_size: int) -> int:
+        """
+        Contar TODOS los productos disponibles de forma confiable
+        Hace requests reales hasta obtener el conteo exacto
+        """
         try:
-            logger.info("Consultando total de productos en PrestaShop...")
+            logger.info("🔍 Contando productos (método confiable)...")
             
-            # PrestaShop limita a ~1000 con offset, usar filtro por ID
-            count = 0
+            all_product_ids = set()
             last_id = 0
-            max_iterations = 100  # Protección contra loops infinitos
+            consecutive_empty = 0
+            max_empty_batches = 3  # Detener después de 3 lotes vacíos consecutivos
             
-            for i in range(max_iterations):
-                # Usar get_products_by_id_range que filtra por ID
-                batch = self.ps_service.get_products_by_id_range(
-                    min_id=last_id,
-                    limit=batch_size
-                )
-                
-                if not batch or len(batch) == 0:
-                    break
+            # Estrategia: obtener todos los IDs de productos hasta que no queden más
+            while consecutive_empty < max_empty_batches:
+                try:
+                    # Solicitar lote con solo IDs (más rápido)
+                    batch = self.ps_service.get_products_by_id_range(
+                        min_id=last_id,
+                        limit=batch_size,
+                        display='[id]'  # Solo IDs para rapidez
+                    )
                     
-                count += len(batch)
+                    if not batch or len(batch) == 0:
+                        consecutive_empty += 1
+                        logger.info(f"Lote vacío ({consecutive_empty}/{max_empty_batches})")
+                        # Intentar saltar IDs (pueden haber gaps)
+                        last_id += batch_size
+                        continue
+                    
+                    # Resetear contador de lotes vacíos
+                    consecutive_empty = 0
+                    
+                    # Agregar IDs únicos
+                    for prod in batch:
+                        prod_id = int(prod.get('id', 0))
+                        if prod_id > 0:
+                            all_product_ids.add(prod_id)
+                    
+                    # Actualizar último ID
+                    last_id = max(int(p.get('id', 0)) for p in batch)
+                    
+                    logger.info(f"  → {len(all_product_ids)} IDs únicos encontrados (último ID: {last_id})")
+                    
+                    # Si recibimos menos del batch_size, probablemente llegamos al final
+                    if len(batch) < batch_size:
+                        logger.info(f"  → Lote incompleto ({len(batch)}<{batch_size}), verificando...")
+                        # Hacer una última verificación
+                        last_id += 1
                 
-                # Obtener el último ID del batch
-                last_id = max(int(p.get('id', 0)) for p in batch)
-                
-                logger.info(f"Conteo parcial: {count} productos (último ID: {last_id})")
-                
-                # Si recibimos menos del batch_size, llegamos al final
-                if len(batch) < batch_size:
+                except Exception as e:
+                    logger.error(f"Error en conteo batch: {e}")
                     break
             
-            logger.info(f"Total de productos detectados en PrestaShop: {count}")
-            return count
+            total_count = len(all_product_ids)
+            logger.info(f"✓ Conteo completo: {total_count} productos únicos detectados")
+            
+            return total_count
             
         except Exception as e:
-            logger.error(f"Error contando productos: {e}")
-            return batch_size * 10  # Fallback conservador
+            logger.error(f"Error en conteo confiable: {e}")
+            return 0
     
     async def _sync_single_product(
         self,
@@ -373,18 +439,47 @@ class BatchSyncService:
                 'combinations': combinations if combinations else []
             }
             
-            # Buscar producto existente
-            local_product = await self.db.products.find_one(
-                {'sku': sku, 'account_id': self.account_id},
+            # Buscar producto existente por prestashop_id (más confiable que SKU)
+            existing_product = await self.db.products.find_one(
+                {
+                    'prestashop_id': prod_id,
+                    'prestashop_integration_id': self.integration_id,
+                    'account_id': self.account_id
+                },
                 {'_id': 0}
             )
             
-            if local_product:
-                await self.db.products.update_one(
-                    {'sku': sku, 'account_id': self.account_id},
-                    {'$set': product_data}
+            is_update = False
+            is_skipped = False
+            
+            if existing_product:
+                # Verificar si hay cambios reales (comparar campos clave)
+                has_changes = (
+                    existing_product.get('name') != name or
+                    existing_product.get('sale_price') != sale_price or
+                    existing_product.get('stock') != stock_quantity or
+                    existing_product.get('ecommerce_active') != ecommerce_active or
+                    existing_product.get('brand') != brand or
+                    existing_product.get('category') != category
                 )
+                
+                if has_changes:
+                    # Actualizar producto existente
+                    product_data['updated_at'] = datetime.now(timezone.utc).isoformat()
+                    await self.db.products.update_one(
+                        {
+                            'prestashop_id': prod_id,
+                            'prestashop_integration_id': self.integration_id,
+                            'account_id': self.account_id
+                        },
+                        {'$set': product_data}
+                    )
+                    is_update = True
+                else:
+                    # Sin cambios, omitir
+                    is_skipped = True
             else:
+                # Crear nuevo producto
                 product_data['id'] = str(uuid4())
                 product_data['created_at'] = datetime.now(timezone.utc).isoformat()
                 await self.db.products.insert_one(product_data)
@@ -392,7 +487,9 @@ class BatchSyncService:
             return {
                 'success': True,
                 'product_id': prod_id,
-                'incomplete_fields': incomplete_fields
+                'incomplete_fields': incomplete_fields,
+                'is_update': is_update,
+                'is_skipped': is_skipped
             }
             
         except Exception as e:

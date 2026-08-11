@@ -452,8 +452,21 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
             clearInterval(pollInterval);
             setBatchSyncing(false);
             
-            const message = `✓ Sincronización completada: ${progress.synced_products} productos sincronizados`;
-            toast.success(message, { duration: 5000 });
+            // Mensaje detallado con estadísticas
+            const stats = [
+              `✓ ${progress.synced_products} productos`,
+              progress.products_created > 0 ? `✨ ${progress.products_created} nuevos` : null,
+              progress.products_updated > 0 ? `🔄 ${progress.products_updated} actualizados` : null,
+              progress.products_skipped > 0 ? `⏩ ${progress.products_skipped} sin cambios` : null,
+              progress.failed_products > 0 ? `❌ ${progress.failed_products} fallidos` : null
+            ].filter(Boolean).join(' | ');
+            
+            // Comparar con total disponible
+            const completeness = progress.total_available && progress.total_available > progress.synced_products
+              ? `\n⚠️  Nota: ${progress.total_available} productos disponibles en PrestaShop`
+              : '';
+            
+            toast.success(`Sincronización completada\n${stats}${completeness}`, { duration: 8000 });
             
             // Marcar etapa 2 como completada
             setCompletedStages(prev => ({ ...prev, stage2: true }));
