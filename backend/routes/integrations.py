@@ -8,6 +8,7 @@ from datetime import datetime, timezone, timedelta
 from uuid import uuid4
 from pydantic import BaseModel
 import asyncio
+import logging
 
 from models.integrations import (
     PrestashopIntegration,
@@ -24,6 +25,7 @@ from utils import db, get_current_user
 from models.users import User
 
 router = APIRouter(prefix="/integrations", tags=["integrations"])
+logger = logging.getLogger(__name__)
 
 
 class PrestashopConnectRequest(BaseModel):
@@ -1369,7 +1371,18 @@ async def sync_images_resource(ps_service, integration_id: str, account_id: str)
 
 
 async def sync_orders_resource(ps_service, integration_id: str, account_id: str, store_code: str, store_id: str = None) -> int:
-    """Sincronizar órdenes/pedidos"""
+    """Sincronizar órdenes/pedidos - solo si hay productos sincronizados"""
+    
+    # ✅ VALIDACIÓN: Verificar que hay productos sincronizados antes de sincronizar órdenes
+    products_count = await db.products.count_documents({
+        'account_id': account_id,
+        'prestashop_integration_id': integration_id
+    })
+    
+    if products_count == 0:
+        logger.warning(f"No se pueden sincronizar órdenes sin productos sincronizados. Integration: {integration_id}")
+        return 0  # Retornar 0, no sincronizar órdenes
+    
     ps_orders = ps_service.get_orders(limit=500)
     synced_count = 0
     
@@ -2227,6 +2240,8 @@ async def clear_integration_data(
     counts = {
         'orders': await db.ecommerce_orders.count_documents({'integration_id': integration_id, 'account_id': current_user.account_id}),
         'customers': await db.ecommerce_customers.count_documents({'integration_id': integration_id, 'account_id': current_user.account_id}),
+        'local_customers': await db.customers.count_documents({'prestashop_integration_id': integration_id, 'account_id': current_user.account_id}),
+        'local_orders': await db.orders.count_documents({'prestashop_integration_id': integration_id, 'account_id': current_user.account_id}),
         'carts': await db.ecommerce_carts.count_documents({'integration_id': integration_id, 'account_id': current_user.account_id}),
         'prestashop_products': await db.prestashop_products.count_documents({'integration_id': integration_id, 'account_id': current_user.account_id}),
         'prestashop_categories': await db.prestashop_categories.count_documents({'integration_id': integration_id, 'account_id': current_user.account_id}),
@@ -2250,6 +2265,12 @@ async def clear_integration_data(
     
     # ✅ Borrar categorías locales que fueron sincronizadas
     await db.categories.delete_many({'integration_id': integration_id, 'account_id': current_user.account_id})
+    
+    # ✅ Borrar clientes locales que fueron sincronizados desde PrestaShop
+    await db.customers.delete_many({'prestashop_integration_id': integration_id, 'account_id': current_user.account_id})
+    
+    # ✅ Borrar órdenes locales que fueron sincronizadas desde PrestaShop
+    await db.orders.delete_many({'prestashop_integration_id': integration_id, 'account_id': current_user.account_id})
     
     # Registrar acción en logs
     log = {
