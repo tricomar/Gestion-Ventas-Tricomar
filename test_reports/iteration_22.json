@@ -1,0 +1,20 @@
+{
+  "summary": "Frontend testing blocked: CustomersPage.js has a JSX compilation error preventing the entire app from rendering. The bulk-delete feature could NOT be tested because the module fails to build. User's claim that the JSX compile error was fixed is incorrect — it is still broken.",
+  "tested_scope": ["frontend"],
+  "passed": [],
+  "failed": [
+    {
+      "area": "Frontend build - CustomersPage.js",
+      "issue": "SyntaxError: Adjacent JSX elements must be wrapped in an enclosing tag. Did you want a JSX fragment <>...</>? at CustomersPage.js:452:8. Also related earlier error: 'Expected corresponding JSX closing tag for <>. (436:6)'. The closing </div> tags between lines 450-455 do not match the opening tags. Structure around lines 450-455: `</div>` x4 followed by `)}` and another `</div>` — one or more closing tags are misplaced/extra so React fails to compile.",
+      "evidence": "Webpack dev overlay shown on every route: 'Compiled with problems: ERROR in ./src/pages/CustomersPage.js — Adjacent JSX elements must be wrapped in an enclosing tag (452:8)'. Login page cannot load because the overlay blocks the app; input[type=email] not reachable, test timed out. Screenshot captured of the overlay.",
+      "priority": "HIGH"
+    }
+  ],
+  "action_items": [
+    "Fix JSX structure in /app/frontend/src/pages/CustomersPage.js around lines 450-455. Balance the opening/closing div tags of the pagination/table/list-wrapper blocks. Recommend re-indenting the JSX inside the `else` branch (lines 267-455) so opening and closing tags line up, then remove the extra </div> (line 452 or 453) that is causing the adjacent-JSX error.",
+    "After fix: reload / (dev server) and re-run this test suite to validate: (a) checkbox 'select all', (b) individual checkbox toggle, (c) floating bar shows N seleccionado(s), (d) 'Eliminar (X)' opens BulkDeleteConfirmModal, (e) Cancelar closes modal preserving selection, (f) Confirmar deletes and refreshes table + clears selection."
+  ],
+  "success_rate": {"backend": "not tested", "frontend": "0%"},
+  "retest_needed": true,
+  "full_testing_deferred": true
+}

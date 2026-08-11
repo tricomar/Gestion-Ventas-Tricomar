@@ -265,10 +265,10 @@ const CustomersPage = () => {
             </button>
           </div>
         ) : (
-          <div className="relative">
+          <div>
             {/* Barra flotante de acciones masivas */}
             {selectedCustomers.length > 0 && (
-              <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4">
+              <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-50">
                 <div 
                   className="bg-slate-900 text-white border-4 border-white rounded-2xl px-6 py-4 flex items-center gap-6"
                   style={{ 
