@@ -1,0 +1,44 @@
+{
+  "summary": "Compilation now clean (JSX error fixed). All requested data-testid attributes are present and functional. Bulk selection flow works end-to-end: select-all + individual checkboxes toggle selection, floating action bar appears/disappears correctly, counter reflects the exact count (1 -> 30), 'Eliminar (30)' button opens the confirmation modal. However, the confirmation modal has TWO functional/copy bugs (see failed[]). Actual deletion was NOT executed to avoid destroying 30 real customer records.",
+  "tested_scope": ["frontend", "integration"],
+  "passed": [
+    "CustomersPage.js compiles with 0 errors (only a benign eslint useEffect-deps warning)",
+    "Login with hola@tricomar.cl works and redirects to /dashboard",
+    "Navigation to /customers renders the Gestión de Clientes page (391 total clients loaded)",
+    "data-testid=customers-select-all-checkbox present and toggles selection of all 30 visible rows",
+    "data-testid=customer-checkbox-{id} present on all 30 rows and toggles individual selection",
+    "data-testid=customers-floating-action-bar hidden with 0 selection, becomes visible after selecting >=1 row",
+    "data-testid=customers-selection-counter shows correct count (verified: '1' after single click, '30' after select-all)",
+    "data-testid=customers-bulk-delete-button label reads 'Eliminar (30)' and is clickable",
+    "BulkDeleteConfirmModal renders on top of the page with title 'Confirmar Eliminación' and defensive 'Escribe eliminar para confirmar' input"
+  ],
+  "failed": [
+    {
+      "area": "BulkDeleteConfirmModal - confirm button label",
+      "issue": "The primary action button inside the modal renders as 'Eliminar undefined' instead of 'Eliminar (30)'. A prop (likely itemCount / count / selectedCount) is not being passed from CustomersPage.js to BulkDeleteConfirmModal, so template renders `undefined`.",
+      "evidence": "Screenshot /app/test_reports/modal.png: button text = 'Eliminar undefined'. Outer button text on the page is correct ('Eliminar (30)') so the count exists in parent state — the prop name mismatch is in the modal invocation at CustomersPage.js lines ~490-498.",
+      "priority": "HIGH"
+    },
+    {
+      "area": "BulkDeleteConfirmModal - copy / item list",
+      "issue": "Modal shows 'Productos a eliminar:' (products) instead of 'Clientes a eliminar:' on the Customers page, and the list area below that heading is empty (no customer names are listed). The component is being reused from a Products deletion flow without customising the label/items props.",
+      "evidence": "Screenshot /app/test_reports/modal.png shows the empty red panel labelled 'Productos a eliminar:' with a trash icon and no items.",
+      "priority": "MEDIUM"
+    },
+    {
+      "area": "BulkDeleteConfirmModal - accessibility",
+      "issue": "Modal container is a plain div (class='fixed inset-0 z-50 ...') with no role='dialog'/role='alertdialog' and no aria-modal. This makes it invisible to role-based queries and screen readers. Also the backdrop div intercepts pointer events (surfaced during automation), which is expected but the modal itself should be marked as a dialog.",
+      "evidence": "page.query_selector('[role=\"dialog\"], [role=\"alertdialog\"]') returned null even though the modal is visually rendered. Playwright reported '<div class=\"fixed inset-0 bg-black/50 backdrop-blur-sm\"></div> subtree intercepts pointer events'.",
+      "priority": "LOW"
+    }
+  ],
+  "action_items": [
+    "Fix modal button label: in CustomersPage.js where <BulkDeleteConfirmModal .../> is rendered (~lines 490-498), pass the selected count using the exact prop name the modal expects (e.g. itemCount={selectedCustomers.length} or count={...}). Verify by opening the modal and confirming it reads 'Eliminar (N)'.",
+    "Fix copy: either (a) pass a title/itemLabel prop like itemLabel='Clientes' so BulkDeleteConfirmModal renders 'Clientes a eliminar:', or (b) pass the actual list of selected customer names as an `items` prop and ensure the modal maps them.",
+    "Add role='alertdialog' and aria-modal='true' to the modal wrapper in /app/frontend/src/components/BulkDeleteConfirmModal.js for a11y and stable automated testing.",
+    "Actual deletion, success toast and table reload were NOT exercised because the modal is currently broken (undefined label + empty item list) and completing the destructive typed confirmation on 30 real customers is unsafe. Re-test end-to-end after the two fixes above."
+  ],
+  "success_rate": {"backend": "not tested (skip per request)", "frontend": "9 of 12 requested behaviors verified (75%); 3 behaviors blocked by modal bugs"},
+  "retest_needed": true,
+  "full_testing_deferred": true
+}

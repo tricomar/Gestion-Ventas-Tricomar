@@ -268,7 +268,10 @@ const CustomersPage = () => {
           <div>
             {/* Barra flotante de acciones masivas */}
             {selectedCustomers.length > 0 && (
-              <div className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-50">
+              <div 
+                className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-50"
+                data-testid="customers-floating-action-bar"
+              >
                 <div 
                   className="bg-slate-900 text-white border-4 border-white rounded-2xl px-6 py-4 flex items-center gap-6"
                   style={{ 
@@ -277,7 +280,10 @@ const CustomersPage = () => {
                   }}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-lime-400 text-slate-900 rounded-full flex items-center justify-center font-black text-lg border-2 border-white">
+                    <div 
+                      className="w-10 h-10 bg-lime-400 text-slate-900 rounded-full flex items-center justify-center font-black text-lg border-2 border-white"
+                      data-testid="customers-selection-counter"
+                    >
                       {selectedCustomers.length}
                     </div>
                     <span className="font-bold text-base">
@@ -289,6 +295,7 @@ const CustomersPage = () => {
                     <button
                       onClick={handleOpenDeleteModal}
                       className="flex items-center gap-2 px-5 py-2.5 bg-red-500 hover:bg-red-600 rounded-lg font-bold transition-colors border-2 border-white"
+                      data-testid="customers-bulk-delete-button"
                     >
                       <Trash2 className="w-4 h-4" />
                       Eliminar ({selectedCustomers.length})
@@ -310,6 +317,7 @@ const CustomersPage = () => {
                         onChange={handleSelectAll}
                         className="w-5 h-5 rounded border-2 border-white cursor-pointer"
                         title="Seleccionar todos"
+                        data-testid="customers-select-all-checkbox"
                       />
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-bold uppercase">Cliente</th>
@@ -330,6 +338,7 @@ const CustomersPage = () => {
                           checked={selectedCustomers.includes(customer.id)}
                           onChange={() => handleSelectCustomer(customer.id)}
                           className="w-5 h-5 rounded border-2 border-slate-900 cursor-pointer"
+                          data-testid={`customer-checkbox-${customer.id}`}
                         />
                       </td>
                       <td className="px-6 py-4">
