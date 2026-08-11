@@ -405,7 +405,6 @@ const CustomersPage = () => {
               </table>
             </div>
           </div>
-        )}
         
         {/* Paginación */}
         {!loading && customers.length > 0 && (
