@@ -98,8 +98,8 @@ class BatchSyncService:
             
             logger.info(f"Total productos a sincronizar: {total_to_sync} en {total_batches} lotes")
             
-            # 3. Sincronizar por lotes
-            offset = 0
+            # 3. Sincronizar por lotes usando filtro por ID (más confiable que offset)
+            last_id = 0
             batch_num = 0
             
             while result['synced_products'] + result['failed_products'] < total_to_sync:
@@ -109,14 +109,17 @@ class BatchSyncService:
                 logger.info(f"=== LOTE {batch_num}/{total_batches} ===")
                 
                 try:
-                    # Obtener lote de productos
-                    batch_products = self.ps_service.get_products(limit=batch_size, offset=offset)
+                    # Obtener lote de productos usando filtro por ID
+                    batch_products = self.ps_service.get_products_by_id_range(
+                        min_id=last_id,
+                        limit=batch_size
+                    )
                     
                     if not batch_products:
                         logger.info("No hay más productos disponibles")
                         break
                     
-                    logger.info(f"Obtenidos {len(batch_products)} productos en este lote")
+                    logger.info(f"Obtenidos {len(batch_products)} productos en este lote (desde ID > {last_id})")
                     
                     # Procesar cada producto del lote
                     for ps_prod in batch_products:
@@ -157,12 +160,15 @@ class BatchSyncService:
                     # Actualizar estado en DB (para que el frontend pueda consultarlo)
                     await self._update_sync_progress(result)
                     
+                    # Actualizar last_id para el siguiente lote
+                    if batch_products:
+                        last_id = max(int(p.get('id', 0)) for p in batch_products)
+                        logger.info(f"Último ID procesado: {last_id}")
+                    
                     # Pausa entre lotes para no sobrecargar PrestaShop
                     if batch_num < total_batches:
                         logger.info(f"Pausa de {pause_seconds}s antes del siguiente lote...")
                         await asyncio.sleep(pause_seconds)
-                    
-                    offset += len(batch_products)
                     
                 except Exception as e:
                     logger.error(f"Error en lote {batch_num}: {e}")
@@ -170,8 +176,9 @@ class BatchSyncService:
                         'batch': batch_num,
                         'error': str(e)
                     })
-                    # Continuar con el siguiente lote
-                    offset += batch_size
+                    # Continuar con el siguiente lote incrementando last_id
+                    if batch_products:
+                        last_id = max(int(p.get('id', last_id)) for p in batch_products)
             
             # 4. Finalizar
             end_time = datetime.now(timezone.utc)
@@ -220,42 +227,42 @@ class BatchSyncService:
         return categories_map
     
     async def _count_available_products(self, batch_size: int) -> int:
-        """Contar productos disponibles en PrestaShop consultando el total real"""
+        """Contar productos disponibles en PrestaShop usando filtro por ID"""
         try:
-            # PrestaShop puede devolver el total en el primer request con limit=1
-            # usando el parámetro display=[id] para minimizar datos
             logger.info("Consultando total de productos en PrestaShop...")
             
-            # Intentar obtener el conteo real de la API
-            # PrestaShop devuelve headers con información de paginación
-            first_request = self.ps_service.get_products(limit=1, offset=0)
-            
-            # Si la API tiene soporte para contar, usar eso
-            # De lo contrario, hacer requests incrementales hasta encontrar el límite
+            # PrestaShop limita a ~1000 con offset, usar filtro por ID
             count = 0
-            offset = 0
+            last_id = 0
             max_iterations = 100  # Protección contra loops infinitos
             
             for i in range(max_iterations):
-                batch = self.ps_service.get_products(limit=batch_size, offset=offset)
+                # Usar get_products_by_id_range que filtra por ID
+                batch = self.ps_service.get_products_by_id_range(
+                    min_id=last_id,
+                    limit=batch_size
+                )
+                
                 if not batch or len(batch) == 0:
                     break
                     
                 count += len(batch)
                 
+                # Obtener el último ID del batch
+                last_id = max(int(p.get('id', 0)) for p in batch)
+                
+                logger.info(f"Conteo parcial: {count} productos (último ID: {last_id})")
+                
                 # Si recibimos menos del batch_size, llegamos al final
                 if len(batch) < batch_size:
                     break
-                    
-                offset += batch_size
             
             logger.info(f"Total de productos detectados en PrestaShop: {count}")
             return count
             
         except Exception as e:
             logger.error(f"Error contando productos: {e}")
-            # Fallback conservador
-            return batch_size * 10
+            return batch_size * 10  # Fallback conservador
     
     async def _sync_single_product(
         self,
