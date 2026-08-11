@@ -212,10 +212,22 @@ async def list_prestashop_integrations(current_user: User = Depends(get_current_
     """
     Listar todas las integraciones de PrestaShop
     """
-    integrations = await db.prestashop_integrations.find(
+    docs = await db.prestashop_integrations.find(
         get_tenant_filter(current_user.dict(), {}),
         {'_id': 0, 'api_key': 0}  # No devolver API key
     ).to_list(100)
+    
+    # Hidratar con modelo Pydantic para aplicar defaults
+    integrations = []
+    for doc in docs:
+        try:
+            # Validar y serializar con modelo para obtener defaults
+            integration_obj = PrestashopIntegration(**doc)
+            integration_dict = integration_obj.dict(exclude={'api_key'})
+            integrations.append(integration_dict)
+        except Exception as e:
+            # Si falla validación, devolver doc tal cual (sin api_key ya excluida)
+            integrations.append(doc)
     
     return integrations
 
@@ -1688,6 +1700,15 @@ async def receive_webhook(
     }
     await db.webhook_events.insert_one(webhook_log)
     
+    # Marcar webhook_active=True al recibir primer evento real
+    # (Los eventos de prueba tienen 'test': True en data)
+    is_test_event = event.data and event.data.get('test', False) if event.data else False
+    if not is_test_event:
+        await db.prestashop_integrations.update_one(
+            {'id': integration_id},
+            {'$set': {'webhook_active': True, 'last_webhook_at': datetime.now(timezone.utc).isoformat()}}
+        )
+    
     # Procesar webhook en background
     background_tasks.add_task(
         process_webhook_background,
@@ -2761,3 +2782,290 @@ async def list_sync_reports(
     ).sort('created_at', -1).limit(limit).to_list(limit)
     
     return reports
+
+
+# ============================================================================
+# FASE 2: SINCRONIZACIÓN BIDIRECCIONAL DE STOCK
+# ============================================================================
+
+@router.post("/prestashop/{integration_id}/stock/sync-from-ps")
+async def sync_stock_from_prestashop(
+    integration_id: str,
+    current_user: User = Depends(get_current_user),
+    product_ids: Optional[List[int]] = None
+):
+    """
+    Sincronizar stock desde PrestaShop hacia Negocio Feliz (PrestaShop → NF)
+    Soporta productos simples y combinaciones
+    
+    Args:
+        integration_id: ID de integración PrestaShop
+        product_ids: Lista de IDs de productos (opcional, None = todos)
+    """
+    from services.prestashop_stock_service import PrestashopStockSyncService
+    
+    # Obtener integración
+    integration = await db.prestashop_integrations.find_one(
+        get_tenant_filter(current_user.dict(), {'id': integration_id}),
+        {'_id': 0}
+    )
+    
+    if not integration:
+        raise HTTPException(status_code=404, detail="Integración no encontrada")
+    
+    # Crear servicios
+    ps_service = PrestashopAPIService(integration['shop_url'], integration['api_key'])
+    stock_service = PrestashopStockSyncService(ps_service)
+    
+    # Ejecutar sincronización
+    result = await stock_service.sync_from_prestashop(
+        account_id=current_user.account_id,
+        integration_id=integration_id,
+        product_ids=product_ids,
+        shop_id=None  # TODO: obtener de integración si es multi-shop
+    )
+    
+    return result
+
+
+@router.post("/prestashop/{integration_id}/stock/sync-to-ps")
+async def sync_stock_to_prestashop_v2(
+    integration_id: str,
+    product_id: str,
+    quantity: int,
+    source: str = 'manual',
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Sincronizar stock desde Negocio Feliz hacia PrestaShop (NF → PrestaShop)
+    
+    Args:
+        integration_id: ID de integración PrestaShop
+        product_id: ID del producto local
+        quantity: Nueva cantidad de stock
+        source: Origen del cambio (pos, manual, sync_manual)
+    """
+    from services.prestashop_stock_service import PrestashopStockSyncService
+    
+    # Validar cantidad
+    if quantity < 0:
+        raise HTTPException(status_code=400, detail="La cantidad no puede ser negativa")
+    
+    # Obtener integración
+    integration = await db.prestashop_integrations.find_one(
+        get_tenant_filter(current_user.dict(), {'id': integration_id}),
+        {'_id': 0}
+    )
+    
+    if not integration:
+        raise HTTPException(status_code=404, detail="Integración no encontrada")
+    
+    # Crear servicios
+    ps_service = PrestashopAPIService(integration['shop_url'], integration['api_key'])
+    stock_service = PrestashopStockSyncService(ps_service)
+    
+    # Ejecutar sincronización
+    result = await stock_service.sync_to_prestashop(
+        account_id=current_user.account_id,
+        integration_id=integration_id,
+        product_id=product_id,
+        new_quantity=quantity,
+        source=source,
+        shop_id=None  # TODO: obtener de integración si es multi-shop
+    )
+    
+    if not result['success']:
+        raise HTTPException(status_code=500, detail=result.get('error', 'Error al sincronizar'))
+    
+    return result
+
+
+class StockConflictResolution(BaseModel):
+    """Resolución de conflicto de stock"""
+    integration_id: str
+    product_id: str
+    resolution: str  # 'use_local' | 'use_prestashop' | 'use_custom'
+    custom_quantity: Optional[int] = None
+
+
+@router.post("/prestashop/stock/resolve-conflict")
+async def resolve_stock_conflict(
+    resolution: StockConflictResolution,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Resolver conflicto de stock entre Negocio Feliz y PrestaShop
+    
+    Según requisitos del usuario: mostrar advertencia y dejar que usuario decida
+    """
+    from services.prestashop_stock_service import PrestashopStockSyncService
+    
+    # Obtener integración
+    integration = await db.prestashop_integrations.find_one(
+        get_tenant_filter(current_user.dict(), {'id': resolution.integration_id}),
+        {'_id': 0}
+    )
+    
+    if not integration:
+        raise HTTPException(status_code=404, detail="Integración no encontrada")
+    
+    # Obtener producto local
+    product = await db.products.find_one({
+        'account_id': current_user.account_id,
+        'id': resolution.product_id
+    }, {'_id': 0})
+    
+    if not product:
+        raise HTTPException(status_code=404, detail="Producto no encontrado")
+    
+    # Crear servicios
+    ps_service = PrestashopAPIService(integration['shop_url'], integration['api_key'])
+    stock_service = PrestashopStockSyncService(ps_service)
+    
+    # Determinar cantidad final según resolución
+    final_quantity = None
+    
+    if resolution.resolution == 'use_local':
+        final_quantity = product.get('stock', 0)
+        # Sincronizar hacia PrestaShop
+        result = await stock_service.sync_to_prestashop(
+            account_id=current_user.account_id,
+            integration_id=resolution.integration_id,
+            product_id=resolution.product_id,
+            new_quantity=final_quantity,
+            source='conflict_resolution_local'
+        )
+        
+    elif resolution.resolution == 'use_prestashop':
+        # Obtener stock de PrestaShop
+        ps_product_id = product.get('prestashop_id')
+        if not ps_product_id:
+            raise HTTPException(status_code=400, detail="Producto no vinculado con PrestaShop")
+        
+        stock_mapping = await stock_service.get_product_stock_mapping(
+            product_id=ps_product_id,
+            shop_id=None
+        )
+        
+        if 0 in stock_mapping:
+            final_quantity = stock_mapping[0]['quantity']
+            # Actualizar local
+            await db.products.update_one(
+                {'account_id': current_user.account_id, 'id': resolution.product_id},
+                {'$set': {
+                    'stock': final_quantity,
+                    'last_stock_sync': datetime.now(timezone.utc).isoformat(),
+                    'stock_sync_source': 'conflict_resolution_prestashop'
+                }}
+            )
+            result = {'success': True, 'message': 'Stock actualizado desde PrestaShop'}
+        else:
+            raise HTTPException(status_code=404, detail="Stock no encontrado en PrestaShop")
+            
+    elif resolution.resolution == 'use_custom':
+        if resolution.custom_quantity is None or resolution.custom_quantity < 0:
+            raise HTTPException(status_code=400, detail="Cantidad personalizada inválida")
+        
+        final_quantity = resolution.custom_quantity
+        
+        # Actualizar ambos lados
+        # 1. Actualizar local
+        await db.products.update_one(
+            {'account_id': current_user.account_id, 'id': resolution.product_id},
+            {'$set': {
+                'stock': final_quantity,
+                'last_stock_sync': datetime.now(timezone.utc).isoformat(),
+                'stock_sync_source': 'conflict_resolution_custom'
+            }}
+        )
+        
+        # 2. Sincronizar hacia PrestaShop
+        result = await stock_service.sync_to_prestashop(
+            account_id=current_user.account_id,
+            integration_id=resolution.integration_id,
+            product_id=resolution.product_id,
+            new_quantity=final_quantity,
+            source='conflict_resolution_custom'
+        )
+    else:
+        raise HTTPException(status_code=400, detail="Resolución inválida")
+    
+    if not result.get('success'):
+        raise HTTPException(status_code=500, detail=result.get('error', 'Error al resolver conflicto'))
+    
+    return {
+        'success': True,
+        'message': 'Conflicto resuelto correctamente',
+        'final_quantity': final_quantity,
+        'resolution': resolution.resolution
+    }
+
+
+@router.get("/prestashop/{integration_id}/stock/conflicts")
+async def get_stock_conflicts(
+    integration_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Detectar y listar conflictos de stock entre Negocio Feliz y PrestaShop
+    """
+    from services.prestashop_stock_service import PrestashopStockSyncService
+    
+    # Obtener integración
+    integration = await db.prestashop_integrations.find_one(
+        get_tenant_filter(current_user.dict(), {'id': integration_id}),
+        {'_id': 0}
+    )
+    
+    if not integration:
+        raise HTTPException(status_code=404, detail="Integración no encontrada")
+    
+    # Obtener productos locales sincronizados con esta integración
+    local_products = await db.products.find({
+        'account_id': current_user.account_id,
+        'prestashop_integration_id': integration_id,
+        'prestashop_id': {'$exists': True, '$ne': None}
+    }, {'_id': 0}).to_list(1000)
+    
+    # Crear servicio
+    ps_service = PrestashopAPIService(integration['shop_url'], integration['api_key'])
+    stock_service = PrestashopStockSyncService(ps_service)
+    
+    conflicts = []
+    
+    for product in local_products:
+        ps_product_id = product.get('prestashop_id')
+        if not ps_product_id:
+            continue
+        
+        try:
+            # Obtener stock de PrestaShop
+            stock_mapping = await stock_service.get_product_stock_mapping(
+                product_id=ps_product_id,
+                shop_id=None
+            )
+            
+            if 0 in stock_mapping:
+                ps_stock = stock_mapping[0]['quantity']
+                local_stock = product.get('stock', 0)
+                
+                if ps_stock != local_stock:
+                    conflicts.append({
+                        'product_id': product['id'],
+                        'product_name': product.get('name', 'Sin nombre'),
+                        'sku': product.get('sku', '-'),
+                        'local_stock': local_stock,
+                        'prestashop_stock': ps_stock,
+                        'difference': abs(ps_stock - local_stock),
+                        'prestashop_product_id': ps_product_id
+                    })
+        except Exception as e:
+            logger.error(f"Error verificando stock de producto {ps_product_id}: {e}")
+    
+    return {
+        'conflicts': conflicts,
+        'total_conflicts': len(conflicts),
+        'integration_id': integration_id,
+        'shop_url': integration['shop_url']
+    }
+

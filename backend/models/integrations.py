@@ -16,6 +16,7 @@ class PrestashopIntegration(BaseModel):
     api_key: str  # API Key encriptada
     is_active: bool = True
     webhook_active: bool = False  # ✅ Detección de webhook configurado
+    last_webhook_at: Optional[str] = None  # Timestamp del último webhook real recibido
     last_sync_products: Optional[datetime] = None
     last_sync_categories: Optional[datetime] = None
     last_sync_stock: Optional[datetime] = None

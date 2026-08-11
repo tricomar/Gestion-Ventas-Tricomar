@@ -1,0 +1,46 @@
+{
+  "summary": "Validación Fase 1 - Detección de Webhook PrestaShop. Se verificó modelo, DB y endpoints. RESULTADO: Fase 1 INCOMPLETA. El campo `webhook_active` está definido en el modelo Pydantic (PrestashopIntegration), y el badge está implementado en el modal (PrestashopModal.js línea 732), pero el campo NO EXISTE en los documentos de MongoDB ni se retorna por el endpoint `/api/integrations/prestashop/list`. El badge 'Webhook Activo' NUNCA se mostrará en la UI porque `integration?.webhook_active` siempre es undefined.",
+  "tested_scope": ["backend", "frontend", "integration"],
+  "passed": [
+    "Login con hola@tricomar.cl exitoso (JWT retornado)",
+    "Endpoint GET /api/integrations/prestashop/list responde 200 con las 2 integraciones esperadas (tricomar.cl id=38b5bca6..., tricomarpets.cl id=252d6da9...)",
+    "Modelo PrestashopIntegration en /app/backend/models/integrations.py línea 18 tiene `webhook_active: bool = False`",
+    "Badge de webhook implementado en PrestashopModal.js líneas 732-744 (condicional `integration?.webhook_active`)",
+    "Endpoint /api/integrations/webhooks/prestashop/{id}/status funciona y detecta actividad real (23 eventos históricos para tricomar.cl, status='inactive' por antigüedad)"
+  ],
+  "failed": [
+    {
+      "area": "Backend - Persistencia DB",
+      "issue": "El campo `webhook_active` NO existe en los documentos MongoDB de `prestashop_integrations`. Consulta directa: ambos docs solo tienen {id, shop_url} sin webhook_active. Falta migración/backfill para agregar el campo a integraciones existentes.",
+      "evidence": "MongoDB query: {'id':'38b5bca6...','shop_url':'https://tricomar.cl'} y {'id':'252d6da9...','shop_url':'https://tricomarpets.cl'} — sin campo webhook_active.",
+      "priority": "HIGH"
+    },
+    {
+      "area": "Backend - Endpoint /prestashop/list",
+      "issue": "La respuesta JSON NO incluye `webhook_active`. El endpoint retorna documentos crudos de Mongo (con {'_id':0,'api_key':0}) por lo que campos faltantes en DB no se serializan con defaults del modelo.",
+      "evidence": "curl /api/integrations/prestashop/list retorna objetos sin la clave webhook_active para las dos integraciones.",
+      "priority": "HIGH"
+    },
+    {
+      "area": "Frontend - Badge Webhook Activo",
+      "issue": "El badge nunca se renderizará porque `integration?.webhook_active` es undefined. La UI de Fase 1 no cumple el requisito de mostrar el estado del webhook por integración.",
+      "evidence": "PrestashopModal.js línea 732: `{integration?.webhook_active && (...)}`. Ninguna integración tiene el campo => badge oculto siempre.",
+      "priority": "HIGH"
+    },
+    {
+      "area": "Backend - Lógica de detección",
+      "issue": "No existe lógica que actualice `webhook_active=true` cuando llegan eventos reales. El endpoint /webhooks/prestashop/{id}/status calcula estado por eventos, pero NO persiste en prestashop_integrations.webhook_active. Los estados independientes por tienda no están reflejados en el campo.",
+      "evidence": "grep en routes/integrations.py: no hay ninguna actualización `webhook_active: True` a la colección prestashop_integrations.",
+      "priority": "HIGH"
+    }
+  ],
+  "action_items": [
+    "1) Ejecutar migración para agregar `webhook_active: False` a los 2 documentos existentes en prestashop_integrations, o cambiar el endpoint /prestashop/list para hidratar defaults del modelo Pydantic (validar via PrestashopIntegration(**doc).dict()).",
+    "2) Implementar lógica en receive_webhook (línea 1655) para marcar `webhook_active=True` en prestashop_integrations al recibir el primer webhook real de esa integración.",
+    "3) Opcionalmente, exponer el estado calculado del endpoint /webhooks/prestashop/{id}/status directamente en /prestashop/list (campo derivado) para que el badge refleje actividad real.",
+    "4) Re-test UI tras el fix: abrir modal PrestaShop para cada integración y verificar que el badge 'Webhook Activo' aparece cuando corresponde e independiente por tienda."
+  ],
+  "success_rate": {"backend": "60%", "frontend": "50%"},
+  "retest_needed": true,
+  "full_testing_deferred": true
+}

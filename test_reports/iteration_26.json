@@ -1,0 +1,20 @@
+{
+  "summary": "Validated Fase 1 webhook detection fix. Backend endpoint GET /api/integrations/prestashop/list correctly returns webhook_active and last_webhook_at fields with hydrated Pydantic defaults. UI (Configuración → Integraciones) correctly renders conditional badges: yellow 'Webhook Inactivo' for tricomar.cl (webhook_active=false) and green 'Webhook Activo' for tricomarpets.cl (webhook_active=true). End-to-end data flow (DB → API → UI conditional rendering) is working correctly.",
+  "tested_scope": ["backend", "frontend", "integration"],
+  "passed": [
+    "Login with hola@tricomar.cl works and returns JWT token",
+    "GET /api/integrations/prestashop/list returns webhook_active field for both integrations (tricomar.cl=false, tricomarpets.cl=true)",
+    "GET /api/integrations/prestashop/list returns last_webhook_at (tricomarpets.cl='2026-08-11T23:34:11.921408+00:00', tricomar.cl=null)",
+    "UI list view badge 'Webhook Inactivo' (yellow) visible for tricomar.cl integration",
+    "UI list view badge 'Webhook Activo' (green with pulse dot) visible for tricomarpets.cl integration",
+    "Both integrations show independent, correct webhook states, confirming the migrate_webhook_active.py migration and the /list hydration fix work as expected"
+  ],
+  "failed": [],
+  "action_items": [
+    "Consider adding data-testid attributes to the PrestashopModal open buttons (gear/settings/webhook icons in each integration row) so the modal-level badge (lines 732-744) can be verified in automated tests. The modal open buttons are currently icon-only without accessible names, which blocked deep modal verification. Not a blocker for Fase 1 sign-off since the list badges use the same webhook_active conditional and are working."
+  ],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "retest_needed": false,
+  "full_testing_deferred": true,
+  "notes": "Modal-level badge (PrestashopModal.js line 732-744) was not directly opened in the browser due to missing accessible selectors on the row-action icons, but the identical conditional (integration?.webhook_active) is confirmed via the list-view badges. Fase 1 ready for sign-off; Fase 2 (Stock Bidireccional) can proceed."
+}
