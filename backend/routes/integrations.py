@@ -1853,41 +1853,53 @@ async def sync_single_product(ps_service, integration_id: str, account_id: str, 
 
 
 async def sync_single_order(ps_service, integration_id: str, account_id: str, order_id: int, store_code: str):
-    """Sincronizar una sola orden"""
+    """
+    Sincronizar una sola orden (FASE 3 MEJORADA)
+    - Sincroniza orden completa con productos
+    - Crea productos automáticamente si no existen
+    - Reserva stock al crear orden
+    - Libera stock al cancelar orden
+    """
+    from services.prestashop_order_service import PrestashopOrderService
+    
     try:
-        ps_order = ps_service.get_order_details(order_id)
-        if not ps_order:
+        # Obtener integración completa para store_id
+        integration = await db.prestashop_integrations.find_one(
+            {'id': integration_id},
+            {'_id': 0}
+        )
+        
+        if not integration:
+            logger.error(f"Integración {integration_id} no encontrada")
             return
         
-        order_data = {
-            'account_id': account_id,
-            'integration_id': integration_id,
-            'prestashop_id': order_id,
-            'reference': ps_order.get('reference', f'PS-{order_id}'),
-            'customer_id': int(ps_order.get('id_customer', 0)),
-            'total_paid': float(ps_order.get('total_paid', 0)),
-            'current_state': int(ps_order.get('current_state', 0)),
-            'payment_method': ps_order.get('payment', 'Unknown'),
-            'date_add': ps_order.get('date_add')
-        }
+        store_id = integration.get('store_id')
         
-        existing = await db.prestashop_orders.find_one({
-            'account_id': account_id,
-            'prestashop_id': order_id
-        }, {'_id': 0})
+        # Crear servicio de órdenes
+        order_service = PrestashopOrderService(ps_service, db)
         
-        if existing:
-            await db.prestashop_orders.update_one(
-                {'account_id': account_id, 'prestashop_id': order_id},
-                {'$set': order_data}
-            )
+        # Sincronizar orden completa con gestión de stock
+        result = await order_service.sync_order_with_products(
+            order_id=order_id,
+            integration_id=integration_id,
+            account_id=account_id,
+            store_id=store_id,
+            store_code=store_code
+        )
+        
+        if result['success']:
+            logger.info(f"✅ Orden {order_id} sincronizada: {result.get('reference')}")
+            if result.get('products_created', 0) > 0:
+                logger.info(f"   ⚠️ {result['products_created']} productos creados automáticamente")
+            if result.get('stock_action'):
+                action = result['stock_action']['action']
+                total = result['stock_action']['total_items']
+                logger.info(f"   📦 Stock {action}: {total} productos")
         else:
-            order_data['id'] = str(uuid4())
-            order_data['created_at'] = datetime.now(timezone.utc).isoformat()
-            await db.prestashop_orders.insert_one(order_data)
+            logger.error(f"❌ Error sincronizando orden {order_id}: {result.get('error')}")
             
     except Exception as e:
-        print(f"Error syncing single order {order_id}: {str(e)}")
+        logger.error(f"Error syncing single order {order_id}: {str(e)}")
 
 
 async def sync_single_customer(ps_service, integration_id: str, account_id: str, customer_id: int, store_code: str):
