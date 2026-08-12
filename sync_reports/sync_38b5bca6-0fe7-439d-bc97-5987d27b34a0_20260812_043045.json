@@ -1,0 +1,3587 @@
+{
+  "integration_id": "38b5bca6-0fe7-439d-bc97-5987d27b34a0",
+  "account_id": "acc_06ca10fb49e1",
+  "store_id": "store_1786329735572",
+  "timestamp": "2026-08-12T04:36:42.551040+00:00",
+  "summary": {
+    "total_products": 3682,
+    "synced_successfully": 500,
+    "failed": 0,
+    "duration_seconds": 356.87869
+  },
+  "errors": [
+    {
+      "batch": 2,
+      "offset": 500,
+      "error": "Error HTTP 500"
+    },
+    {
+      "batch": 3,
+      "offset": 1000,
+      "error": "Error HTTP 500"
+    },
+    {
+      "batch": 4,
+      "offset": 1500,
+      "error": "Error HTTP 500"
+    }
+  ],
+  "incomplete_data": [
+    {
+      "product_id": 20,
+      "product_name": "Research Sensi 219 Kush x Hindu Kush Auto (x3)- Sensi Seed",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 144,
+      "product_name": "Royal Creamatic Auto (x3) - Royal Queen Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 145,
+      "product_name": "Royal Creamatic Auto (x1) - Royal Queen Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 147,
+      "product_name": "Royal Cookies Auto (x3) - Royal Queen Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 151,
+      "product_name": "Bubble Kush Auto (x3) - Royal Queen Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 163,
+      "product_name": "Amnesia Haze Auto (x3) - Royal Queen Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 175,
+      "product_name": "Royal Kush Auto (x3) - Royal Queen Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 184,
+      "product_name": "Green Gelato (x1) - Royal Queen Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 195,
+      "product_name": "Royal Cookies (x3) - Royal Queen Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 202,
+      "product_name": "Critical Kush (x1) - Royal Queen Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 207,
+      "product_name": "Somango XL (x3) - Royal Queen Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 211,
+      "product_name": "Pineapple Kush (x3) - Royal Queen Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 215,
+      "product_name": "Bubble Kush (x3) - Royal Queen Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 217,
+      "product_name": "Honey Cream (Royal Caramel) Fast Version (x3) - Royal Queen Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 218,
+      "product_name": "Honey Cream (Royal Caramel) - Fast Version (x1) - Royal Queen Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 229,
+      "product_name": "Royal Moby (x3) - Royal Queen Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 235,
+      "product_name": "Special Kush 1 (x3) - Royal Queen Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 237,
+      "product_name": "Critical (x3) - Royal Queen Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 239,
+      "product_name": "Skunk XL (x3) - Royal Queen Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 243,
+      "product_name": "Blue Mystic (x3) - Royal Queen Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 253,
+      "product_name": "White Widow (x3) - Royal Queen Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 268,
+      "product_name": "Bandeja Plastico Jiffy Vacía 33 mm 104 Alvéolos",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 281,
+      "product_name": "Extractor 4' (100mm) Cuadrado - 4:20 All Time",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 282,
+      "product_name": "Extractor 4' (100mm) Redondo - 4:20 ALL TIME",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 285,
+      "product_name": "Extractor 6\" (150mm) Cuadrado - 4:20 All Time",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 298,
+      "product_name": "Bubba's Gift (x3) - Humboldt",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 383,
+      "product_name": "Gorilla Candy (x3+1) Fem - Eva Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 408,
+      "product_name": "Plato 20x20x3cms (Maceta 11L)",
+      "missing_fields": [
+        "summary",
+        "description",
+        "image"
+      ]
+    },
+    {
+      "product_id": 425,
+      "product_name": "Filtro Pre-Rolled (120Uds) - Lion Rolling Circus",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 430,
+      "product_name": "Papelillos con Sabor 1 1/4 Electric Grape - Lion Rolling Circus",
+      "missing_fields": [
+        "description",
+        "image"
+      ]
+    },
+    {
+      "product_id": 504,
+      "product_name": "Old School (x3) - Ripper Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 524,
+      "product_name": "Honey Bells CBD (x3) - Delicious",
+      "missing_fields": [
+        "summary",
+        "description",
+        "image"
+      ]
+    },
+    {
+      "product_id": 527,
+      "product_name": "Growthmax 500ml - Grotek",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 528,
+      "product_name": "Rype 500ml - Grotek",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 529,
+      "product_name": "Root Force 500 ml Grotek",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 530,
+      "product_name": "Micropower 500 ml - Grotek",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 531,
+      "product_name": "Vital 500 ml - Grotek",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 532,
+      "product_name": "Core 500 ml - Grotek",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 533,
+      "product_name": "Monster Bloom 1L - Grotek",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 536,
+      "product_name": "Heavy Bud Pro 4 lt - Grotek",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 537,
+      "product_name": "Monster Bloom 2,5 Kg Grotek",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 538,
+      "product_name": "Solo Tek Bloom 4L - Grotek",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 539,
+      "product_name": "Solo Tek Grow 4 lt - Grotek",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 546,
+      "product_name": "Deimos (x3) Auto - Buddha Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 548,
+      "product_name": "Buddha Purple Kush (x3) Fem - Buddha Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 567,
+      "product_name": "Bubba Cheese Auto (x3) - Humboldt",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 569,
+      "product_name": "Blue Dream Auto (x3) - Humboldt",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 592,
+      "product_name": "Badazz (x3) - Ripper Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 593,
+      "product_name": "Sideral (x3) - Ripper Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 594,
+      "product_name": "Washing Machine (x3) - Ripper Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 597,
+      "product_name": "Ampolleta LEC 315W 4000K - Vanguard",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 615,
+      "product_name": "Mazar Kush (x3) Fem- World Of Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 617,
+      "product_name": "Amnesia (x3) Fem - World Of Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 636,
+      "product_name": "Hollywood Dream (X1) - Sunset Genetics",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 638,
+      "product_name": "Hangover (x1) - Sunset Genetics",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 643,
+      "product_name": "Daiquiri OG (x1) - Sunset Genetics",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 650,
+      "product_name": "Sour Diesel Fem (x3) - Seed Stockers",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 654,
+      "product_name": "Fuel Og (x3) - Ripper Seeds",
+      "missing_fields": [
+        "description",
+        "image"
+      ]
+    },
+    {
+      "product_id": 655,
+      "product_name": "Zkittlez x Bubba Kush (x3) - Ripper Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 658,
+      "product_name": "Bestial Skunk (x3) Fem - Elite Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 724,
+      "product_name": "Northern Light Blue (x1)  Fem - Delicious Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 794,
+      "product_name": "Furious Candy (x3+1) Fem - Eva Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 795,
+      "product_name": "Black Dream (x3+1) Fem - Eva Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 798,
+      "product_name": "Jamaican Dream (x3+1) Fem - Eva Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 800,
+      "product_name": "Veneno (3+1) Fem - Eva Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 801,
+      "product_name": "Missing In Barcelona (x3+1) - Eva Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 802,
+      "product_name": "Monster (x3+1) Fem - Eva Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 803,
+      "product_name": "High Level (x3+1) Fem - Eva Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 842,
+      "product_name": "Indigo Berry Kush (x3+1) - Sweet Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 844,
+      "product_name": "Mohan Ram (x3+1) - Sweet Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 861,
+      "product_name": "Durban (x3) - Sensi Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 862,
+      "product_name": "Jamaican Pearl (x3) - Sensi Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 863,
+      "product_name": "Mexican Sativa (x3) - Sensi Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 867,
+      "product_name": "Northern Lights 5 x Haze (x3) - Sensi Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 869,
+      "product_name": "Shiva Skunk (x3) - Sensi Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 890,
+      "product_name": "Auto Nefertiti (x3+1)  - Pyramid Seed",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 896,
+      "product_name": "Auto Anubis (x3+1) - Pyramid Seed",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 906,
+      "product_name": "Tutankhamon (x3+1) - Pyramid Seed",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 909,
+      "product_name": "Auto Kryptonite (x3+1) - Pyramid Seed",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 916,
+      "product_name": "Critical 47 Express Auto (x5) - Positronics",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 918,
+      "product_name": "May Day Express (x3) - Positronics",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 925,
+      "product_name": "Critical 47 (x3) - Positronics",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 927,
+      "product_name": "Blue Rhino (x3) - Positronics",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 955,
+      "product_name": "Critical 47 (x1) Fem - Positronics",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 995,
+      "product_name": "Llimonet Haze Clasica THC (x3) Fem - Elite Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1001,
+      "product_name": "La Rica Clasica Thc (x3) - Elite Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1011,
+      "product_name": "Critical + 2.0 (x3) - Dinafem",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1020,
+      "product_name": "White Widow (x3) - Dutch Passion",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1022,
+      "product_name": "Think Fast (x3) - Dutch Passion",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1023,
+      "product_name": "The Ultimate (x3) - Dutch Passion",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1024,
+      "product_name": "The Edge (x3) Dutch Passion",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1025,
+      "product_name": "Strawberry Cough (x3) - Dutch Passion",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1026,
+      "product_name": "Snow Bud (x3) - Dutch Passion",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1027,
+      "product_name": "Skunk 11 (x3) - Dutch Passion",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1028,
+      "product_name": "Shaman (x3+1) Dutch Passion",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1029,
+      "product_name": "Purple N°1 (x3) - Dutch Passion",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1030,
+      "product_name": "Power Plant Auto (x3) Dutch Passion",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1031,
+      "product_name": "Passion N°1 (x3) - Dutch Passion",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1032,
+      "product_name": "Outlaw Amnesia (x3) - Dutch Passion",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1033,
+      "product_name": "Orange Hill Special (x3) - Dutch Passion",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1034,
+      "product_name": "Orange Bud (x3) - Dutch Passion",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1035,
+      "product_name": "Night Queen (x3) - Dutch Passion",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1036,
+      "product_name": "Mazar (x3) - Dutch Passion",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1037,
+      "product_name": "Jorges Diamonds N°1 (x3) - Dutch Passion",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1038,
+      "product_name": "Hollands Hope (x3) - Duch Passion",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1039,
+      "product_name": "Glueberry Og (x3) - Dutch Passion",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1040,
+      "product_name": "Frisian Duck (x3) - Dutch Passion",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1041,
+      "product_name": "Frisian Dew (x3) - Dutch Passion",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1042,
+      "product_name": "Freddy's Best  (x3) Fem - Dutch Passion",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1043,
+      "product_name": "Euforia (x3) - Dutch Passion",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1044,
+      "product_name": "Durban Poison (x3) - Dutch Passion",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1045,
+      "product_name": "Desfran (x3) - Dutch Passion",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1046,
+      "product_name": "CBD Compassion (x3) - Dutch Passion",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1047,
+      "product_name": "Californian Orange (x3) - Dutch Passion",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1048,
+      "product_name": "Brainstorm (x3) Fem - Dutch Passion",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1049,
+      "product_name": "Blueberry (x3) - Dutch Passion",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1050,
+      "product_name": "CBD Skunk Haze (x3) - Dutch Passion",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1078,
+      "product_name": "8 Ball Kush (x3) - Barneys Farm",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1080,
+      "product_name": "Blue Cheese (x3) - Barneys Farm",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1107,
+      "product_name": "Cbd Blue Shark (x3) - Barneys Farm",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1110,
+      "product_name": "Ona Gel 732g Fruit Fusion - ONA",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1111,
+      "product_name": "Ona Gel 735g Polar Crystal - ONA",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1112,
+      "product_name": "Ona Dispenser Breeze Fan - ONA",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1113,
+      "product_name": "Ona Mist Dispenser - ONA",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1114,
+      "product_name": "Ona Mist 170Grs Apple Crumble - ONA",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1115,
+      "product_name": "Ona Mist 170Grs Fresh Linen - ONA",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1116,
+      "product_name": "Ona Mist 170Grs Polar Crystal - ONA",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1117,
+      "product_name": "Ona Mist 170Grs Pro - ONA",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1118,
+      "product_name": "Ona Gel 3,6 Kg. (Apple Crumble) Jarra - ONA",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1119,
+      "product_name": "Ona Gel 428G (Apple Crumble) - ONA",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1120,
+      "product_name": "Ona Gel 3,6K Fresh Linen Jarra - ONA",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1121,
+      "product_name": "Ona Gel 732 g Fresh Linen - ONA",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1122,
+      "product_name": "Ona Gel 3.6K Jarra Pro - ONA",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1123,
+      "product_name": "Ona Gel 735g Pro - ONA",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1124,
+      "product_name": "Ona Block 170g Apple Crumble - ONA",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1125,
+      "product_name": "Ona Block 170g Fresh Linen - ONA",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1126,
+      "product_name": "Ona Block Polar Crystal 170g - ONA",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1130,
+      "product_name": "Filtro Carbon Eco 125/400Mm 480M3/H - Prima Klima",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1131,
+      "product_name": "Filtro Carbon Eco 100/250Mm 360M3/H Prima Klima",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1134,
+      "product_name": "All Mix 50L - Plagron",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1139,
+      "product_name": "Terra Professional 25L - Canna",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1143,
+      "product_name": "All Mix 20L - Biobizz",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1144,
+      "product_name": "Taco Siembra 75X75X65 Mm Plug 38X35 Mm 240 Uds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1145,
+      "product_name": "Taco Siembra 75X75X65 Mm Plug 28X35 Mm 240 Uds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1146,
+      "product_name": "Taco Siembra 75x75x65mm Plug 38x35mm - Cultilene",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1147,
+      "product_name": "Taco Siembra 75x75x65mm Plug 28x35mm - Cultilene",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1148,
+      "product_name": "Bandeja Lana De Roca 25X25X40Cm 150 Alv 2 Bandejas",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1149,
+      "product_name": "Bandeja Lana De Roca 35X35X40Cm 77 Alv 2 Bandejas",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1158,
+      "product_name": "Coco Professional Plus 50L - Canna",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1164,
+      "product_name": "Skywalker Kush X Ak 47 (x7) - Eleven Seeds",
+      "missing_fields": [
+        "description",
+        "image"
+      ]
+    },
+    {
+      "product_id": 1181,
+      "product_name": "CBD Kush (x3) - Dutch Passion",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1182,
+      "product_name": "White Widow Auto CBD (x3) - Dutch Passion",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1183,
+      "product_name": "CBD Auto Compassion Lime (x3) - Dutch Passion",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1213,
+      "product_name": "Sweet Cheese (x3+1) - Sweet Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1225,
+      "product_name": "Sweet Mix Auto (x10) - Sweet Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1240,
+      "product_name": "Red Poison Auto (x3+1) - Sweet Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1254,
+      "product_name": "Early Skunk Auto (x3) - Sensi Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1256,
+      "product_name": "Northern Lights Auto (x3) - Sensi Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1257,
+      "product_name": "Skunk 1 Auto (x10) - Sensi Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1258,
+      "product_name": "Skunk 1 Auto (x3) - Sensi Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1259,
+      "product_name": "Super Skunk Auto (x10) - Sensi Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1267,
+      "product_name": "Auto American Pie (x3+1) - Pyramid Seed",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1270,
+      "product_name": "Auto White Widow (3+1) - Pyramid Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1272,
+      "product_name": "Auto Wembley (x3+1) - Pyramid Seed",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1275,
+      "product_name": "Auto Super Og Kush (x3+1) - Pyramid Seed",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1277,
+      "product_name": "Auto Super Hash (x3+1) - Pyramid Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1278,
+      "product_name": "Auto Shark (x3+1) - Pyramid Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1281,
+      "product_name": "Auto Northern Lights (x3+1) - Pyramid Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1290,
+      "product_name": "Galaxy Auto (x3) - Pyramid Seed",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1292,
+      "product_name": "Auto Blue Pyramid (x3+1) - Pyramid Seed",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1295,
+      "product_name": "Auto Anesthesia (x3+1) - Pyramid Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1297,
+      "product_name": "Auto Amnesia Gold (3+1) - Pyramid Seed",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1299,
+      "product_name": "Auto Alpujarreña (x3+1) - Pyramid Seed",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1342,
+      "product_name": "Moby Dick XXL Auto (x3) - Dinafem",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1343,
+      "product_name": "Critical Jack Auto (x3) - Dinafem",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1346,
+      "product_name": "Bubba Kush Auto (3 Semilla) - Dinafem",
+      "missing_fields": [
+        "summary",
+        "image"
+      ]
+    },
+    {
+      "product_id": 1350,
+      "product_name": "Cheese XXL Auto (x3) - Dinafem",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1351,
+      "product_name": "Blue Amnesia XXL Auto (x3) - Dinafem",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1353,
+      "product_name": "Moby Dick Fem (x5) - Seed Stockers",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1354,
+      "product_name": "White Widow XXL Auto (x1) - Dinafem",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1356,
+      "product_name": "White Widow XXL Auto (x3) - Dinafem",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1359,
+      "product_name": "Haze XXL Auto (x3) - Dinafem",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1360,
+      "product_name": "Amnesia XXL Auto (x3) - Dinafem",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1361,
+      "product_name": "Critical + 2.0 Auto (x3) - Dinafem",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1363,
+      "product_name": "White Widow Auto (x3) - Dutch Passion",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1364,
+      "product_name": "Auto Think Big (x3) - Dutch Passion",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1366,
+      "product_name": "Auto Night Queen (x3) - Dutch Passion",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1370,
+      "product_name": "Auto Euforia (x3) - Dutch Passion",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1371,
+      "product_name": "Auto Duck (x3) - Dutch Passion",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1373,
+      "product_name": "Auto Colorado Cookies Auto (x3) - Dutch Passion",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1375,
+      "product_name": "Blue Auto Mazar (X3) - Dutch Passion",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1377,
+      "product_name": "Auto Blackberry Kush (x3) - Dutch Passion",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1394,
+      "product_name": "Malana Bomb Auto (x3) - Barneys Farm",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1401,
+      "product_name": "Northern Light X Big Bud (x3) Fem - World Of Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1436,
+      "product_name": "Green Crack Auto (x5) - Fast Buds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1448,
+      "product_name": "Crystal Meth Auto (x5) - Fast Buds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1452,
+      "product_name": "Californian Snow Auto (x3) - Fast Buds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1454,
+      "product_name": "Cbd Crack Auto (x3) - Fast Buds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1456,
+      "product_name": "C4 Auto (x3) - Fast Buds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1458,
+      "product_name": "Blue Dream Matic Auto (x3) - Fast Buds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1460,
+      "product_name": "Blackberry Auto (x3) - Fast Buds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1475,
+      "product_name": "Dinamex Auto (x3) - Dinafem",
+      "missing_fields": [
+        "description",
+        "image"
+      ]
+    },
+    {
+      "product_id": 1496,
+      "product_name": "Auto Think Different (x3) - Dutch Passion",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1528,
+      "product_name": "Aquaspray Metal 2 Salidas",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1536,
+      "product_name": "Ozonizador Agua A400 Water Master",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1537,
+      "product_name": "Ozonizador Ovni",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1538,
+      "product_name": "Kit De Riego - Vdl",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1544,
+      "product_name": "Filtro de Osmosis Inversa 3000 L/D - Growmax",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1546,
+      "product_name": "Osmosis Power Grow 500L/D Growmax",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1548,
+      "product_name": "Filtro De Osmosis Inversa Eco 2 Etapas",
+      "missing_fields": [
+        "summary",
+        "image"
+      ]
+    },
+    {
+      "product_id": 1551,
+      "product_name": "Filtro Super Grow 800 L/H Growmax",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1552,
+      "product_name": "Filtro Garden Grow 480 L/H Growmax",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1556,
+      "product_name": "Jarra Graduada 100ml",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1559,
+      "product_name": "Deposito Rectangular 80Lts 78,5X48,5X30Cms",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1578,
+      "product_name": "Secador Drynet 90cms - Dark Box",
+      "missing_fields": [
+        "description",
+        "image"
+      ]
+    },
+    {
+      "product_id": 1585,
+      "product_name": "Pipa de Cristal - G-Lock 17",
+      "missing_fields": [
+        "brand",
+        "image"
+      ]
+    },
+    {
+      "product_id": 1586,
+      "product_name": "Libro Hidroponia Para Todos (Esp)",
+      "missing_fields": [
+        "category",
+        "image"
+      ]
+    },
+    {
+      "product_id": 1589,
+      "product_name": "Libro Cannabis Positivo Aceite Medicinal",
+      "missing_fields": [
+        "category",
+        "image"
+      ]
+    },
+    {
+      "product_id": 1590,
+      "product_name": "Libro Manual Práctico Para Enteraos Cultivo Interior",
+      "missing_fields": [
+        "category",
+        "image"
+      ]
+    },
+    {
+      "product_id": 1596,
+      "product_name": "Libro Fundamentos De Cultivo Guía Fácil Jorge Cervantes",
+      "missing_fields": [
+        "category",
+        "description",
+        "image"
+      ]
+    },
+    {
+      "product_id": 1606,
+      "product_name": "Gas Butano 400ml - Colibri",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1609,
+      "product_name": "Hash Shaker Xl",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1624,
+      "product_name": "Bote Silicona Mediano 5 U - Nogoo",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1631,
+      "product_name": "Contenedor Hermetico 2L 20X10Cm (85-113G)-Cvault",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1632,
+      "product_name": "Contenedor Hermetico L 12X6.50Cm (28-50G)-Cvault",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1650,
+      "product_name": "Maceta Rejilla 5cms 90Uds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1654,
+      "product_name": "Air Pot 7,5L",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1669,
+      "product_name": "Bandeja Plastico Jiffy Vacía 33mm 60 Alvéolos",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1670,
+      "product_name": "Bandeja Cuadrada 80X80X12cms - Garland",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1673,
+      "product_name": "Bandeja Cuadrada Grande 120X120X12 cm - Garland",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1674,
+      "product_name": "Bandeja Cuadrada Grande 100X100X12 cm - Garland",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1675,
+      "product_name": "Bandeja Cuadrada 60x60x12cm - Garland",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1676,
+      "product_name": "Bandeja Mesa De Cultivo Negra Agujero 200 X 100 Cm",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1677,
+      "product_name": "Bandeja Mesa De Cultivo Negra C/Agujero 100X110Cm",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1696,
+      "product_name": "Carpa (240x120x200) Db240 - Dark Box",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1697,
+      "product_name": "Carpa Db120 (120x120x200) - Dark Box",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1698,
+      "product_name": "Carpa Db100 (100x100x200) - Dark Box",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1699,
+      "product_name": "Carpa (80x80x160) Db80 - Dark Box",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1702,
+      "product_name": "Termohigrometro Mini Higro Temp Sin Sonda - Vanguard",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1704,
+      "product_name": "Termohigrometro Pantalla Grande Vdl",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1705,
+      "product_name": "Termohigrómetro Digital con Sonda - HTC-2",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1706,
+      "product_name": "Medidor Rapitest 3 en 1 Ph-Luz-Humedad - VDL",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1709,
+      "product_name": "Phmetro Ph Be Water Master",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1710,
+      "product_name": "Medidor de PH Digital -  Vanguard",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1711,
+      "product_name": "Calibrador Líquido pH 7.01 20ml - Water Master",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1712,
+      "product_name": "Calibrador Líquido pH 4.01 20ml - Water Master",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1714,
+      "product_name": "Conductivimetro Vanguard Hydroponics",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1718,
+      "product_name": "Temporizador Digital Vdl (Enchufe Europeo)",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1719,
+      "product_name": "Temporizador Analogico 30Min  (Enchufe Europeo) - VDL",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1720,
+      "product_name": "Temporizador Analogico 15Min / 24Hrs Vdl (Enchufe Europeo)",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1722,
+      "product_name": "Reflector Azerwing Medium 95% - Prima Klima",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1723,
+      "product_name": "Reflector Azerwing Medium 86% - Prima Klima",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1725,
+      "product_name": "Reflector Spudnik Aircooled Brida 125Mm Prima Klima",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1727,
+      "product_name": "Reflector Cool Tube 150/580mm - Prima Klima",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1728,
+      "product_name": "Reflector Cool Tube 125/480Mm Prima Klima",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1730,
+      "product_name": "Reflector Enforcer Grande - Adjust A Wing",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1732,
+      "product_name": "Reflector Enforcer Mediano 70 X 55 Cms - Adjust A Wing",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1733,
+      "product_name": "Reflector Hammer Stone - Grow Genetics",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1734,
+      "product_name": "Reflector CFL Horizontal - Solux",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1741,
+      "product_name": "Foco Led T360W - Tesla",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1742,
+      "product_name": "Foco Led T180 W - Tesla",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1743,
+      "product_name": "Foco Led T90 W Tesla",
+      "missing_fields": [
+        "summary",
+        "image"
+      ]
+    },
+    {
+      "product_id": 1744,
+      "product_name": "Balastro 315w Digimac  Lec Ultron Solux",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1745,
+      "product_name": "Ampolleta 250w Mh  - Solux",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1747,
+      "product_name": "Ampolleta 400w Solux Mh",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1750,
+      "product_name": "Ampolleta 250W MH Horti-Max Agro  - Vanguard",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1754,
+      "product_name": "Balastro 600w Magnético Plug&Play - Vanguard",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1755,
+      "product_name": "Balastro 400w Electronico Sin Ventilador  - Nanolux",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1756,
+      "product_name": "Balastro 250w  Electonico Sin Ventilador Nanolux",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1757,
+      "product_name": "Balastro 600w Electronico Extra Lumen C/Dimmer  Vanguard Hortimax",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1758,
+      "product_name": "Ampolleta Solux Cfl 250W / 2700K Floracion",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1763,
+      "product_name": "Luminaria Skywalker T5 60Cms Solux",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1764,
+      "product_name": "Ampolleta 150w Solux Super Hps",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1765,
+      "product_name": "Ampolleta 250w Solux Super Hps",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1766,
+      "product_name": "Ampolleta 100w Green Force  - Solux",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1767,
+      "product_name": "Ampolleta 250w Green Force -  Solux",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1769,
+      "product_name": "Ampolleta 400w Solux Super Hps",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1770,
+      "product_name": "Ampolleta 400w Solux Green Force",
+      "missing_fields": [
+        "description",
+        "image"
+      ]
+    },
+    {
+      "product_id": 1771,
+      "product_name": "Ampolleta 600w Solux Super Hps",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1772,
+      "product_name": "Ampolleta 600w Solux Green Force",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1775,
+      "product_name": "Ampolleta 600W Horti-Max (Grow & Bloom) - Vanguard",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1776,
+      "product_name": "Ampolleta 600W SHP Horti-Max Agro (Bloom)  - Vanguard",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1780,
+      "product_name": "Poleas Pro Grip 2 Light - VDL",
+      "missing_fields": [
+        "description",
+        "image"
+      ]
+    },
+    {
+      "product_id": 1781,
+      "product_name": "Poleas Light-Duty Hanger 5Kg - Grow Genetics",
+      "missing_fields": [
+        "description",
+        "image"
+      ]
+    },
+    {
+      "product_id": 1786,
+      "product_name": "Cable EIC para Balastro Macho (3mts X 0,75mm)",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1789,
+      "product_name": "Tutor Plástico 8mm/900mm",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1790,
+      "product_name": "Tutor Plástico 8mm/700mm",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1798,
+      "product_name": "Tijera Bud Clean Punta Curva Vdl",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1801,
+      "product_name": "Microscopio (60X-80X-100X) - Lumagny",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1802,
+      "product_name": "Microscopio LED (50X) Lumagny",
+      "missing_fields": [
+        "summary",
+        "image"
+      ]
+    },
+    {
+      "product_id": 1803,
+      "product_name": "Microscopio LED 30X - Lumagny",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1808,
+      "product_name": "Tijera Golden Eagle - GKM",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1811,
+      "product_name": "Ata Organics Flower C 500 Ml Atami",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1816,
+      "product_name": "Rhizotonic 250ml - Canna",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1817,
+      "product_name": "Bio Boost 250ml - Canna",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1819,
+      "product_name": "Bio Heaven 5L - Biobizz",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1820,
+      "product_name": "Alg A Mic 10Lt - Biobizz",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1828,
+      "product_name": "Alg A Mic 5L - Biobizz",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1830,
+      "product_name": "Top Grow Box 100% Terra Plagron",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1832,
+      "product_name": "Top Grow Box 100% Natural - Plagron",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1834,
+      "product_name": "Micro Pack - Grotek",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1838,
+      "product_name": "B Cuzz Soil Nutrition A+B 1Lt - Atami",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1842,
+      "product_name": "Starter Box Suelo - Hesi",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1843,
+      "product_name": "Starter Box Hidro - Hesi",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1844,
+      "product_name": "Starter Box Coco - Hesi",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1845,
+      "product_name": "Mega Pack - Grotek",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1846,
+      "product_name": "Starters Pack 3000ml - Biobizz",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1857,
+      "product_name": "Blossom Blaster Pro 500ml - Grotek",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1866,
+      "product_name": "Floracion Hidro 1L - Hesi",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1868,
+      "product_name": "Fosforo Plus 500ml - Hesi",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1870,
+      "product_name": "Bud Fuel Pro 1Lt - Grotek",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1871,
+      "product_name": "Heavy Bud Pro 500Ml - Grotek (Heavy Bloom)",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1872,
+      "product_name": "Bud Fuel Pro 500 Ml - Grotek",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1873,
+      "product_name": "Solo Tek Bloom 500ml - Grotek",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1874,
+      "product_name": "Solo Tek Bloom 1 Lt - Grotek",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1875,
+      "product_name": "Heavy Bud Pro 1L - Grotek",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1896,
+      "product_name": "Fish Mix 10L - Biobizz",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1898,
+      "product_name": "PK 13/14 500ml - Plagron",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1905,
+      "product_name": "Bio Flores 5L - Canna",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1909,
+      "product_name": "Terra Flores 5L - Canna",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1920,
+      "product_name": "Power Roots 500 Ml - Plagron",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1922,
+      "product_name": "Power Roots 100 Ml - Plagron",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1926,
+      "product_name": "Complejo Radicular 1L - Hesi",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1929,
+      "product_name": "Root Juice 1L - Biobizz",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1931,
+      "product_name": "Root Juice 5Lt - Biobizz",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1937,
+      "product_name": "Bio Vega 5L - Canna",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1949,
+      "product_name": "Solo Tek Grow 500ml - Grotek",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1950,
+      "product_name": "Solo Tek Grow 1L - Grotek",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1951,
+      "product_name": "Monster Grow Pro 130 Grs - Grotek",
+      "missing_fields": [
+        "description",
+        "image"
+      ]
+    },
+    {
+      "product_id": 1957,
+      "product_name": "Bio Grow 1L - Biobizz",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1958,
+      "product_name": "Bio Grow 10Lt Biobizz",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1963,
+      "product_name": "Micorrizas 5g - Mico True",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1964,
+      "product_name": "Ata Organics Alga C 500 Ml - Atami",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1968,
+      "product_name": "Super Vit 50ml - Hesi",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1970,
+      "product_name": "Vitamax Pro 500Ml - Grotek",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1972,
+      "product_name": "Carbo Max 300Grs - Grotek",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1973,
+      "product_name": "Carbo Max 100Grs - Grotek",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1975,
+      "product_name": "Cal Max 500Ml - Grotek",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1977,
+      "product_name": "Final Flush Manzana 1 Lt - Grotek",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1978,
+      "product_name": "Final Flush Grapefruit 1L - Grotek",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1979,
+      "product_name": "Final Flush Blueberry 1L - Grotek",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1981,
+      "product_name": "Final Flush Regular 1Lt - Grotek",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1984,
+      "product_name": "Vitamax Plus 1L - Grotek",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1985,
+      "product_name": "Final Flush  1L - Grotek",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1986,
+      "product_name": "Cal Max 1Lt - Grotek",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1987,
+      "product_name": "Abono Nanoparticulado 300Grs - Ccopper",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1995,
+      "product_name": "Humidificador Megamist 8L - VDL",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 1997,
+      "product_name": "Ducto Aluconnect 4' 102 Mm VDL (10 Mt)",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 2006,
+      "product_name": "Controlador De Co2 Dosis Vdl",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 2008,
+      "product_name": "Deshumidificador Mini - VDL",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 2009,
+      "product_name": "Deshumidificador Drybox ( 12 Lts ) - VDL",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 2013,
+      "product_name": "CO2 Pad + Percha - CO2 Boost",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 2014,
+      "product_name": "Sonoconnect 102 Mm (10 Mts)",
+      "missing_fields": [
+        "summary",
+        "image"
+      ]
+    },
+    {
+      "product_id": 2015,
+      "product_name": "Sonoconnect 127 Mm (10 Mts)",
+      "missing_fields": [
+        "summary",
+        "image"
+      ]
+    },
+    {
+      "product_id": 2016,
+      "product_name": "Sonoconnect 152 Mm (10 Mts)",
+      "missing_fields": [
+        "summary",
+        "image"
+      ]
+    },
+    {
+      "product_id": 2017,
+      "product_name": "Combiconnect 102 Mm (10Mts)",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 2018,
+      "product_name": "Combiconnect 127 Mm (10Mts)",
+      "missing_fields": [
+        "summary",
+        "image"
+      ]
+    },
+    {
+      "product_id": 2019,
+      "product_name": "Combiconnect 152 Mm (10Mts)",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 2022,
+      "product_name": "Extractor Pk 150 2 Vel (380 - 760 M3/H) Prima Klima",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 2026,
+      "product_name": "Sonoconnect 254 Mm (10Mts)",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 2028,
+      "product_name": "Ventilador De Pared Con Cuerda 40Cms Cyclone",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 2029,
+      "product_name": "Uci Digital Hr & Temperatura",
+      "missing_fields": [
+        "description",
+        "image"
+      ]
+    },
+    {
+      "product_id": 2030,
+      "product_name": "Kit Humidificador 1 Membrana + Antisalpicador - VDL",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 2031,
+      "product_name": "Termostato Ta 1002",
+      "missing_fields": [
+        "summary",
+        "image"
+      ]
+    },
+    {
+      "product_id": 2034,
+      "product_name": "Sonoconnect 152 Mm (7,6 Mts)",
+      "missing_fields": [
+        "summary",
+        "image"
+      ]
+    },
+    {
+      "product_id": 2035,
+      "product_name": "Sonoconnect 127 Mm (7,6 Mts)",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 2036,
+      "product_name": "Sonoconnect 102 Mm (7,6 Mts)",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 2037,
+      "product_name": "Acople Reducción Plástico 80-150Mm - Blauberg",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 2039,
+      "product_name": "Manguito Corona Plastico 125 Mm",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 2045,
+      "product_name": "Aluconnect 150Mm (3Mts)",
+      "missing_fields": [
+        "description",
+        "image"
+      ]
+    },
+    {
+      "product_id": 2046,
+      "product_name": "Aluconnect 125Mm (3Mts)",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 2047,
+      "product_name": "Aluconnect 100Mm (3Mts)",
+      "missing_fields": [
+        "brand",
+        "image"
+      ]
+    },
+    {
+      "product_id": 2048,
+      "product_name": "Acople Reduccion Plastico 150 - 200mm",
+      "missing_fields": [
+        "brand",
+        "image"
+      ]
+    },
+    {
+      "product_id": 2049,
+      "product_name": "Silenciador Flexible 150 - 1000 Mm",
+      "missing_fields": [
+        "brand",
+        "summary",
+        "image"
+      ]
+    },
+    {
+      "product_id": 2054,
+      "product_name": "Manguito Corona Plástico 100mm",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 2055,
+      "product_name": "Manguito Corona Plastico 150Mm",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 2056,
+      "product_name": "Ventilador De Suelo 20 Cms - Cyclone",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 2057,
+      "product_name": "Ventilador De Suelo 30 Cms - Cyclone",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 2060,
+      "product_name": "Extractor De Pared 150 (295M3/H) - Blauberg",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 2061,
+      "product_name": "Extractor De Pared 125 (190M3/H) - Blauberg",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 2062,
+      "product_name": "Extractor De Pared 100 (98M3/H) - Blauberg",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 2064,
+      "product_name": "Extractor En Linea 100 (137 M3/H) Tubo - Blauberg",
+      "missing_fields": [
+        "description",
+        "image"
+      ]
+    },
+    {
+      "product_id": 2066,
+      "product_name": "Extractor En Linea 150 (298 M3/H) Tubo - Blauberg",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 2067,
+      "product_name": "Extractor Turbo 125 2 Vel 230 -345 M3/H - Blauberg",
+      "missing_fields": [
+        "description",
+        "image"
+      ]
+    },
+    {
+      "product_id": 2068,
+      "product_name": "Extractor Turbo 100 2 Vel 170-220 M3/H - Blauberg",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 2069,
+      "product_name": "Extractor Centro 125mm (260 M3/H) - Blauberg",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 2070,
+      "product_name": "Extractor En Linea 125 (245 M3/H) Tubo - Blauberg",
+      "missing_fields": [
+        "description",
+        "image"
+      ]
+    },
+    {
+      "product_id": 2072,
+      "product_name": "Fungi 250ml - Wonderland",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 2073,
+      "product_name": "Trampas Adhesivas Amarillas 10 Uds - VDL",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 2074,
+      "product_name": "Diatoweed Polvo Diatomea Mundorganico 300Grs",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 2081,
+      "product_name": "Light Mix 50L - Royal Green",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 4344,
+      "product_name": "Light Mix 50L - Vitaflor",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 6607,
+      "product_name": "Promix 50L - Plagron",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 6608,
+      "product_name": "Blossom Blaster 130g - Grotek",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 6609,
+      "product_name": "Hesi Boost 2,5L - Hesi",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 6610,
+      "product_name": "Power Zyme 2,5L - Hesi",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 6611,
+      "product_name": "Complejo Radicular 2,5L - Hesi",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 6614,
+      "product_name": "Bio pH Down 500ml - Biobizz",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 6617,
+      "product_name": "Starter Kit - Biocanna",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 6618,
+      "product_name": "Terra Starter Kit - Canna",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 6619,
+      "product_name": "Happy Clover 15grs - Mico True",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 6628,
+      "product_name": "Black Pearl 900ml - Grotek",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 6635,
+      "product_name": "Bud XL 500ml - House & Garden",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 6662,
+      "product_name": "Aceite de CBD 1000mg 30ml - Andes Austral",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 6663,
+      "product_name": "Aceite de CBD 2000mg 30ml - Andes Austral",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 6810,
+      "product_name": "Muse (x3) - R-KIEM Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 6816,
+      "product_name": "Icer (x3) - R-KIEM Seeds",
+      "missing_fields": [
+        "description",
+        "image"
+      ]
+    },
+    {
+      "product_id": 6817,
+      "product_name": "Pack Mix Clásicas (x6) - R-KIEM Seeds",
+      "missing_fields": [
+        "description",
+        "image"
+      ]
+    },
+    {
+      "product_id": 6821,
+      "product_name": "Royal Gorilla Auto (x3) - Royal Queen Seeds",
+      "missing_fields": [
+        "description",
+        "image"
+      ]
+    },
+    {
+      "product_id": 6825,
+      "product_name": "Sweet Zkittlez (x3) - Royal Queen Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 6851,
+      "product_name": "Sweet Fresh Gel Naranja 250ml - Kokümelen",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 6854,
+      "product_name": "Sweet Fresh Gel Tutti Frutti 250ml - Kokümelen",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 6855,
+      "product_name": "Sweet Fresh Gel Deluxe Lemon 250ml - Kokümelen",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 6856,
+      "product_name": "Sweet Fresh Gel Deluxe Frutal 250ml - Kokümelen",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 6857,
+      "product_name": "Sweet Fresh Gel Deluxe Vainilla 250ml - Kokümelen",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 6858,
+      "product_name": "Sweet Fresh Gel Deluxe Chocolate 250ml - Kokümelen",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 6869,
+      "product_name": "Papelillos con Sabor 1 1/4 Banana Freak - Lion Rolling Circus",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 6876,
+      "product_name": "Synergy 140Grs Micorrizas - Grotek",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 6900,
+      "product_name": "Amazon Haze Auto (x3) - R-KIEM Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 6909,
+      "product_name": "Ampolleta Solux Pro LEC 315W 3100K- Solux",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 6924,
+      "product_name": "Uptake 1L - Cyco",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 6945,
+      "product_name": "Dr Repair 1L - Cyco",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 6946,
+      "product_name": "Dr Repair 250ml - Cyco",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 6955,
+      "product_name": "Royal Haze Auto (x3+1) - Royal Queen Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 6959,
+      "product_name": "Royal Gorilla (x3+1) - Royal Queen Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 6960,
+      "product_name": "Sour Diesel (x3+1) - Royal Queen Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7000,
+      "product_name": "Ampolleta Solux Pro LEC 315W 4200K - Solux",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7026,
+      "product_name": "LED Pioneer 4 400 W - Helios Corporate",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7028,
+      "product_name": "LED COB 6 Onyx 370W - Helios Corporate",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7102,
+      "product_name": "Light Mix 50L - Grotek",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7228,
+      "product_name": "Carpa (100x100x200) - Helios Corporate",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7260,
+      "product_name": "Ventilador Pinza Oscilante 20W - Cornwall Electronics",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7266,
+      "product_name": "Carpa (60x60x160) - Helios Corporate",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7273,
+      "product_name": "Kukulkán (x3+1) - Pyramid Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7302,
+      "product_name": "Haze (x3) - Ripper Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7337,
+      "product_name": "Purple Cherry (x5) - Positronics",
+      "missing_fields": [
+        "summary",
+        "description",
+        "image"
+      ]
+    },
+    {
+      "product_id": 7338,
+      "product_name": "Z Valley (x5) - Positronics",
+      "missing_fields": [
+        "summary",
+        "description",
+        "image"
+      ]
+    },
+    {
+      "product_id": 7339,
+      "product_name": "Superguano 5K - Top Crop",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7341,
+      "product_name": "Balastro 250w Magnetico  - Inter Light",
+      "missing_fields": [
+        "summary",
+        "description",
+        "image"
+      ]
+    },
+    {
+      "product_id": 7362,
+      "product_name": "Ampolleta 400W Dual (Grow & Bloom) - Grow Genetics",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7363,
+      "product_name": "Tripack 750ml Orgánico - Wonderland",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7374,
+      "product_name": "Tierra Diatomea 100grs - Kasvi",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7380,
+      "product_name": "Top Vulcan 700g/1L - Top Crop",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7383,
+      "product_name": "Apple Crumble Block 170g - ONA",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7387,
+      "product_name": "Glass Cleaner 500cc - Bonglab",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7389,
+      "product_name": "Ventilador Pinza Oscilante 2.0  25cm/20W – Garden High Pro",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7390,
+      "product_name": "Balastro 600w Electrónico LumaxPro  - Garden High Pro",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7393,
+      "product_name": "Auto Lemon Kix (x3) - Dutch Passion",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7394,
+      "product_name": "Ducto 5' PROFLEX ALUDUCT 127mm (10m) - Garden High Pro",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7395,
+      "product_name": "Ducto 6' PROFLEX ALUDUCT 152mm (10m) - Garden High Pro",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7397,
+      "product_name": "Malla Bloqueo de Insectos 4\" (100mm)",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7398,
+      "product_name": "Jabón Potásico 80cc - Kasvi",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7399,
+      "product_name": "BC Diesel (x3) - Blimburn",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7400,
+      "product_name": "Galaxy  (x3+1) - Pyramid Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7402,
+      "product_name": "Automaria II (x3) - Paradise Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7403,
+      "product_name": "Gelato Glue (x3) - Strain Machine",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7404,
+      "product_name": "Reflector  Watermark Stuco",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7411,
+      "product_name": "Auto Mazar (x3) - Dutch Passion",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7412,
+      "product_name": "Termohigrómetro PROHYGRO Pro - Garden High Pro",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7413,
+      "product_name": "Termohigrómetro PROHYGRO Medium - Garden High Pro",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7414,
+      "product_name": "Filtro de Carbón Activo 4\" 100mm - Kasvi",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7415,
+      "product_name": "Filtro de Carbón Activo 5\" 125mm - Kasvi",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7416,
+      "product_name": "Ampolleta 250w HPS  (Grow & Bloom) - Kasvi",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7417,
+      "product_name": "Balastro 250w Magnético  - The King Of Green",
+      "missing_fields": [
+        "description",
+        "image"
+      ]
+    },
+    {
+      "product_id": 7418,
+      "product_name": "Malla de Secado 55cm 8 Niveles - Kasvi",
+      "missing_fields": [
+        "description",
+        "image"
+      ]
+    },
+    {
+      "product_id": 7419,
+      "product_name": "Balanza Gold Gram - Grow Genetics",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7420,
+      "product_name": "Balanza Green Gram - Grow Genetics",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7421,
+      "product_name": "Tijera One Eye - Grow Genetics",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7423,
+      "product_name": "Poleas PROHANGER 68Kg  - Garden High Pro",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7424,
+      "product_name": "Poleas LIGHTHANGER 5Kg  - Garden High Pro",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7427,
+      "product_name": "Moby-D Auto XXL (x12) - BSF",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7428,
+      "product_name": "New York City (x3+1) - Pyramid Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7429,
+      "product_name": "Gorilla Glue Auto (x2) - BSF",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7430,
+      "product_name": "Lebron Haze XXL Auto (x2) - BSF",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7431,
+      "product_name": "BCN Critical XXL (x3) Auto - Seed Stockers",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7432,
+      "product_name": "Purple Punch Auto (x3) - Seed Stockers",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7433,
+      "product_name": "Golden Lemon Haze Fem (x3) - Seed Stockers",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7435,
+      "product_name": "Ampolleta CFL 150W Floración - Agrolite",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7438,
+      "product_name": "Filtro 125mm x 460m3/hr Proactiv - Garden High Pro",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7449,
+      "product_name": "Tijera PROCUT 1 Eye Scissors - Garden High Pro",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7450,
+      "product_name": "Tijera PROCUT Curved - Garden High Pro",
+      "missing_fields": [
+        "description",
+        "image"
+      ]
+    },
+    {
+      "product_id": 7452,
+      "product_name": "Tijera PROCUT Straight Blades Recta - Garden High Pro",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7453,
+      "product_name": "Tijera Leef Kleen Punta Recta - Neptune Hydroponics",
+      "missing_fields": [
+        "summary",
+        "description",
+        "image"
+      ]
+    },
+    {
+      "product_id": 7455,
+      "product_name": "pH Kit Test - Neptune Hydroponics",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7462,
+      "product_name": "Ampolleta 600w SHP - Horti Light",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7469,
+      "product_name": "Malla Scrog PRONET 60-120cm - Garden High Pro",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7471,
+      "product_name": "Extractor en Línea 150mm  - Vents",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7472,
+      "product_name": "Extractor TT 125 (220/280 m3/h ) - VENTS",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7478,
+      "product_name": "Carpa (150x150x200) ECOPRO - Garde HIGHPRO",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7482,
+      "product_name": "Balastro 400w Plug And Play  - Grow Genetics",
+      "missing_fields": [
+        "summary",
+        "description",
+        "image"
+      ]
+    },
+    {
+      "product_id": 7483,
+      "product_name": "Balastro 600w Plug And Play  - Grow Genetics",
+      "missing_fields": [
+        "summary",
+        "description",
+        "image"
+      ]
+    },
+    {
+      "product_id": 7485,
+      "product_name": "Red Critical Auto (x12) - BSF",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7492,
+      "product_name": "Hongos De Suelo 150ml - Anasac",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7494,
+      "product_name": "Malla de Secado Prodry Modulable 55/4 - Garden High Pro",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7495,
+      "product_name": "Plato 18x18x3cms (Maceta 7L y 5L) - Tricomar",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7496,
+      "product_name": "Sticky Fingers Auto (x3) - Seed Stockers",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7499,
+      "product_name": "Green Sensation 250ml - Plagron",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7503,
+      "product_name": "Ampolleta 400W Sodio (Grow & Bloom) LUMAXPRO  - Garden HIGHPRO",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7504,
+      "product_name": "Lemon King (x3+1) Fem - Eva Seeds",
+      "missing_fields": [
+        "image"
+      ]
+    },
+    {
+      "product_id": 7527,
+      "product_name": "Ampolleta 400W Dual Horti-Max  (Grow & Bloom) - Vanguard",
+      "missing_fields": [
+        "image"
+      ]
+    }
+  ]
+}

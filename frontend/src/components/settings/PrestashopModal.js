@@ -415,15 +415,15 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
     });
     
     try {
-      // Iniciar sincronización por lotes (BatchSyncService con batch_size=500, pause=0)
+      // Iniciar sincronización RÁPIDA (optimizada con offset)
       const response = await axios.post(
-        `${API}/integrations/prestashop/${integrationId}/sync-batch?batch_size=500&pause_seconds=0`
+        `${API}/integrations/prestashop/${integrationId}/sync-products-fast`
       );
       
       const jobId = response.data.job_id;
       setBatchProgress(prev => ({ ...prev, job_id: jobId, status: 'running' }));
       
-      toast.success('🚀 Sincronización iniciada', {
+      toast.success('🚀 Sincronización rápida iniciada', {
         duration: 5000
       });
       
@@ -431,7 +431,7 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
       const pollInterval = setInterval(async () => {
         try {
           const progressResponse = await axios.get(
-            `${API}/integrations/prestashop/${integrationId}/sync-progress?job_id=${jobId}`
+            `${API}/integrations/prestashop/sync-progress-v2/${jobId}`
           );
           
           const progress = progressResponse.data;

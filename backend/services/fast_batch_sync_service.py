@@ -91,7 +91,7 @@ class FastBatchSyncService:
             manufacturers_map = await self._load_manufacturers_map()
             categories_map = await self._load_categories_map()
             
-            # 3. Sincronizar en lotes grandes SIN PAUSAS
+            # 3. Sincronizar en lotes grandes SIN PAUSAS usando OFFSET
             batch_size = 500  # Aumentado de 100
             synced = 0
             failed = 0
@@ -99,29 +99,29 @@ class FastBatchSyncService:
             updated = 0
             skipped = 0
             
-            last_id = 0
+            offset = 0
             batch_num = 0
             consecutive_empty = 0
             
-            while synced + failed < total_to_sync and consecutive_empty < 5:
+            while synced + failed < total_to_sync and consecutive_empty < 3:
                 batch_num += 1
                 
                 try:
-                    # Obtener lote
-                    batch = self.ps_service.get_products_by_id_range(
-                        min_id=last_id,
-                        limit=batch_size
+                    # Obtener lote usando OFFSET (más confiable que filtros por ID)
+                    batch = self.ps_service.get_products(
+                        limit=batch_size,
+                        offset=offset
                     )
                     
-                    if not batch:
+                    if not batch or len(batch) == 0:
                         consecutive_empty += 1
-                        last_id += batch_size  # Saltar gap
-                        logger.info(f"📦 Lote {batch_num}: vacío ({consecutive_empty}/5), saltando...")
+                        offset += batch_size
+                        logger.info(f"📦 Lote {batch_num}: vacío ({consecutive_empty}/3), saltando...")
                         continue
                     
                     consecutive_empty = 0
                     batch_count = len(batch)
-                    logger.info(f"📦 Lote {batch_num}: {batch_count} productos (ID>{last_id})")
+                    logger.info(f"📦 Lote {batch_num}: {batch_count} productos (offset={offset})")
                     
                     # Procesar lote en paralelo (más rápido)
                     tasks = [
@@ -164,15 +164,15 @@ class FastBatchSyncService:
                         'current_batch': batch_num
                     })
                     
-                    # Actualizar last_id
-                    last_id = max(int(p.get('id', last_id)) for p in batch)
+                    # Avanzar offset para el siguiente lote
+                    offset += batch_size
                     
                     # SIN PAUSA - Continuar inmediatamente
                     
                 except Exception as e:
                     logger.error(f"❌ Error lote {batch_num}: {e}")
                     consecutive_empty += 1
-                    last_id += batch_size
+                    offset += batch_size
             
             # 4. Finalizar
             await self._update_progress({
@@ -212,39 +212,31 @@ class FastBatchSyncService:
     
     async def _count_products_fast(self) -> int:
         """
-        Contar productos usando el método confiable del servicio anterior
-        (HÍBRIDO: usa la lógica probada de batch_sync_service)
+        Contar productos usando OFFSET (más confiable que filtros por ID)
         """
-        logger.info("🔢 Contando productos (método confiable híbrido)...")
+        logger.info("🔢 Contando productos...")
         
         all_product_ids = set()
-        last_id = 0
+        offset = 0
         consecutive_empty = 0
-        max_empty_batches = 10  # Aumentado para manejar gaps grandes
-        iterations_without_new = 0
-        max_iterations_without_new = 20  # Aumentado para catálogos grandes
+        max_empty_batches = 3
         
-        while consecutive_empty < max_empty_batches and iterations_without_new < max_iterations_without_new:
+        while consecutive_empty < max_empty_batches:
             try:
                 # Solicitar lote con solo IDs (más rápido)
-                batch = self.ps_service.get_products_by_id_range(
-                    min_id=last_id,
+                batch = self.ps_service.get_products(
                     limit=500,
+                    offset=offset,
                     display='[id]'
                 )
                 
                 if not batch or len(batch) == 0:
                     consecutive_empty += 1
-                    iterations_without_new += 1
-                    # Saltar IDs para manejar gaps
-                    last_id += 500
+                    offset += 500
                     continue
                 
                 # Resetear contador de lotes vacíos
                 consecutive_empty = 0
-                
-                # Verificar si encontramos nuevos IDs
-                ids_before = len(all_product_ids)
                 
                 # Agregar IDs únicos
                 for prod in batch:
@@ -252,24 +244,17 @@ class FastBatchSyncService:
                     if prod_id > 0:
                         all_product_ids.add(prod_id)
                 
-                # Verificar si agregamos nuevos IDs
-                ids_after = len(all_product_ids)
-                if ids_after == ids_before:
-                    iterations_without_new += 1
-                else:
-                    iterations_without_new = 0
+                # Avanzar offset
+                offset += 500
                 
-                # Actualizar último ID procesado
-                last_id = max(int(p.get('id', 0)) for p in batch)
-                
-                # Si recibimos menos del batch_size, probablemente hay un gap
+                # Si recibimos menos de 500, probablemente terminamos
                 if len(batch) < 500:
-                    last_id += 1  # Saltar al siguiente ID posible
+                    # Intentar uno más para confirmar
+                    offset += 500
                 
             except Exception as e:
-                logger.error(f"Error en conteo batch: {e}")
-                # Intentar continuar saltando IDs
-                last_id += 500
+                logger.error(f"Error en conteo offset {offset}: {e}")
+                offset += 500
                 consecutive_empty += 1
         
         total = len(all_product_ids)
