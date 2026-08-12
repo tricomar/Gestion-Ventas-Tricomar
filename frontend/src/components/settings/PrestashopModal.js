@@ -415,31 +415,28 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
     });
     
     try {
-      // Iniciar sincronización por lotes
+      // Iniciar sincronización RÁPIDA (nuevo endpoint optimizado)
       const response = await axios.post(
-        `${API}/integrations/prestashop/${integrationId}/sync-batch`,
-        {
-          batch_size: 100,
-          pause_seconds: 0.5,
-          max_products: null // null = usar límite configurado en cuenta
-        }
+        `${API}/integrations/prestashop/${integrationId}/sync-products-fast`
       );
       
       const jobId = response.data.job_id;
       setBatchProgress(prev => ({ ...prev, job_id: jobId, status: 'running' }));
       
-      toast.success('Sincronización por lotes iniciada');
+      toast.success('🚀 Sincronización rápida iniciada (3-5 min para 2400 productos)', {
+        duration: 5000
+      });
       
-      // Polling para verificar progreso
+      // Polling para verificar progreso (nuevo endpoint)
       const pollInterval = setInterval(async () => {
         try {
           const progressResponse = await axios.get(
-            `${API}/integrations/prestashop/${integrationId}/sync-progress?job_id=${jobId}`
+            `${API}/integrations/prestashop/sync-progress-v2/${jobId}`
           );
           
           const progress = progressResponse.data;
           
-          if (progress.status === 'not_started') {
+          if (progress.status === 'initializing') {
             return;
           }
           
@@ -447,14 +444,17 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
             status: progress.status,
             progress_percentage: progress.progress_percentage || 0,
             current_batch: progress.current_batch || 0,
-            total_batches: progress.total_batches || 0,
+            total_batches: Math.ceil((progress.total_products || 0) / 500), // batch size 500
             synced_products: progress.synced_products || 0,
             failed_products: progress.failed_products || 0,
             total_products: progress.total_products || 0,
-            job_id: progress.id,
-            errors_count: progress.errors_count || 0,
-            incomplete_count: progress.incomplete_count || 0,
-            report_path: progress.report_path
+            products_created: progress.products_created || 0,
+            products_updated: progress.products_updated || 0,
+            products_skipped: progress.products_skipped || 0,
+            job_id: jobId,
+            errors_count: progress.failed_products || 0,
+            incomplete_count: 0,
+            report_path: null
           });
           
           if (progress.status === 'completed') {
@@ -471,9 +471,9 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
             ].filter(Boolean).join(' | ');
             
             // Comparar con total disponible
-            const completeness = progress.total_available && progress.total_available > progress.synced_products
-              ? `\n⚠️  Nota: ${progress.total_available} productos disponibles en PrestaShop`
-              : '';
+            const completeness = progress.total_products && progress.total_products > progress.synced_products
+              ? `\n⚠️  ${progress.synced_products}/${progress.total_products} sincronizados`
+              : `\n✅ 100% completado`;
             
             toast.success(`Sincronización completada\n${stats}${completeness}`, { duration: 8000 });
             
@@ -481,31 +481,31 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
             setCompletedStages(prev => ({ ...prev, stage2: true }));
             setCurrentStage('stage3');
             
-            // Mostrar opción de descargar reporte
-            if (progress.errors_count > 0 || progress.incomplete_count > 0) {
+            // Mostrar opción de descargar reporte si hay errores
+            if (progress.failed_products > 0) {
               setShowBatchReport(true);
             }
             
             // Recargar categorías si corresponde
             window.dispatchEvent(new CustomEvent('reloadCategories'));
-          } else if (progress.status === 'error') {
+          } else if (progress.status === 'failed') {
             clearInterval(pollInterval);
             setBatchSyncing(false);
-            toast.error(`Error en sincronización: ${progress.error_message || 'Error desconocido'}`);
+            toast.error(`Error en sincronización: ${progress.error || 'Error desconocido'}`);
           }
         } catch (error) {
           console.error('Error polling batch progress:', error);
         }
       }, 2000); // Polling cada 2 segundos
       
-      // Timeout de seguridad (30 minutos para muchos productos)
+      // Timeout de seguridad aumentado (15 minutos, más que suficiente para 10k productos)
       setTimeout(() => {
         clearInterval(pollInterval);
         if (batchSyncing) {
           setBatchSyncing(false);
-          toast.warning('Sincronización tomó demasiado tiempo. Verifica el progreso manualmente.');
+          toast.warning('⏱️ Sincronización tomó más de lo esperado. Verifica en Inventario.');
         }
-      }, 1800000); // 30 minutos
+      }, 900000); // 15 minutos (vs 30 minutos anterior, ahora es mucho más rápido)
       
     } catch (error) {
       let errorMsg = 'Error al iniciar sincronización por lotes';
