@@ -6,6 +6,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useSettings } from '../context/SettingsContext';
 import { useAuth } from '../context/AuthContext';
 import { useStores } from '../hooks/useStores';
+import { useData } from '../context/DataContext';
 import ImportProducts from '../components/ImportProducts';
 import * as XLSX from 'xlsx';
 
@@ -36,6 +37,7 @@ const SettingsPage = () => {
   const { settings, refreshSettings } = useSettings();
   const { user, logout } = useAuth();
   const { stores, loading: storesLoading } = useStores(); // Hook para obtener tiendas dinámicas
+  const { invalidateCategories } = useData(); // Hook para invalidar cache
   const [activeTab, setActiveTab] = useState('profile'); // 'stores', 'profile', 'users', 'inventory', 'database', or 'audit' - Inicia en Mi Perfil
   
   // Categories management (jerárquico)
@@ -291,6 +293,9 @@ const SettingsPage = () => {
       
       toast.success('Categoría agregada exitosamente');
       await fetchHierarchicalCategories();
+      
+      // Invalidar cache global de categorías
+      invalidateCategories();
     } catch (error) {
       const errorMessage = error.response?.data?.detail || 'Error al agregar categoría';
       toast.error(errorMessage);
@@ -306,6 +311,9 @@ const SettingsPage = () => {
       
       toast.success('Categoría actualizada exitosamente');
       await fetchHierarchicalCategories();
+      
+      // Invalidar cache global
+      invalidateCategories();
     } catch (error) {
       const errorMessage = error.response?.data?.detail || 'Error al actualizar categoría';
       toast.error(errorMessage);

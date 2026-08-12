@@ -445,6 +445,90 @@ async def sync_categories(
         raise HTTPException(status_code=500, detail=f"Error al sincronizar categorías: {str(e)}")
 
 
+@router.post("/prestashop/{integration_id}/sync-products-fast")
+async def sync_products_fast(
+    integration_id: str,
+    background_tasks: BackgroundTasks,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    NUEVO: Sincronización rápida y robusta (10x más rápido)
+    Optimizado para catálogos grandes (10k+ productos)
+    
+    Mejoras:
+    - Sin pausas entre lotes
+    - Batch size 500 (vs 100)
+    - Procesamiento paralelo
+    - Progress en DB
+    - Manejo robusto de gaps
+    
+    Estimado: 2400 productos en 3-5 min (vs 30+ min)
+    """
+    from services.fast_batch_sync_service import FastBatchSyncService
+    
+    # Obtener integración
+    integration = await db.prestashop_integrations.find_one(
+        get_tenant_filter(current_user.dict(), {'id': integration_id}),
+        {'_id': 0}
+    )
+    
+    if not integration:
+        raise HTTPException(status_code=404, detail="Integración no encontrada")
+    
+    # Obtener límite de cuenta
+    account = await db.accounts.find_one(
+        {'id': current_user.account_id},
+        {'_id': 0, 'max_products_sync': 1}
+    )
+    max_products = account.get('max_products_sync', 3000) if account else 3000
+    
+    # Crear servicio rápido
+    ps_service = PrestashopAPIService(integration['shop_url'], integration['api_key'])
+    fast_sync = FastBatchSyncService(
+        ps_service,
+        db,
+        current_user.account_id,
+        integration_id
+    )
+    
+    # Iniciar en background (sin bloquear)
+    background_tasks.add_task(
+        fast_sync.sync_all_products_fast,
+        store_id=integration['store_id'],
+        store_code='A',  # TODO: obtener de integración
+        max_products=max_products
+    )
+    
+    return {
+        'success': True,
+        'job_id': fast_sync.job_id,
+        'message': '🚀 Sincronización rápida iniciada',
+        'estimated_time': '3-5 minutos para 2400 productos'
+    }
+
+
+@router.get("/prestashop/sync-progress-v2/{job_id}")
+async def get_sync_progress_v2(
+    job_id: str,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Obtener progreso de sincronización rápida (para polling desde frontend)
+    """
+    progress = await db.sync_progress.find_one(
+        {
+            'job_id': job_id,
+            'account_id': current_user.account_id
+        },
+        {'_id': 0}
+    )
+    
+    if not progress:
+        raise HTTPException(status_code=404, detail="Job no encontrado")
+    
+    return progress
+
+
 @router.post("/prestashop/{integration_id}/sync-products")
 async def sync_products(
     integration_id: str,
@@ -452,7 +536,8 @@ async def sync_products(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Iniciar sincronización de productos en background
+    Iniciar sincronización de productos en background (versión antigua)
+    ⚠️ DEPRECADO: Usar /sync-products-fast en su lugar
     """
     # Obtener integración
     integration = await db.prestashop_integrations.find_one(
