@@ -1,0 +1,26 @@
+{
+  "summary": "Fase 3 Órdenes Automáticas: Validación de código PrestashopOrderService. Verificado backend RUNNING sin errores de importación, servicio instanciable, 8 métodos existentes, detección de estados correcta (cancelled 6/7/8, payment 2/11/12, delivered 5), creación automática de productos con flags correctos (auto_created=True, auto_created_from_order=True, auto_created_at, prestashop_integration_id, stock=0), reserva de stock funciona (10→7 con reason=order_reserve_{id}), liberación de stock funciona (7→10 con reason=order_cancel_{id}), sync_single_order actualizada usa nuevo servicio y obtiene store_id de integración. E2E real con webhook diferido (no hay órdenes reales en DB aún).",
+  "tested_scope": ["backend"],
+  "passed": [
+    "Backend RUNNING (supervisor OK, uptime confirmado)",
+    "prestashop_order_service.py importa sin errores",
+    "PrestashopOrderService instanciable con (ps_service, db)",
+    "8 métodos existentes: sync_order_with_products, _get_order_products, _ensure_products_exist, _reserve_stock, _release_stock, _is_cancelled_state, _is_payment_accepted_state, _is_delivered_state",
+    "_is_cancelled_state: 6/7/8=True, 2=False ✓",
+    "_is_payment_accepted_state: 2/11/12=True, 5=False ✓",
+    "_is_delivered_state: 5=True, 2=False ✓",
+    "sync_order_with_products (con mocks): orden nueva → success=True, crea producto faltante con auto_created=True, auto_created_from_order=True, stock=0, prestashop_integration_id vinculado",
+    "Reserva de stock: stock 10 - qty 3 = 7, last_stock_change_reason='order_reserve_555', stock_reserved=True, stock_reserved_at presente",
+    "Liberación de stock (cambio estado 2→6): stock 7 + qty 3 = 10, last_stock_change_reason='order_cancel_555', stock_reserved=False, stock_released_at presente",
+    "Orden nueva → insert_one, orden existente → update_one (correcto)",
+    "_get_order_products: parsea associations.order_rows, normaliza dict a lista (row único), retorna product_id/name/reference/quantity/unit_price",
+    "sync_single_order (routes/integrations.py:1855-1902) usa PrestashopOrderService, obtiene store_id de db.prestashop_integrations, llama sync_order_with_products con todos los parámetros",
+    "process_webhook_background invoca sync_single_order en eventos order_created/order_updated"
+  ],
+  "failed": [],
+  "action_items": [],
+  "success_rate": {"backend": "100%", "frontend": "N/A"},
+  "retest_needed": false,
+  "full_testing_deferred": true,
+  "notes": "E2E real con webhook de PrestaShop no probado (requiere orden real). Validación basada en unit tests con mocks (motor AsyncMock) que replican el flujo completo. DB actualmente sin órdenes."
+}

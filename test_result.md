@@ -686,9 +686,9 @@ frontend:
 metadata:
   created_by: "main_agent"
   version: "2.0"
-  test_sequence: 26
+  test_sequence: 27
   last_updated: "2026-12-20"
   test_date: "2026-12-20"
   test_accounts: "hola@tricomar.cl"
-  current_phase: "phase_3_automatic_orders_webhook"
+  current_phase: "phase_3_automatic_orders_testing"
 
