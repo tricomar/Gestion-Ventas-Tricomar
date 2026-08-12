@@ -686,9 +686,9 @@ frontend:
 metadata:
   created_by: "main_agent"
   version: "2.0"
-  test_sequence: 24
+  test_sequence: 25
   last_updated: "2026-12-20"
   test_date: "2026-12-20"
   test_accounts: "hola@tricomar.cl"
-  current_phase: "phase_2_frontend_integration"
+  current_phase: "phase_2_inventory_pos_integration"
 

@@ -147,6 +147,16 @@ const API = `${BACKEND_URL}/api`;
 
       toast.success('Venta registrada exitosamente');
       
+      // Sincronizar stock con PrestaShop si el producto está vinculado
+      if (selectedProduct.prestashop_id && selectedProduct.prestashop_integration_id) {
+        const newStock = (selectedProduct.stock || 0) - parseFloat(quantity);
+        syncStockToPrestaShop(
+          selectedProduct.prestashop_integration_id,
+          selectedProduct.id,
+          Math.max(0, newStock) // Asegurar que no sea negativo
+        );
+      }
+      
       // Reset form
       setSelectedProduct(null);
       setProductSearch('');
@@ -163,6 +173,29 @@ const API = `${BACKEND_URL}/api`;
       console.error('Error creating sale:', error);
     } finally {
       setLoading(false);
+    }
+  };
+  
+  const syncStockToPrestaShop = async (integrationId, productId, newStock) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(
+        `${API}/integrations/prestashop/${integrationId}/stock/sync-to-ps`,
+        null,
+        {
+          params: {
+            product_id: productId,
+            quantity: newStock,
+            source: 'pos'
+          },
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+      console.log('✅ Stock POS sincronizado con PrestaShop');
+    } catch (error) {
+      console.error('⚠️ Error sincronizando stock POS con PrestaShop:', error);
     }
   };
 

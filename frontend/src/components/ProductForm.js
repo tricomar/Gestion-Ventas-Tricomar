@@ -111,6 +111,11 @@ const ProductForm = ({ product, onClose }) => {
       if (product) {
         await axios.put(`${API}/products/${product.id}`, data);
         toast.success('Producto actualizado');
+        
+        // Sincronizar stock con PrestaShop si el producto está vinculado
+        if (product.prestashop_id && product.prestashop_integration_id) {
+          syncStockToPrestaShop(product.prestashop_integration_id, product.id, data.stock);
+        }
       } else {
         await axios.post(`${API}/products`, data);
         toast.success('Producto creado');
@@ -122,6 +127,31 @@ const ProductForm = ({ product, onClose }) => {
       console.error('Error saving product:', error);
     } finally {
       setLoading(false);
+    }
+  };
+  
+  const syncStockToPrestaShop = async (integrationId, productId, quantity) => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(
+        `${API}/integrations/prestashop/${integrationId}/stock/sync-to-ps`,
+        null,
+        {
+          params: {
+            product_id: productId,
+            quantity: quantity,
+            source: 'manual'
+          },
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+      // No mostrar toast para no ser intrusivo, pero loggear éxito
+      console.log('✅ Stock sincronizado con PrestaShop');
+    } catch (error) {
+      // Solo loggear error, no mostrar toast para no interrumpir el flujo
+      console.error('⚠️ Error sincronizando stock con PrestaShop:', error);
     }
   };
 
