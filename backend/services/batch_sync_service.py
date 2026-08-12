@@ -32,8 +32,8 @@ class BatchSyncService:
         
     async def sync_products_in_batches(
         self,
-        batch_size: int = 100,
-        pause_seconds: float = 0.5,
+        batch_size: int = 500,
+        pause_seconds: float = 0,
         max_products: int = None
     ) -> Dict[str, Any]:
         """

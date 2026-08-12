@@ -13,18 +13,19 @@ export const useStores = () => {
   const stores = useMemo(() => {
     if (!account || !account.stores || account.stores.length === 0) {
       // Fallback a configuración legacy de 2 tiendas
+      // Solo usar nombres reales de settings si existen
       return [
         {
           id: 'store_a',
           key: 'A',
-          name: settings?.store_a_name || 'Tienda A',
+          name: settings?.store_a_name || 'Caja A',
           active: true,
           color: '#D4F0A5'
         },
         {
           id: 'store_b',
           key: 'B',
-          name: settings?.store_b_name || 'Tienda B',
+          name: settings?.store_b_name || 'Caja B',
           active: true,
           color: '#FADBB0'
         }
@@ -68,7 +69,8 @@ export const useStores = () => {
       store = getStoreById(keyOrId);
     }
     
-    return store ? store.name : `Tienda ${keyOrId}`;
+    // Si no se encuentra, devolver el código tal cual (ej: "A", "B") sin agregar "Tienda"
+    return store ? store.name : keyOrId;
   };
 
   return {

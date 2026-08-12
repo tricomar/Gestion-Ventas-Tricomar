@@ -415,28 +415,29 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
     });
     
     try {
-      // Iniciar sincronización RÁPIDA (nuevo endpoint optimizado)
+      // Iniciar sincronización por lotes (BatchSyncService con batch_size=500, pause=0)
       const response = await axios.post(
-        `${API}/integrations/prestashop/${integrationId}/sync-products-fast`
+        `${API}/integrations/prestashop/${integrationId}/sync-batch?batch_size=500&pause_seconds=0`
       );
       
       const jobId = response.data.job_id;
       setBatchProgress(prev => ({ ...prev, job_id: jobId, status: 'running' }));
       
-      toast.success('🚀 Sincronización rápida iniciada (3-5 min para 2400 productos)', {
+      toast.success('🚀 Sincronización iniciada', {
         duration: 5000
       });
       
-      // Polling para verificar progreso (nuevo endpoint)
+      // Polling para verificar progreso
       const pollInterval = setInterval(async () => {
         try {
           const progressResponse = await axios.get(
-            `${API}/integrations/prestashop/sync-progress-v2/${jobId}`
+            `${API}/integrations/prestashop/${integrationId}/sync-progress?job_id=${jobId}`
           );
           
           const progress = progressResponse.data;
           
-          if (progress.status === 'initializing') {
+          // El BatchSyncService puede devolver status 'running', 'completed', 'error'
+          if (!progress) {
             return;
           }
           
@@ -444,7 +445,7 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
             status: progress.status,
             progress_percentage: progress.progress_percentage || 0,
             current_batch: progress.current_batch || 0,
-            total_batches: Math.ceil((progress.total_products || 0) / 500), // batch size 500
+            total_batches: progress.total_batches || 0,
             synced_products: progress.synced_products || 0,
             failed_products: progress.failed_products || 0,
             total_products: progress.total_products || 0,
@@ -452,9 +453,9 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
             products_updated: progress.products_updated || 0,
             products_skipped: progress.products_skipped || 0,
             job_id: jobId,
-            errors_count: progress.failed_products || 0,
-            incomplete_count: 0,
-            report_path: null
+            errors_count: progress.errors_count || 0,
+            incomplete_count: progress.incomplete_count || 0,
+            report_path: progress.report_path || null
           });
           
           if (progress.status === 'completed') {

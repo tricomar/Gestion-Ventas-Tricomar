@@ -17,10 +17,7 @@ export const useSettings = () => {
 
 export const SettingsProvider = ({ children }) => {
   const { token } = useAuth(); // Get token from AuthContext
-  const [settings, setSettings] = useState({
-    store_a_name: 'Tienda A',
-    store_b_name: 'Tienda B'
-  });
+  const [settings, setSettings] = useState(null); // null inicial hasta que se carguen settings reales
   const [loading, setLoading] = useState(true);
 
   const fetchSettings = async () => {
