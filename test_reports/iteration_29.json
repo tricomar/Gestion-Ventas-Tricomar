@@ -1,0 +1,42 @@
+{
+  "summary": "Fase 2 Stock Bidireccional - Frontend integration testing for PrestashopModal. Backend endpoints (sync-from-ps and conflicts) validated 200 OK via curl. Modal opens correctly via Configuración > Integraciones > Configurar. Stock UI section is correctly gated by completedStages.stage2 and is NOT rendered because stage2 sync hasn't been completed (DB empty of productos). Code review of PrestashopModal.js confirms buttons/handlers/conflicts modal exist at lines 1252-1312 and 1450-1549. Full UI flow (clicking Sincronizar/Detectar and asserting API calls) could NOT be validated end-to-end because stage2 gating prevents rendering until products are synced.",
+  "tested_scope": ["frontend", "backend", "integration"],
+  "passed": [
+    "Backend POST /api/integrations/prestashop/{id}/stock/sync-from-ps returns 200 with {success:true, synced_count:0, conflicts_detected:0}",
+    "Backend GET /api/integrations/prestashop/{id}/stock/conflicts returns 200 with {conflicts:[], total_conflicts:0}",
+    "Login flow works (hola@tricomar.cl)",
+    "Configuración > Integraciones tab renders integration card 'Tienda 1' (tricomar.cl)",
+    "'Configurar' button opens PrestashopModal (title 'Configurar PrestaShop' visible)",
+    "Modal shows stage progress (Conexión ✓ / Sincronización)",
+    "Stock section correctly hidden when completedStages.stage2 is false (matches spec: 'solo debe mostrarse si completedStages.stage2 es true')",
+    "yarn build compiled successfully (per main agent context)"
+  ],
+  "failed": [
+    {
+      "area": "frontend/integration",
+      "issue": "GET stages endpoint returns 422 - 'Error verificando etapas completadas: AxiosError: Request failed with status code 422'. This prevents completedStages.stage2 from ever becoming true via this modal instance, so the new Stock section cannot be reached through the UI even if user has already synced products previously.",
+      "evidence": "Browser console: 'Failed to load resource: the server responded with a status of 422' twice on modal open, followed by 'Error verificando etapas completadas: AxiosError: Request failed with status code 422'",
+      "priority": "HIGH"
+    },
+    {
+      "area": "frontend",
+      "issue": "Stock section UI (Sincronizar Stock desde PS / Detectar Conflictos buttons and conflicts modal) could NOT be exercised end-to-end via UI because the gating condition (completedStages.stage2) is not met. Testing verified only via source-code review (lines 1252-1312, 1450-1549) that JSX exists.",
+      "evidence": "Playwright locators 'h3:has-text(\"Sincronización de Stock\")' returned count=0 after opening modal.",
+      "priority": "MEDIUM"
+    },
+    {
+      "area": "testability",
+      "issue": "New Stock section buttons and conflicts modal do not have data-testid attributes, which forced text-based selectors during testing.",
+      "evidence": "grep of PrestashopModal.js for data-testid returned 0 matches in the new Fase 2 UI blocks.",
+      "priority": "LOW"
+    }
+  ],
+  "action_items": [
+    "Investigate 422 response on 'verificando etapas completadas' endpoint - likely blocks the entire Fase 2 stock UI from becoming visible for users",
+    "Provide a way to test/reach the stock UI (e.g., stub stage2=true in dev, or add data seeding) OR fix the 422 so completedStages resolves properly",
+    "Add data-testid attributes to new Fase 2 elements (stock-sync-btn, detect-conflicts-btn, conflicts-modal, resolve-local-btn, resolve-ps-btn) for reliable automated testing"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "40% (modal opens & gating logic correct; buttons/API calls not reachable via UI due to stage2 gate + 422)"},
+  "retest_needed": true,
+  "full_testing_deferred": true
+}

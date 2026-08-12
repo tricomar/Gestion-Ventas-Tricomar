@@ -140,6 +140,12 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
   });
   const [showBatchReport, setShowBatchReport] = useState(false);
   
+  // Estados para sincronización de stock (Fase 2)
+  const [syncingStock, setSyncingStock] = useState(false);
+  const [stockConflicts, setStockConflicts] = useState([]);
+  const [showConflictsModal, setShowConflictsModal] = useState(false);
+  const [loadingConflicts, setLoadingConflicts] = useState(false);
+  
   // Estados para etapas de sincronización secuencial
   const [completedStages, setCompletedStages] = useState({
     stage1: false,    // Etapa 1: Categorías
@@ -166,15 +172,18 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
     if (!integId) return;
     
     try {
+      const token = localStorage.getItem('token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      
       // Verificar si hay categorías sincronizadas PARA ESTA INTEGRACIÓN
-      const categoriesResponse = await axios.get(`${API}/categories`);
+      const categoriesResponse = await axios.get(`${API}/categories`, { headers });
       const categories = categoriesResponse.data || [];
       const hasCategories = categories.some(cat => 
         cat.prestashop_integration_id === integId || cat.store_id === storeId
       );
       
       // Verificar si hay productos sincronizados PARA ESTA INTEGRACIÓN
-      const productsResponse = await axios.get(`${API}/products/search?query=`);
+      const productsResponse = await axios.get(`${API}/products/search?query=`, { headers });
       const products = productsResponse.data || [];
       const hasProducts = products.some(prod => 
         prod.prestashop_integration_id === integId || prod.store_id === storeId
@@ -538,6 +547,109 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
     }
   };
 
+  // ============================================================================
+  // FUNCIONES DE SINCRONIZACIÓN DE STOCK (FASE 2)
+  // ============================================================================
+  
+  const handleSyncStockFromPrestaShop = async () => {
+    if (!integration?.id) return;
+    
+    setSyncingStock(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(
+        `${API}/integrations/prestashop/${integration.id}/stock/sync-from-ps`,
+        { product_ids: null }, // null = sincronizar todos los productos
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      if (response.data.success) {
+        toast.success(`✅ Stock sincronizado: ${response.data.synced_count} productos actualizados`);
+        
+        if (response.data.conflicts_detected > 0) {
+          toast.warning(`⚠️ ${response.data.conflicts_detected} conflictos detectados`);
+        }
+        
+        // Recargar para reflejar cambios
+        if (onSuccess) onSuccess();
+      }
+    } catch (error) {
+      console.error('Error sincronizando stock:', error);
+      toast.error(error.response?.data?.detail || 'Error al sincronizar stock desde PrestaShop');
+    } finally {
+      setSyncingStock(false);
+    }
+  };
+  
+  const handleDetectConflicts = async () => {
+    if (!integration?.id) return;
+    
+    setLoadingConflicts(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(
+        `${API}/integrations/prestashop/${integration.id}/stock/conflicts`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
+      
+      setStockConflicts(response.data.conflicts || []);
+      setShowConflictsModal(true);
+      
+      if (response.data.conflicts && response.data.conflicts.length > 0) {
+        toast.warning(`⚠️ Se encontraron ${response.data.total_conflicts} conflictos de stock`);
+      } else {
+        toast.success('✅ No hay conflictos de stock');
+      }
+    } catch (error) {
+      console.error('Error detectando conflictos:', error);
+      toast.error('Error al detectar conflictos de stock');
+    } finally {
+      setLoadingConflicts(false);
+    }
+  };
+  
+  const handleResolveConflict = async (productId, resolution, customQuantity = null) => {
+    if (!integration?.id) return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(
+        `${API}/integrations/prestashop/stock/resolve-conflict`,
+        {
+          integration_id: integration.id,
+          product_id: productId,
+          resolution: resolution, // 'use_local', 'use_prestashop', 'use_custom'
+          custom_quantity: customQuantity
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      toast.success('✅ Conflicto resuelto');
+      
+      // Recargar conflictos
+      handleDetectConflicts();
+      
+      // Recargar productos
+      if (onSuccess) onSuccess();
+    } catch (error) {
+      console.error('Error resolviendo conflicto:', error);
+      toast.error(error.response?.data?.detail || 'Error al resolver conflicto');
+    }
+  };
 
 
   const handleFinish = () => {
@@ -1139,6 +1251,67 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
                     </div>
                   </div>
                 )}
+                
+                {/* FASE 2: Sincronización de Stock Bidireccional */}
+                {integration && (completedStages.stage2) && (
+                  <div className="mt-6 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-600 rounded-xl">
+                    <h3 className="font-bold text-lg text-slate-900 mb-2 flex items-center gap-2">
+                      <Package className="w-6 h-6 text-blue-600" />
+                      Sincronización de Stock
+                    </h3>
+                    <p className="text-sm text-slate-700 mb-4">
+                      Mantén el stock sincronizado entre Negocio Feliz y PrestaShop
+                    </p>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {/* Botón: Sincronizar Stock desde PrestaShop */}
+                      <button
+                        onClick={handleSyncStockFromPrestaShop}
+                        disabled={syncingStock}
+                        className="flex items-center gap-2 px-4 py-3 bg-blue-500 text-white border-2 border-slate-900 rounded-lg font-bold hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                        style={{ boxShadow: '3px 3px 0px 0px rgba(15,23,42,1)' }}
+                      >
+                        {syncingStock ? (
+                          <>
+                            <Loader className="w-5 h-5 animate-spin" />
+                            Sincronizando...
+                          </>
+                        ) : (
+                          <>
+                            <RefreshCw className="w-5 h-5" />
+                            Sincronizar Stock desde PS
+                          </>
+                        )}
+                      </button>
+                      
+                      {/* Botón: Detectar Conflictos */}
+                      <button
+                        onClick={handleDetectConflicts}
+                        disabled={loadingConflicts}
+                        className="flex items-center gap-2 px-4 py-3 bg-yellow-500 text-white border-2 border-slate-900 rounded-lg font-bold hover:bg-yellow-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                        style={{ boxShadow: '3px 3px 0px 0px rgba(15,23,42,1)' }}
+                      >
+                        {loadingConflicts ? (
+                          <>
+                            <Loader className="w-5 h-5 animate-spin" />
+                            Buscando...
+                          </>
+                        ) : (
+                          <>
+                            <ShoppingCart className="w-5 h-5" />
+                            Detectar Conflictos
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    
+                    <div className="mt-3 p-3 bg-blue-100 border-2 border-blue-600 rounded-lg">
+                      <p className="text-xs text-slate-700">
+                        <span className="font-bold">💡 Nota:</span> La sincronización de stock también se ejecuta automáticamente al editar stock en Inventario o al realizar ventas en POS.
+                      </p>
+                    </div>
+                  </div>
+                )}
 
                 {/* Barra de progreso de sincronización rápida */}
                 {syncing && (
@@ -1276,6 +1449,101 @@ const PrestashopModal = ({ isOpen, onClose, integration, onSuccess, stores }) =>
           </div>
         </div>
       </div>
+      
+      {/* Modal de Conflictos de Stock */}
+      {showConflictsModal && (
+        <>
+          <div 
+            className="fixed inset-0 bg-black bg-opacity-50 z-[60]"
+            onClick={() => setShowConflictsModal(false)}
+          />
+          <div className="fixed inset-0 flex items-center justify-center z-[60] p-4">
+            <div 
+              className="bg-white border-4 border-slate-900 rounded-2xl w-full max-w-4xl max-h-[80vh] overflow-hidden"
+              style={{ boxShadow: '12px 12px 0px 0px rgba(15,23,42,1)' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="bg-gradient-to-r from-yellow-500 to-orange-600 text-white px-6 py-4 flex justify-between items-center border-b-4 border-slate-900">
+                <h2 className="text-xl font-bold flex items-center gap-2">
+                  <ShoppingCart className="w-6 h-6" />
+                  Conflictos de Stock ({stockConflicts.length})
+                </h2>
+                <button
+                  onClick={() => setShowConflictsModal(false)}
+                  className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              
+              {/* Contenido */}
+              <div className="p-6 overflow-y-auto max-h-[calc(80vh-80px)]">
+                {stockConflicts.length === 0 ? (
+                  <div className="text-center py-8">
+                    <Check className="w-16 h-16 text-green-500 mx-auto mb-4" />
+                    <h3 className="text-xl font-bold text-slate-900 mb-2">
+                      ¡Sin conflictos!
+                    </h3>
+                    <p className="text-slate-600">
+                      El stock está sincronizado correctamente entre Negocio Feliz y PrestaShop.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {stockConflicts.map((conflict, index) => (
+                      <div 
+                        key={index}
+                        className="bg-gradient-to-r from-yellow-50 to-orange-50 border-2 border-yellow-600 rounded-xl p-4"
+                      >
+                        <div className="flex justify-between items-start mb-3">
+                          <div>
+                            <h4 className="font-bold text-slate-900">{conflict.product_name}</h4>
+                            <p className="text-sm text-slate-600">SKU: {conflict.sku}</p>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-xs font-bold text-red-600">
+                              Diferencia: {conflict.difference}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-3 mb-3">
+                          <div className="bg-blue-100 border-2 border-blue-600 rounded-lg p-3">
+                            <div className="text-xs text-slate-600 mb-1">Negocio Feliz</div>
+                            <div className="text-2xl font-bold text-blue-600">{conflict.local_stock}</div>
+                          </div>
+                          <div className="bg-purple-100 border-2 border-purple-600 rounded-lg p-3">
+                            <div className="text-xs text-slate-600 mb-1">PrestaShop</div>
+                            <div className="text-2xl font-bold text-purple-600">{conflict.prestashop_stock}</div>
+                          </div>
+                        </div>
+                        
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleResolveConflict(conflict.product_id, 'use_local')}
+                            className="flex-1 px-3 py-2 bg-blue-500 text-white border-2 border-slate-900 rounded-lg text-sm font-bold hover:bg-blue-600 transition-all"
+                            style={{ boxShadow: '2px 2px 0px 0px rgba(15,23,42,1)' }}
+                          >
+                            Usar Local ({conflict.local_stock})
+                          </button>
+                          <button
+                            onClick={() => handleResolveConflict(conflict.product_id, 'use_prestashop')}
+                            className="flex-1 px-3 py-2 bg-purple-500 text-white border-2 border-slate-900 rounded-lg text-sm font-bold hover:bg-purple-600 transition-all"
+                            style={{ boxShadow: '2px 2px 0px 0px rgba(15,23,42,1)' }}
+                          >
+                            Usar PrestaShop ({conflict.prestashop_stock})
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </>
   );
 };
