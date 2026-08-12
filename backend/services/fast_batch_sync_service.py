@@ -211,49 +211,74 @@ class FastBatchSyncService:
             }
     
     async def _count_products_fast(self) -> int:
-        """Contar productos rápidamente usando solo IDs"""
-        logger.info("🔢 Contando productos...")
+        """
+        Contar productos usando el método confiable del servicio anterior
+        (HÍBRIDO: usa la lógica probada de batch_sync_service)
+        """
+        logger.info("🔢 Contando productos (método confiable híbrido)...")
         
-        all_ids = set()
+        all_product_ids = set()
         last_id = 0
-        empty_count = 0
-        no_new_ids_count = 0
+        consecutive_empty = 0
+        max_empty_batches = 10  # Aumentado para manejar gaps grandes
+        iterations_without_new = 0
+        max_iterations_without_new = 20  # Aumentado para catálogos grandes
         
-        while empty_count < 5 and no_new_ids_count < 10:
+        while consecutive_empty < max_empty_batches and iterations_without_new < max_iterations_without_new:
             try:
+                # Solicitar lote con solo IDs (más rápido)
                 batch = self.ps_service.get_products_by_id_range(
                     min_id=last_id,
                     limit=500,
                     display='[id]'
                 )
                 
-                if not batch:
-                    empty_count += 1
+                if not batch or len(batch) == 0:
+                    consecutive_empty += 1
+                    iterations_without_new += 1
+                    # Saltar IDs para manejar gaps
                     last_id += 500
                     continue
                 
-                empty_count = 0
-                ids_before = len(all_ids)
+                # Resetear contador de lotes vacíos
+                consecutive_empty = 0
                 
-                for p in batch:
-                    pid = int(p.get('id', 0))
-                    if pid > 0:
-                        all_ids.add(pid)
+                # Verificar si encontramos nuevos IDs
+                ids_before = len(all_product_ids)
                 
-                if len(all_ids) == ids_before:
-                    no_new_ids_count += 1
+                # Agregar IDs únicos
+                for prod in batch:
+                    prod_id = int(prod.get('id', 0))
+                    if prod_id > 0:
+                        all_product_ids.add(prod_id)
+                
+                # Verificar si agregamos nuevos IDs
+                ids_after = len(all_product_ids)
+                if ids_after == ids_before:
+                    iterations_without_new += 1
                 else:
-                    no_new_ids_count = 0
+                    iterations_without_new = 0
                 
-                last_id = max(int(p.get('id', last_id)) for p in batch)
+                # Actualizar último ID procesado
+                last_id = max(int(p.get('id', 0)) for p in batch)
+                
+                # Si recibimos menos del batch_size, probablemente hay un gap
+                if len(batch) < 500:
+                    last_id += 1  # Saltar al siguiente ID posible
                 
             except Exception as e:
-                logger.error(f"Error contando: {e}")
-                empty_count += 1
+                logger.error(f"Error en conteo batch: {e}")
+                # Intentar continuar saltando IDs
                 last_id += 500
+                consecutive_empty += 1
         
-        total = len(all_ids)
-        logger.info(f"✓ Total productos: {total}")
+        total = len(all_product_ids)
+        logger.info(f"✓ Total productos detectados: {total}")
+        
+        if all_product_ids:
+            sorted_ids = sorted(all_product_ids)
+            logger.info(f"  Rango de IDs: {min(sorted_ids)} - {max(sorted_ids)}")
+        
         return total
     
     async def _sync_single_product(
