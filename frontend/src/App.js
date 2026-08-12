@@ -24,6 +24,7 @@ import AppLayout from './components/layout/AppLayout';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { AccountProvider } from './context/AccountContext';
 import { SettingsProvider } from './context/SettingsContext';
+import { DataProvider } from './context/DataContext';
 import { AppSettingsProvider } from './hooks/useAppSettings';
 import { setupAxiosInterceptor } from './utils/axiosInterceptor';
 import './App.css';
@@ -263,9 +264,11 @@ function App() {
     <AuthProvider>
       <AccountProvider>
         <SettingsProvider>
-          <BrowserRouter>
-            <AppRoutes />
-          </BrowserRouter>
+          <DataProvider>
+            <BrowserRouter>
+              <AppRoutes />
+            </BrowserRouter>
+          </DataProvider>
         </SettingsProvider>
       </AccountProvider>
     </AuthProvider>

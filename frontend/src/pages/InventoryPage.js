@@ -5,6 +5,7 @@ import { Package, Plus, Edit, Trash2, Home, Download, Search, Filter, Calculator
 import { useNavigate } from 'react-router-dom';
 import { useSettings } from '../context/SettingsContext';
 import { useStores } from '../hooks/useStores';
+import { useData } from '../context/DataContext';
 import ProductForm from '../components/ProductForm';
 import PriceCalculatorModal from '../components/PriceCalculatorModal';
 import BulkDeleteConfirmModal from '../components/BulkDeleteConfirmModal';
