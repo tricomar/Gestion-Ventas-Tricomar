@@ -104,11 +104,11 @@ class BatchSyncService:
             
             logger.info(f"📦 Iniciando sincronización: {total_to_sync} productos en {total_batches} lotes de {batch_size}")
             
-            # 3. Sincronizar por lotes usando filtro por ID (más confiable que offset)
-            last_id = 0
+            # 3. Sincronizar por lotes usando OFFSET (más simple y compatible)
+            offset = 0
             batch_num = 0
             consecutive_empty_batches = 0
-            max_consecutive_empty = 5  # Permitir más gaps
+            max_consecutive_empty = 3
             
             while result['synced_products'] + result['failed_products'] < total_to_sync:
                 # Salir si hay demasiados lotes vacíos consecutivos
@@ -119,26 +119,25 @@ class BatchSyncService:
                 batch_num += 1
                 result['current_batch'] = batch_num
                 
-                logger.info(f"=== LOTE {batch_num}/{total_batches} ===")
+                logger.info(f"=== LOTE {batch_num}/{total_batches} (offset={offset}) ===")
                 
                 try:
-                    # Obtener lote de productos usando filtro por ID
-                    batch_products = self.ps_service.get_products_by_id_range(
-                        min_id=last_id,
-                        limit=batch_size
+                    # Obtener lote usando offset simple
+                    batch_products = self.ps_service.get_products(
+                        limit=batch_size,
+                        offset=offset
                     )
                     
-                    if not batch_products:
+                    if not batch_products or len(batch_products) == 0:
                         consecutive_empty_batches += 1
-                        logger.info(f"Lote vacío ({consecutive_empty_batches}/{max_consecutive_empty}), saltando IDs...")
-                        # Saltar IDs para manejar gaps
-                        last_id += batch_size
+                        logger.info(f"Lote vacío ({consecutive_empty_batches}/{max_consecutive_empty})")
+                        offset += batch_size
                         continue
                     
                     # Resetear contador de lotes vacíos
                     consecutive_empty_batches = 0
                     
-                    logger.info(f"Obtenidos {len(batch_products)} productos en este lote (desde ID > {last_id})")
+                    logger.info(f"Obtenidos {len(batch_products)} productos en este lote")
                     
                     # Procesar cada producto del lote
                     for ps_prod in batch_products:
@@ -187,13 +186,17 @@ class BatchSyncService:
                     # Actualizar estado en DB (para que el frontend pueda consultarlo)
                     await self._update_sync_progress(result)
                     
-                    # Actualizar last_id para el siguiente lote
-                    if batch_products:
-                        last_id = max(int(p.get('id', 0)) for p in batch_products)
-                        logger.info(f"Último ID procesado: {last_id}")
+                    # Avanzar offset para el siguiente lote
+                    offset += batch_size
+                    logger.info(f"Siguiente offset: {offset}")
+                    
+                    # Si recibimos menos productos que el batch_size, probablemente terminamos
+                    if len(batch_products) < batch_size:
+                        logger.info(f"✓ Lote incompleto ({len(batch_products)} < {batch_size}), probablemente fin de productos")
+                        # No terminar aquí, dejar que el loop verifique si faltan productos
                     
                     # Pausa entre lotes para no sobrecargar PrestaShop
-                    if batch_num < total_batches:
+                    if pause_seconds > 0 and batch_num < total_batches:
                         logger.info(f"Pausa de {pause_seconds}s antes del siguiente lote...")
                         await asyncio.sleep(pause_seconds)
                     
@@ -201,14 +204,12 @@ class BatchSyncService:
                     logger.error(f"Error en lote {batch_num}: {e}")
                     result['errors'].append({
                         'batch': batch_num,
+                        'offset': offset,
                         'error': str(e)
                     })
                     consecutive_empty_batches += 1
-                    # Continuar saltando IDs
-                    if batch_products:
-                        last_id = max(int(p.get('id', last_id)) for p in batch_products)
-                    else:
-                        last_id += batch_size
+                    # Continuar con el siguiente offset
+                    offset += batch_size
             
             # 4. Finalizar y generar mensaje detallado
             end_time = datetime.now(timezone.utc)
@@ -285,85 +286,66 @@ class BatchSyncService:
     
     async def _count_all_products_reliable(self, batch_size: int) -> int:
         """
-        Contar TODOS los productos disponibles de forma confiable
-        MEJORADO: Maneja gaps de IDs y productos eliminados
+        Contar TODOS los productos disponibles de forma simple y confiable
+        Usa offset progresivo sin filtros complejos
         """
         try:
-            logger.info("🔍 Contando productos (método confiable mejorado)...")
+            logger.info("🔍 Contando productos totales...")
             
             all_product_ids = set()
-            last_id = 0
+            offset = 0
             consecutive_empty = 0
-            max_empty_batches = 5  # Aumentado para manejar gaps grandes
-            iterations_without_new = 0
-            max_iterations_without_new = 10  # Salir si 10 iteraciones sin nuevos IDs
+            max_empty_batches = 3
             
-            # Estrategia mejorada: obtener todos los IDs hasta confirmar que no quedan más
-            while consecutive_empty < max_empty_batches and iterations_without_new < max_iterations_without_new:
+            # Estrategia simple: usar offset progresivo hasta no obtener más productos
+            while consecutive_empty < max_empty_batches:
                 try:
                     # Solicitar lote con solo IDs (más rápido)
-                    batch = self.ps_service.get_products_by_id_range(
-                        min_id=last_id,
+                    batch = self.ps_service.get_products(
                         limit=batch_size,
+                        offset=offset,
                         display='[id]'  # Solo IDs para rapidez
                     )
                     
                     if not batch or len(batch) == 0:
                         consecutive_empty += 1
-                        iterations_without_new += 1
-                        logger.info(f"Lote vacío ({consecutive_empty}/{max_empty_batches})")
-                        # Saltar IDs para manejar gaps (productos eliminados)
-                        last_id += batch_size
+                        logger.info(f"Lote vacío en offset {offset} ({consecutive_empty}/{max_empty_batches})")
+                        offset += batch_size
                         continue
-                    
-                    # Verificar si encontramos nuevos IDs
-                    ids_before = len(all_product_ids)
                     
                     # Resetear contador de lotes vacíos
                     consecutive_empty = 0
                     
                     # Agregar IDs únicos
+                    ids_before = len(all_product_ids)
                     for prod in batch:
                         prod_id = int(prod.get('id', 0))
                         if prod_id > 0:
                             all_product_ids.add(prod_id)
                     
-                    # Verificar si agregamos nuevos IDs
-                    ids_after = len(all_product_ids)
-                    if ids_after == ids_before:
-                        iterations_without_new += 1
-                        logger.info(f"⚠️  Sin nuevos IDs ({iterations_without_new}/{max_iterations_without_new})")
-                    else:
-                        iterations_without_new = 0
-                        logger.info(f"  → +{ids_after - ids_before} nuevos IDs | Total: {ids_after} únicos")
+                    ids_added = len(all_product_ids) - ids_before
+                    logger.info(f"Offset {offset}: +{ids_added} nuevos IDs | Total: {len(all_product_ids)} únicos")
                     
-                    # Actualizar último ID procesado
-                    last_id = max(int(p.get('id', 0)) for p in batch)
-                    logger.info(f"  → Último ID procesado: {last_id}")
+                    # Avanzar offset
+                    offset += batch_size
                     
-                    # Si recibimos menos del batch_size, probablemente hay un gap
+                    # Si recibimos menos del batch_size, probablemente terminamos
                     if len(batch) < batch_size:
-                        logger.info(f"  → Lote incompleto ({len(batch)}<{batch_size}), continuando búsqueda...")
-                        last_id += 1  # Saltar al siguiente ID posible
+                        logger.info(f"Lote incompleto ({len(batch)} < {batch_size}), probablemente fin")
+                        # Intentar uno más para confirmar
+                        offset += batch_size
                 
                 except Exception as e:
-                    logger.error(f"Error en conteo batch: {e}")
-                    # Intentar continuar saltando IDs
-                    last_id += batch_size
+                    logger.error(f"Error en conteo offset {offset}: {e}")
+                    offset += batch_size
                     consecutive_empty += 1
             
             total_count = len(all_product_ids)
+            logger.info(f"✓ Conteo completo: {total_count} productos únicos detectados")
             
-            if iterations_without_new >= max_iterations_without_new:
-                logger.info(f"✓ Conteo completo: {total_count} productos únicos (detenido por sin nuevos IDs)")
-            else:
-                logger.info(f"✓ Conteo completo: {total_count} productos únicos detectados")
-            
-            # Log de IDs para debug (primeros 10 y últimos 10)
+            # Log de IDs para debug
             if all_product_ids:
                 sorted_ids = sorted(all_product_ids)
-                logger.info(f"  IDs detectados - Primeros: {sorted_ids[:10]}")
-                logger.info(f"  IDs detectados - Últimos: {sorted_ids[-10:]}")
                 logger.info(f"  Rango de IDs: {min(sorted_ids)} - {max(sorted_ids)}")
             
             return total_count
