@@ -126,7 +126,7 @@ class BatchSyncService:
                     batch_products = self.ps_service.get_products(
                         limit=batch_size,
                         offset=offset,
-                        display='[id,name,reference,price,id_category_default,quantity,active,id_manufacturer,description,description_short,weight]'
+                        display='[id,name,reference,price,id_category_default,quantity,active,id_manufacturer,description,description_short,weight,id_default_image]'
                     )
                     
                     if not batch_products or len(batch_products) == 0:

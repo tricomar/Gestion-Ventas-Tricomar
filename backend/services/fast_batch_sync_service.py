@@ -111,7 +111,7 @@ class FastBatchSyncService:
                     batch = self.ps_service.get_products(
                         limit=batch_size,
                         offset=offset,
-                        display='[id,name,reference,price,id_category_default,quantity,active,id_manufacturer,description,description_short,weight]'
+                        display='[id,name,reference,price,id_category_default,quantity,active,id_manufacturer,description,description_short,weight,id_default_image]'
                     )
                     
                     if not batch or len(batch) == 0:
@@ -300,6 +300,37 @@ class FastBatchSyncService:
                 'ecommerce_active': ps_prod.get('active') == '1'
             }
             
+            # Resumen (description_short de PrestaShop)
+            if ps_prod.get('description_short'):
+                # Limpiar HTML tags si es necesario
+                import re
+                summary = ps_prod['description_short']
+                if isinstance(summary, str):
+                    # Remover tags HTML básicos
+                    summary = re.sub(r'<[^>]+>', '', summary)
+                    summary = summary.strip()
+                    if summary:
+                        product_data['summary'] = summary[:250]  # Limitar a 250 caracteres
+            
+            # Descripción completa
+            if ps_prod.get('description'):
+                import re
+                description = ps_prod['description']
+                if isinstance(description, str):
+                    # Mantener la descripción con formato HTML
+                    description = description.strip()
+                    if description:
+                        product_data['description'] = description
+            
+            # Peso
+            if ps_prod.get('weight'):
+                try:
+                    weight = float(ps_prod['weight'])
+                    if weight > 0:
+                        product_data['weight'] = weight
+                except (ValueError, TypeError):
+                    pass
+            
             # Marca
             man_id = ps_prod.get('id_manufacturer')
             if man_id:
@@ -321,6 +352,32 @@ class FastBatchSyncService:
                         product_data['category'] = categories_map[cat_id_int]
                 except (ValueError, TypeError):
                     pass
+            
+            # Obtener URL de imagen desde PrestaShop
+            # PrestaShop devuelve el ID de la imagen por defecto en id_default_image
+            if ps_prod.get('id_default_image') and int(ps_prod.get('id_default_image', 0)) > 0:
+                image_id = ps_prod['id_default_image']
+                shop_url = self.ps_service.base_url.replace('/api', '')
+                product_data['image_url'] = f"{shop_url}/api/images/products/{ps_id}/{image_id}"
+            else:
+                # Si no hay imagen por defecto, intentar obtener la primera imagen
+                try:
+                    images_response = self.ps_service._make_request(f'images/products/{ps_id}', params={'display': '[id]'})
+                    if images_response and 'image' in images_response:
+                        images = images_response['image']
+                        # Si es una lista, tomar la primera imagen
+                        if isinstance(images, list) and len(images) > 0:
+                            image_id = images[0].get('id') if isinstance(images[0], dict) else images[0]
+                        elif isinstance(images, dict):
+                            image_id = images.get('id')
+                        else:
+                            image_id = images
+                        
+                        if image_id:
+                            shop_url = self.ps_service.base_url.replace('/api', '')
+                            product_data['image_url'] = f"{shop_url}/api/images/products/{ps_id}/{image_id}"
+                except Exception as e:
+                    logger.debug(f"No se pudo obtener imagen para producto {ps_id}: {e}")
             
             # Actualizar o crear
             if existing:
