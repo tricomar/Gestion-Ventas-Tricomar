@@ -205,14 +205,14 @@ const API = `${BACKEND_URL}/api`;
     setShowProductSuggestions(false);
     // Calculate initial total when product is selected
     if (quantity && prod.sale_price) {
-      setTotal((parseFloat(quantity) * prod.sale_price).toString());
+      setTotal((parseInt(quantity) * prod.sale_price).toString());  // Usar enteros
     }
   };
 
   // Update total when quantity changes
   useEffect(() => {
     if (selectedProduct && selectedProduct.sale_price && quantity) {
-      setTotal((parseFloat(quantity) * selectedProduct.sale_price).toString());
+      setTotal((parseInt(quantity) * selectedProduct.sale_price).toString());  // Usar enteros
     } else {
       setTotal('');
     }

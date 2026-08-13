@@ -94,8 +94,8 @@ const ProductForm = ({ product, onClose }) => {
       const data = {
         name,
         store,
-        cost_price: costPrice ? parseFloat(costPrice) : 0,
-        sale_price: salePrice ? parseFloat(salePrice) : 0,
+        cost_price: costPrice ? parseInt(costPrice) : 0,  // Convertir a entero
+        sale_price: salePrice ? parseInt(salePrice) : 0,  // Convertir a entero
         sku: sku || null,
         brand: brand || null,
         barcode: barcode || null,
@@ -446,19 +446,19 @@ const ProductForm = ({ product, onClose }) => {
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-sm font-medium text-slate-600">Precio Costo:</span>
-                  <span className="font-mono font-bold">${parseFloat(costPrice).toFixed(0)}</span>
+                  <span className="font-mono font-bold">${parseInt(costPrice || 0).toLocaleString('es-CL')}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm font-medium text-slate-600">IVA (19%):</span>
-                  <span className="font-mono font-bold text-blue-600">${ivaAmount.toFixed(0)}</span>
+                  <span className="font-mono font-bold text-blue-600">${Math.round(ivaAmount).toLocaleString('es-CL')}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm font-medium text-slate-600">Margen Utilidad:</span>
-                  <span className="font-mono font-bold text-green-600">${margin.toFixed(0)}</span>
+                  <span className="font-mono font-bold text-green-600">${Math.round(margin).toLocaleString('es-CL')}</span>
                 </div>
                 <div className="flex justify-between pt-2 border-t-2 border-slate-900">
                   <span className="text-sm font-bold text-slate-900">Precio Venta:</span>
-                  <span className="font-mono font-bold text-lg text-slate-900">${parseFloat(salePrice).toFixed(0)}</span>
+                  <span className="font-mono font-bold text-lg text-slate-900">${parseInt(salePrice || 0).toLocaleString('es-CL')}</span>
                 </div>
               </div>
             </div>

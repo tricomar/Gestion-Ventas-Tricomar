@@ -436,7 +436,7 @@ class BatchSyncService:
                         'id': int(comb.get('id', 0)),
                         'reference': comb.get('reference'),
                         'quantity': int(comb.get('quantity', 0)),
-                        'price': float(comb.get('price', 0)),
+                        'price': int(round(float(comb.get('price', 0)))),  # Convertir a entero
                         'attributes': []  # Simplificado por ahora
                     })
             except Exception:
