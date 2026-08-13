@@ -44,6 +44,10 @@ const ProductForm = ({ product, onClose }) => {
       setExpiryDate(product.expiry_date || '');
       setCategory(product.category || '');
       setStock(product.stock !== undefined ? product.stock.toString() : '');
+      setSummary(product.summary || '');
+      setDescription(product.description || '');
+      setImageUrl(product.image_url || '');
+      setWeight(product.weight ? product.weight.toString() : '');
     } else if (stores && stores.length > 0) {
       // Para nuevo producto, usar la primera tienda disponible
       setStore(stores[0].key);
@@ -112,9 +116,22 @@ const ProductForm = ({ product, onClose }) => {
         await axios.put(`${API}/products/${product.id}`, data);
         toast.success('Producto actualizado');
         
-        // Sincronizar stock con PrestaShop si el producto está vinculado
+        // Sincronizar con PrestaShop si el producto está vinculado
         if (product.prestashop_id && product.prestashop_integration_id) {
-          syncStockToPrestaShop(product.prestashop_integration_id, product.id, data.stock);
+          try {
+            // Sincronizar todos los cambios con PrestaShop (stock, summary, description, image)
+            await axios.post(
+              `${API}/integrations/prestashop/${product.prestashop_integration_id}/sync-product-to-ps`,
+              {
+                product_id: product.id,
+                sync_fields: ['stock', 'summary', 'description', 'image_url']
+              }
+            );
+            toast.success('✓ Sincronizado con PrestaShop');
+          } catch (error) {
+            console.error('Error sincronizando con PrestaShop:', error);
+            toast.error('Advertencia: No se pudo sincronizar con PrestaShop');
+          }
         }
       } else {
         await axios.post(`${API}/products`, data);

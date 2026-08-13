@@ -845,6 +845,9 @@ const InventoryPage = () => {
                       title="Seleccionar todos"
                     />
                   </th>
+                  <th className="px-4 py-4 text-center text-xs font-bold uppercase tracking-wider" style={{ width: '80px' }}>
+                    Imagen
+                  </th>
                   <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider">
                     Tienda/Caja
                   </th>
@@ -949,6 +952,20 @@ const InventoryPage = () => {
                         onChange={() => handleSelectProduct(product.id)}
                         className="w-5 h-5 rounded border-2 border-slate-900 cursor-pointer"
                       />
+                    </td>
+                    <td className="px-4 py-4 text-center">
+                      {product.image_url ? (
+                        <img 
+                          src={product.image_url} 
+                          alt={product.name}
+                          className="w-12 h-12 object-cover rounded border-2 border-slate-900 mx-auto"
+                          onError={(e) => { e.target.style.display = 'none'; }}
+                        />
+                      ) : (
+                        <div className="w-12 h-12 bg-slate-200 rounded border-2 border-slate-900 flex items-center justify-center text-xs text-slate-400 mx-auto">
+                          Sin img
+                        </div>
+                      )}
                     </td>
                     <td className="px-6 py-4">
                       <span 

@@ -2787,6 +2787,116 @@ async def sync_products_batch(
     }
 
 
+
+@router.post("/prestashop/{integration_id}/sync-product-to-ps")
+async def sync_product_to_prestashop(
+    integration_id: str,
+    request_data: dict,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Sincronizar cambios de un producto local hacia PrestaShop
+    Permite sincronizar campos específicos: stock, summary, description, image_url
+    """
+    try:
+        product_id = request_data.get('product_id')
+        sync_fields = request_data.get('sync_fields', ['stock'])  # Por defecto solo stock
+        
+        if not product_id:
+            raise HTTPException(status_code=400, detail="product_id requerido")
+        
+        # Verificar integración
+        integration = await db.prestashop_integrations.find_one({
+            'id': integration_id,
+            'account_id': current_user.account_id
+        }, {'_id': 0})
+        
+        if not integration:
+            raise HTTPException(status_code=404, detail="Integración no encontrada")
+        
+        # Obtener producto local
+        product = await db.products.find_one({
+            'id': product_id,
+            'account_id': current_user.account_id
+        }, {'_id': 0})
+        
+        if not product or not product.get('prestashop_id'):
+            raise HTTPException(
+                status_code=404,
+                detail="Producto no encontrado o no vinculado a PrestaShop"
+            )
+        
+        # Crear servicio PrestaShop
+        from services.prestashop_service import PrestashopAPIService
+        ps_service = PrestashopAPIService(integration['shop_url'], integration['api_key'])
+        
+        # Obtener producto de PrestaShop
+        ps_product_id = product['prestashop_id']
+        ps_product = ps_service.get_product(ps_product_id)
+        
+        if not ps_product:
+            raise HTTPException(status_code=404, detail="Producto no encontrado en PrestaShop")
+        
+        # Construir XML de actualización con los campos solicitados
+        updates = {}
+        
+        if 'stock' in sync_fields and 'stock' in product:
+            updates['quantity'] = str(product['stock'])
+        
+        if 'summary' in sync_fields and product.get('summary'):
+            # PrestaShop usa description_short para resumen
+            updates['description_short'] = f'<![CDATA[{product["summary"]}]]>'
+        
+        if 'description' in sync_fields and product.get('description'):
+            updates['description'] = f'<![CDATA[{product["description"]}]]>'
+        
+        if 'image_url' in sync_fields and product.get('image_url'):
+            # La imagen requiere un proceso especial en PrestaShop
+            # Por ahora solo actualizamos los textos
+            pass
+        
+        if not updates:
+            return {'success': True, 'message': 'Sin cambios para sincronizar'}
+        
+        # Construir XML
+        xml_parts = ['<?xml version="1.0" encoding="UTF-8"?>', '<prestashop>', '<product>']
+        xml_parts.append(f'<id>{ps_product_id}</id>')
+        
+        for field, value in updates.items():
+            xml_parts.append(f'<{field}>{value}</{field}>')
+        
+        xml_parts.extend(['</product>', '</prestashop>'])
+        update_xml = '\n'.join(xml_parts)
+        
+        # Enviar actualización a PrestaShop
+        import requests
+        response = requests.put(
+            f"{integration['shop_url']}/api/products/{ps_product_id}",
+            auth=(integration['api_key'], ''),
+            headers={'Content-Type': 'text/xml'},
+            data=update_xml,
+            timeout=30
+        )
+        
+        if response.status_code not in [200, 201]:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Error actualizando en PrestaShop: HTTP {response.status_code}"
+            )
+        
+        return {
+            'success': True,
+            'message': f'Producto sincronizado con PrestaShop',
+            'fields_synced': sync_fields
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error sincronizando producto a PrestaShop: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.get("/prestashop/{integration_id}/sync-progress")
 async def get_sync_progress(
     integration_id: str,
