@@ -129,21 +129,38 @@ const CustomersPage = () => {
     setShowDeleteModal(true);
   };
 
-  const handleBulkDelete = async () => {
-    if (selectedCustomers.length === 0) return;
+  const handleBulkDelete = async (deleteAll = false) => {
+    if (!deleteAll && selectedCustomers.length === 0) return;
 
     setIsDeleting(true);
     
     try {
-      await Promise.all(
-        selectedCustomers.map(customerId => 
-          axios.delete(`${API}/customers/${customerId}`)
-        )
-      );
-      
-      toast.success(`✓ ${selectedCustomers.length} cliente${selectedCustomers.length > 1 ? 's eliminados' : ' eliminado'} exitosamente`, {
-        duration: 4000
-      });
+      if (deleteAll) {
+        // Eliminar todos los clientes de la cuenta
+        const response = await axios.get(`${API}/customers?limit=10000`); // Obtener todos
+        const allCustomerIds = response.data.customers.map(c => c.id);
+        
+        await Promise.all(
+          allCustomerIds.map(customerId => 
+            axios.delete(`${API}/customers/${customerId}`)
+          )
+        );
+        
+        toast.success(`✓ Todos los clientes (${allCustomerIds.length}) fueron eliminados exitosamente`, {
+          duration: 4000
+        });
+      } else {
+        // Eliminar solo los seleccionados
+        await Promise.all(
+          selectedCustomers.map(customerId => 
+            axios.delete(`${API}/customers/${customerId}`)
+          )
+        );
+        
+        toast.success(`✓ ${selectedCustomers.length} cliente${selectedCustomers.length > 1 ? 's eliminados' : ' eliminado'} exitosamente`, {
+          duration: 4000
+        });
+      }
       
       setSelectedCustomers([]);
       setShowDeleteModal(false);

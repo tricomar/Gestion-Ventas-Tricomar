@@ -2,13 +2,19 @@ import React, { useState } from 'react';
 import { X, AlertTriangle, Trash2 } from 'lucide-react';
 
 const BulkDeleteConfirmModal = ({ 
-  selectedCount, 
+  selectedCount,
+  itemCount, // Para compatibilidad con CustomersPage
+  itemType = 'producto',
   onConfirm, 
   onCancel, 
   isDeleting 
 }) => {
   const [confirmText, setConfirmText] = useState('');
+  const [deleteAll, setDeleteAll] = useState(false);
   const isConfirmValid = confirmText.toLowerCase() === 'eliminar';
+  
+  // Usar itemCount si está disponible, sino selectedCount
+  const count = itemCount || selectedCount || 0;
 
   // NO limpiar el texto cuando cambia el contador
   // El usuario puede agregar/quitar productos sin perder lo que escribió
@@ -62,16 +68,42 @@ const BulkDeleteConfirmModal = ({
         >
           <div className="flex items-center justify-between">
             <span className="text-slate-700 font-bold">
-              Productos a eliminar:
+              {itemType === 'cliente' ? 'Clientes' : 'Productos'} a eliminar:
             </span>
             <div className="flex items-center gap-2">
               <Trash2 className="w-5 h-5 text-red-600" />
               <span className="text-3xl font-black text-red-600">
-                {selectedCount}
+                {count}
               </span>
             </div>
           </div>
         </div>
+
+        {/* Checkbox para eliminar todos los clientes (solo visible para clientes) */}
+        {itemType === 'cliente' && (
+          <div 
+            className="mb-6 p-4 bg-amber-50 border-2 border-slate-900 rounded-xl"
+            style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
+          >
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={deleteAll}
+                onChange={(e) => setDeleteAll(e.target.checked)}
+                disabled={isDeleting}
+                className="mt-1 w-5 h-5 border-2 border-slate-900 rounded cursor-pointer accent-red-500"
+              />
+              <div>
+                <span className="font-bold text-slate-900 block">
+                  Eliminar TODOS los clientes
+                </span>
+                <span className="text-sm text-slate-600">
+                  Esto eliminará todos los clientes de tu cuenta, no solo los seleccionados
+                </span>
+              </div>
+            </label>
+          </div>
+        )}
 
         {/* Confirmation input */}
         <div className="mb-6">
@@ -105,7 +137,7 @@ const BulkDeleteConfirmModal = ({
             Cancelar
           </button>
           <button
-            onClick={onConfirm}
+            onClick={() => onConfirm(deleteAll)}
             disabled={!isConfirmValid || isDeleting}
             className="flex-1 px-4 py-3 bg-red-500 border-2 border-slate-900 rounded-xl font-bold text-white hover:bg-red-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             style={{ boxShadow: '4px 4px 0px 0px rgba(15,23,42,1)' }}
@@ -116,7 +148,7 @@ const BulkDeleteConfirmModal = ({
                 Eliminando...
               </span>
             ) : (
-              `Eliminar ${selectedCount}`
+              `Eliminar ${deleteAll ? 'TODOS' : count}`
             )}
           </button>
         </div>
