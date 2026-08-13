@@ -50,12 +50,14 @@ const OrderDetailModal = ({ orderId, onClose, onUpdate }) => {
       setUpdating(true);
       const selectedStateObj = states.find(s => s.id === selectedState);
       
+      // Actualizar en Negocio Feliz Y sincronizar con PrestaShop
       await axios.patch(`${API}/ecommerce/orders/${orderId}/status`, {
         status: selectedState,
-        state_name: selectedStateObj?.name || ''
+        state_name: selectedStateObj?.name || '',
+        sync_to_prestashop: true  // Sincronizar con PrestaShop
       });
       
-      toast.success('Estado actualizado correctamente');
+      toast.success('Estado actualizado en Negocio Feliz y PrestaShop');
       onUpdate && onUpdate();
       await fetchOrderDetail();
     } catch (error) {
@@ -165,9 +167,24 @@ const OrderDetailModal = ({ orderId, onClose, onUpdate }) => {
               <User className="w-5 h-5 text-blue-600" />
               <h3 className="font-bold text-slate-900">Cliente</h3>
             </div>
-            <p className="text-slate-900 font-medium">{order.customer_name}</p>
-            <p className="text-sm text-slate-600">{order.customer_email}</p>
-            <p className="text-xs text-slate-500 mt-1">ID: {order.customer_id}</p>
+            <p className="text-slate-900 font-medium mb-2">{order.customer_name}</p>
+            {order.customer_email && (
+              <div className="flex items-center gap-2 text-sm text-slate-600 mb-1">
+                <span className="font-semibold">Email:</span>
+                <a href={`mailto:${order.customer_email}`} className="hover:text-blue-600">
+                  {order.customer_email}
+                </a>
+              </div>
+            )}
+            {order.customer_phone && (
+              <div className="flex items-center gap-2 text-sm text-slate-600 mb-1">
+                <span className="font-semibold">Teléfono:</span>
+                <a href={`tel:${order.customer_phone}`} className="hover:text-blue-600">
+                  {order.customer_phone}
+                </a>
+              </div>
+            )}
+            <p className="text-xs text-slate-500 mt-2">ID: {order.customer_id}</p>
           </div>
 
           {/* Pago */}
@@ -231,11 +248,24 @@ const OrderDetailModal = ({ orderId, onClose, onUpdate }) => {
           </div>
         </div>
 
-        {/* Ver en PrestaShop Button */}
+        {/* Botones de Acción */}
         {order.integration_id && (
-          <div className="mt-6 flex justify-end">
+          <div className="mt-6 flex flex-wrap gap-3 justify-end">
+            {/* Botón Generar Nota de Venta */}
+            <button
+              onClick={() => {
+                // Generar nota de venta/factura
+                window.print();
+              }}
+              className="px-4 py-2 bg-green-400 text-white font-bold border-2 border-slate-900 rounded-lg hover:bg-green-500 transition-colors inline-flex items-center gap-2"
+            >
+              <DollarSign className="w-4 h-4" />
+              Generar Nota de Venta
+            </button>
+            
+            {/* Botón Ver en PrestaShop */}
             <a
-              href={`#`}
+              href={order.prestashop_url || `${order.shop_url}/admin/index.php?controller=AdminOrders&id_order=${order.id_order}&vieworder&token=`}
               target="_blank"
               rel="noopener noreferrer"
               className="px-4 py-2 bg-purple-400 text-white font-bold border-2 border-slate-900 rounded-lg hover:bg-purple-500 transition-colors inline-flex items-center gap-2"

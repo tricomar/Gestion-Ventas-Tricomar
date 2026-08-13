@@ -758,6 +758,59 @@ class PrestashopAPIService:
                             elif isinstance(order_state, dict):
                                 states = [order_state]
                     elif isinstance(states_data, list):
+
+    def update_order_state(self, order_id: int, new_state_id: str) -> bool:
+        """
+        Actualizar el estado de una orden en PrestaShop
+        
+        Args:
+            order_id: ID de la orden en PrestaShop
+            new_state_id: ID del nuevo estado
+            
+        Returns:
+            True si se actualizó correctamente
+        """
+        try:
+            # Obtener la orden actual
+            order_data = self._make_request(f'orders/{order_id}')
+            
+            if not order_data or 'order' not in order_data:
+                logger.error(f"No se pudo obtener orden {order_id}")
+                return False
+            
+            order = order_data['order']
+            
+            # Actualizar el estado
+            order['current_state'] = str(new_state_id)
+            
+            # Enviar actualización
+            update_xml = f'''<?xml version="1.0" encoding="UTF-8"?>
+<prestashop>
+    <order>
+        <id>{order_id}</id>
+        <current_state>{new_state_id}</current_state>
+    </order>
+</prestashop>'''
+            
+            response = requests.put(
+                f"{self.base_url}/orders/{order_id}",
+                auth=(self.api_key, ''),
+                headers={'Content-Type': 'text/xml'},
+                data=update_xml,
+                timeout=30
+            )
+            
+            if response.status_code in [200, 201]:
+                logger.info(f"✓ Estado de orden {order_id} actualizado a {new_state_id}")
+                return True
+            else:
+                logger.error(f"Error actualizando orden {order_id}: HTTP {response.status_code}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Error actualizando estado de orden {order_id}: {e}")
+            return False
+
                         states = states_data
                 
                 if not states:

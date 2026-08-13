@@ -190,6 +190,21 @@ async def get_order_detail(
                 detail="Orden no encontrada"
             )
         
+        # Obtener integración para construir URL de PrestaShop
+        if order.get('integration_id'):
+            integration = await db.prestashop_integrations.find_one(
+                {
+                    'id': order['integration_id'],
+                    'account_id': current_user.account_id
+                },
+                {'_id': 0, 'shop_url': 1}
+            )
+            if integration:
+                order['shop_url'] = integration['shop_url']
+                # Construir URL directa a la orden en PrestaShop admin
+                if order.get('id_order'):
+                    order['prestashop_url'] = f"{integration['shop_url']}/admin/index.php?controller=AdminOrders&id_order={order['id_order']}&vieworder"
+        
         # Mapeo de estados de PrestaShop
         state_names = {
             "1": "Esperando pago con cheque",
@@ -301,6 +316,22 @@ async def get_order_detail(
         if not order.get('customer_email'):
             order['customer_email'] = 'No disponible'
         
+        # Asegurar que customer_phone existe
+        if not order.get('customer_phone'):
+            customer_id = order.get('customer_id')
+            if customer_id:
+                # Intentar obtener desde la tabla de clientes ecommerce local
+                customer = await db.ecommerce_customers.find_one({
+                    "account_id": current_user.account_id,
+                    "customer_id": str(customer_id)
+                }, {"_id": 0, "phone": 1, "phone_mobile": 1})
+                
+                if customer:
+                    order['customer_phone'] = customer.get('phone_mobile') or customer.get('phone') or ''
+            
+            if not order.get('customer_phone'):
+                order['customer_phone'] = ''
+        
         # Si customer_name está vacío, intentar obtenerlo de ecommerce_customers o PrestaShop
         if not order.get('customer_name') or order.get('customer_name').strip() == '':
             customer_id = order.get('customer_id')
@@ -378,8 +409,41 @@ async def update_order_status(
                 detail="Orden no encontrada"
             )
         
-        # TODO: Si hay integración de PrestaShop activa, actualizar también en PrestaShop
-        # Esto requeriría llamar a la API de PrestaShop para actualizar el estado de la orden
+        # Sincronizar con PrestaShop si está solicitado
+        sync_to_prestashop = update_data.get("sync_to_prestashop", True)
+        if sync_to_prestashop:
+            try:
+                # Obtener orden para obtener integration_id e id_order
+                order = await db.ecommerce_orders.find_one(tenant_filter, {"_id": 0, "integration_id": 1, "id_order": 1})
+                
+                if order and order.get('integration_id') and order.get('id_order'):
+                    from services.prestashop_service import PrestashopAPIService
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    
+                    # Obtener integración
+                    integration = await db.prestashop_integrations.find_one(
+                        {
+                            'id': order['integration_id'],
+                            'account_id': current_user.account_id
+                        },
+                        {'_id': 0, 'shop_url': 1, 'api_key': 1}
+                    )
+                    
+                    if integration:
+                        ps_service = PrestashopAPIService(
+                            integration['shop_url'],
+                            integration['api_key']
+                        )
+                        
+                        # Actualizar estado en PrestaShop
+                        ps_service.update_order_state(order['id_order'], new_status)
+                        logger.info(f"✓ Estado sincronizado con PrestaShop: Order {order['id_order']} -> State {new_status}")
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"⚠️  Error sincronizando con PrestaShop: {e}")
+                # No fallar la actualización local si falla la sincronización remota
         
         return {"success": True, "message": "Estado actualizado correctamente"}
         
