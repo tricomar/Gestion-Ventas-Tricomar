@@ -10,10 +10,18 @@ const API = `${BACKEND_URL}/api`;
 
 const PersonalizationTab = () => {
   const { settings, refreshSettings } = useSettings();
-  const [logoPreview, setLogoPreview] = useState(settings?.company_logo || null);
+  const [logoPreview, setLogoPreview] = useState(null);
   const [logoFile, setLogoFile] = useState(null);
-  const [companyName, setCompanyName] = useState(settings?.company_name || '');
+  const [companyName, setCompanyName] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Inicializar valores desde settings
+  React.useEffect(() => {
+    if (settings) {
+      setCompanyName(settings.company_name || '');
+      setLogoPreview(settings.company_logo || null);
+    }
+  }, [settings]);
 
   const handleLogoUpload = (e) => {
     const file = e.target.files[0];
@@ -45,6 +53,7 @@ const PersonalizationTab = () => {
     setLoading(true);
     
     try {
+      const token = localStorage.getItem('token');
       const updateData = {
         company_name: companyName,
       };
@@ -53,11 +62,19 @@ const PersonalizationTab = () => {
         updateData.company_logo = logoFile;
       }
 
-      await axios.patch(`${API}/settings/personalization`, updateData);
+      await axios.patch(
+        `${API}/settings/personalization`,
+        updateData,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      );
       
       await refreshSettings();
       
-      toast.success('Personalización guardada exitosamente', {
+      toast.success('✓ Personalización guardada exitosamente', {
         duration: 3000,
         style: {
           background: '#D4F0A5',
@@ -70,7 +87,7 @@ const PersonalizationTab = () => {
       setLogoFile(null);
     } catch (error) {
       console.error('Error saving personalization:', error);
-      toast.error('Error al guardar la personalización');
+      toast.error(error.response?.data?.detail || 'Error al guardar la personalización');
     } finally {
       setLoading(false);
     }
@@ -112,19 +129,19 @@ const PersonalizationTab = () => {
         </p>
       </div>
 
-      {/* Logo Upload */}
+      {/* Logo Upload - Diseño compacto */}
       <div 
         className="bg-white border-2 border-slate-900 rounded-xl p-6"
         style={{ boxShadow: '3px 3px 0px 0px rgba(15,23,42,1)' }}
       >
         <h3 className="text-lg font-bold text-slate-900 mb-4">Logo de la Empresa</h3>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Preview */}
-          <div>
+        <div className="flex flex-col md:flex-row gap-6 items-start">
+          {/* Preview - Más pequeño */}
+          <div className="w-full md:w-48">
             <p className="text-sm font-bold text-slate-900 mb-3">Vista Previa</p>
             <div 
-              className="w-full aspect-square bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-slate-900 rounded-xl flex items-center justify-center overflow-hidden"
+              className="w-48 h-48 bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-slate-900 rounded-xl flex items-center justify-center overflow-hidden"
               style={{ boxShadow: '2px 2px 0px 0px rgba(15,23,42,1)' }}
             >
               {logoPreview ? (
@@ -136,7 +153,8 @@ const PersonalizationTab = () => {
                   />
                   <button
                     onClick={handleRemoveLogo}
-                    className="absolute top-2 right-2 p-2 bg-red-500 border-2 border-slate-900 rounded-lg text-white hover:bg-red-600 transition-all"
+                    type="button"
+                    className="absolute top-2 right-2 p-1.5 bg-red-500 border-2 border-slate-900 rounded-lg text-white hover:bg-red-600 transition-all"
                     style={{ boxShadow: '2px 2px 0px 0px rgba(15,23,42,1)' }}
                   >
                     <X className="w-4 h-4" />
@@ -144,20 +162,20 @@ const PersonalizationTab = () => {
                 </div>
               ) : (
                 <div className="text-center">
-                  <ImageIcon className="w-16 h-16 text-slate-300 mx-auto mb-3" />
+                  <ImageIcon className="w-12 h-12 text-slate-300 mx-auto mb-2" />
                   <p className="text-sm text-slate-400">Sin logo</p>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Upload */}
-          <div>
+          {/* Upload - Más pequeño */}
+          <div className="flex-1">
             <p className="text-sm font-bold text-slate-900 mb-3">Subir Logo</p>
             <label 
-              className="block w-full aspect-square bg-gradient-to-br from-purple-100 to-pink-100 border-2 border-dashed border-slate-900 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-gradient-to-br hover:from-purple-200 hover:to-pink-200 transition-all"
+              className="block w-full md:w-64 h-48 bg-gradient-to-br from-purple-100 to-pink-100 border-2 border-dashed border-slate-900 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-gradient-to-br hover:from-purple-200 hover:to-pink-200 transition-all"
             >
-              <Upload className="w-12 h-12 text-slate-600 mb-3" />
+              <Upload className="w-10 h-10 text-slate-600 mb-2" />
               <p className="text-sm font-bold text-slate-900 mb-1">Haz click para subir</p>
               <p className="text-xs text-slate-600 text-center px-4">
                 PNG, JPG o SVG<br />
@@ -170,16 +188,9 @@ const PersonalizationTab = () => {
                 className="hidden"
               />
             </label>
-            
-            <div className="mt-4 p-4 bg-blue-50 border-2 border-blue-200 rounded-xl">
-              <p className="text-xs text-blue-800 font-medium mb-2">💡 Recomendaciones:</p>
-              <ul className="text-xs text-blue-700 space-y-1">
-                <li>• Formato cuadrado o rectangular</li>
-                <li>• Fondo transparente (PNG)</li>
-                <li>• Resolución mínima 300x300px</li>
-                <li>• Se usará en documentos y TopBar</li>
-              </ul>
-            </div>
+            <p className="text-xs text-slate-500 mt-3">
+              💡 Recomendado: Logo cuadrado con fondo transparente
+            </p>
           </div>
         </div>
       </div>

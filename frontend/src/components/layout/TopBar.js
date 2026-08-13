@@ -75,16 +75,22 @@ const TopBar = () => {
             {settings?.company_logo ? (
               <img 
                 src={settings.company_logo} 
-                alt="Logo" 
-                className="h-12 w-auto border-2 border-slate-900 rounded-lg"
+                alt="Company Logo" 
+                className="h-12 w-12 object-contain border-2 border-slate-900 rounded-lg bg-white p-1"
                 style={{ boxShadow: '2px 2px 0px 0px rgba(15,23,42,1)' }}
+                onError={(e) => {
+                  // Si falla la carga, ocultar
+                  e.target.style.display = 'none';
+                }}
               />
             ) : (
               <div 
                 className="h-12 w-12 bg-gradient-to-br from-purple-500 to-pink-500 border-2 border-slate-900 rounded-lg flex items-center justify-center"
                 style={{ boxShadow: '2px 2px 0px 0px rgba(15,23,42,1)' }}
               >
-                <span className="text-white font-black text-xl">ERP</span>
+                <span className="text-white font-black text-xl">
+                  {settings?.company_name ? settings.company_name.charAt(0).toUpperCase() : 'NF'}
+                </span>
               </div>
             )}
             <div>
