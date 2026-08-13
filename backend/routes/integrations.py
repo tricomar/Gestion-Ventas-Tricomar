@@ -475,12 +475,20 @@ async def sync_products_fast(
     if not integration:
         raise HTTPException(status_code=404, detail="Integración no encontrada")
     
-    # Obtener límite de cuenta
+    # Obtener límite de cuenta y código de tienda
     account = await db.accounts.find_one(
         {'id': current_user.account_id},
-        {'_id': 0, 'max_products_sync': 1}
+        {'_id': 0, 'max_products_sync': 1, 'stores': 1}
     )
     max_products = account.get('max_products_sync', 3000) if account else 3000
+    
+    # Obtener código de tienda desde la configuración
+    store_code = 'A'  # default fallback
+    if account and 'stores' in account:
+        for store in account['stores']:
+            if store.get('id') == integration['store_id']:
+                store_code = store.get('code', 'A')
+                break
     
     # Crear servicio rápido
     ps_service = PrestashopAPIService(integration['shop_url'], integration['api_key'])
@@ -495,7 +503,7 @@ async def sync_products_fast(
     background_tasks.add_task(
         fast_sync.sync_all_products_fast,
         store_id=integration['store_id'],
-        store_code='A',  # TODO: obtener de integración
+        store_code=store_code,  # Código real de la tienda
         max_products=max_products
     )
     

@@ -302,13 +302,25 @@ class FastBatchSyncService:
             
             # Marca
             man_id = ps_prod.get('id_manufacturer')
-            if man_id and man_id in manufacturers_map:
-                product_data['brand'] = manufacturers_map[man_id]
+            if man_id:
+                # Convertir a int para buscar en el mapa
+                try:
+                    man_id_int = int(man_id)
+                    if man_id_int in manufacturers_map:
+                        product_data['brand'] = manufacturers_map[man_id_int]
+                except (ValueError, TypeError):
+                    pass
             
             # Categoría
             cat_id = ps_prod.get('id_category_default')
-            if cat_id and cat_id in categories_map:
-                product_data['category'] = categories_map[cat_id]
+            if cat_id:
+                # Convertir a int para buscar en el mapa
+                try:
+                    cat_id_int = int(cat_id)
+                    if cat_id_int in categories_map:
+                        product_data['category'] = categories_map[cat_id_int]
+                except (ValueError, TypeError):
+                    pass
             
             # Actualizar o crear
             if existing:
