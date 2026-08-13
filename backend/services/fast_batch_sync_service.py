@@ -151,10 +151,13 @@ class FastBatchSyncService:
                     
                     results = await asyncio.gather(*tasks, return_exceptions=True)
                     
-                    # Contabilizar resultados
+                    # Contabilizar resultados y guardar errores de ejemplo
+                    batch_errors = []
                     for result in results:
                         if isinstance(result, Exception):
                             failed += 1
+                            if len(batch_errors) < 5:  # Guardar primeros 5 errores
+                                batch_errors.append(str(result))
                         elif result.get('success'):
                             synced += 1
                             if result.get('is_skipped'):
@@ -165,6 +168,16 @@ class FastBatchSyncService:
                                 created += 1
                         else:
                             failed += 1
+                            if len(batch_errors) < 5:  # Guardar primeros 5 errores
+                                error_msg = result.get('error', 'Unknown error')
+                                prod_id = result.get('product_id', 'unknown')
+                                batch_errors.append(f"Producto {prod_id}: {error_msg}")
+                    
+                    # Log errores de ejemplo si hay muchos fallos
+                    if batch_errors and len(batch_errors) > 0:
+                        logger.warning(f"⚠️ Lote {batch_num} - Ejemplos de errores:")
+                        for err in batch_errors[:3]:
+                            logger.warning(f"   • {err}")
                     
                     # Actualizar progreso en DB
                     progress = min(100, int((synced + failed) / total_to_sync * 100))
@@ -297,8 +310,13 @@ class FastBatchSyncService:
         store_code: str
     ) -> Dict[str, Any]:
         """Sincronizar un producto (optimizado)"""
+        ps_id = None
         try:
             ps_id = int(ps_prod.get('id'))
+            
+            # Debug: verificar datos recibidos
+            if not ps_prod.get('name'):
+                logger.warning(f"Producto {ps_id}: sin nombre")
             
             # Buscar producto existente
             existing = await self.db.products.find_one({
@@ -358,7 +376,7 @@ class FastBatchSyncService:
             # PrestaShop devuelve el ID de la imagen por defecto en id_default_image
             if ps_prod.get('id_default_image') and int(ps_prod.get('id_default_image', 0)) > 0:
                 image_id = ps_prod['id_default_image']
-                shop_url = self.ps_service.base_url.replace('/api', '')
+                shop_url = self.ps_service.shop_url
                 product_data['image_url'] = f"{shop_url}/api/images/products/{ps_id}/{image_id}"
             else:
                 # Si no hay imagen por defecto, intentar obtener la primera imagen
@@ -375,7 +393,7 @@ class FastBatchSyncService:
                             image_id = images
                         
                         if image_id:
-                            shop_url = self.ps_service.base_url.replace('/api', '')
+                            shop_url = self.ps_service.shop_url
                             product_data['image_url'] = f"{shop_url}/api/images/products/{ps_id}/{image_id}"
                 except Exception as e:
                     logger.debug(f"No se pudo obtener imagen para producto {ps_id}: {e}")
@@ -394,7 +412,8 @@ class FastBatchSyncService:
                 return {'success': True, 'is_update': False}
                 
         except Exception as e:
-            return {'success': False, 'error': str(e)}
+            logger.error(f"❌ Error procesando producto {ps_id}: {str(e)}")
+            return {'success': False, 'error': str(e), 'product_id': ps_id}
     
     async def _load_manufacturers_map(self) -> Dict[int, str]:
         """Pre-cargar mapa de fabricantes"""

@@ -827,7 +827,7 @@ class PrestashopAPIService:
 </prestashop>'''
             
             response = requests.put(
-                f"{self.base_url}/orders/{order_id}",
+                f"{self.api_url}/orders/{order_id}",
                 auth=(self.api_key, ''),
                 headers={'Content-Type': 'text/xml'},
                 data=update_xml,
