@@ -91,9 +91,12 @@ class FastBatchSyncService:
             manufacturers_map = await self._load_manufacturers_map()
             categories_map = await self._load_categories_map()
             
-            # 3. Sincronizar en lotes SIN PAUSAS usando PAGINACIÓN POR ID
-            # IMPORTANTE: Batch size 200 (no 500) para evitar HTTP 500 de PrestaShop con filter[id]
-            batch_size = 200
+            # 3. FASE 1: Sincronizar datos básicos SIN campos HTML (rápido y confiable)
+            # Estrategia de dos fases:
+            # - Fase 1: Campos básicos sin HTML (id, name, sku, price, stock, category, brand, weight, image)
+            # - Fase 2: Enriquecimiento con descripciones (opcional, se hace después)
+            
+            batch_size = 500  # Ahora podemos usar 500 sin problemas (sin HTML)
             synced = 0
             failed = 0
             created = 0
@@ -104,16 +107,18 @@ class FastBatchSyncService:
             batch_num = 0
             consecutive_empty = 0
             
+            logger.info("📦 FASE 1: Sincronizando datos básicos (sin descripciones HTML)")
+            
             while synced + failed < total_to_sync and consecutive_empty < 3:
                 batch_num += 1
                 
                 try:
-                    # Obtener lote usando PAGINACIÓN POR ID con campos específicos
-                    # Esto evita HTTP 500 que ocurre con offset > 0 en PrestaShop
+                    # FASE 1: Solo campos básicos sin HTML - mucho más rápido y confiable
+                    # NO incluimos description ni description_short para evitar HTTP 500
                     batch = self.ps_service.get_products_by_id_range(
                         min_id=last_id,
                         limit=batch_size,
-                        display='[id,name,reference,price,id_category_default,quantity,active,id_manufacturer,description,description_short,weight,id_default_image]'
+                        display='[id,name,reference,price,id_category_default,quantity,active,id_manufacturer,weight,id_default_image]'
                     )
                     
                     if not batch or len(batch) == 0:
@@ -181,7 +186,7 @@ class FastBatchSyncService:
                     logger.error(f"❌ Error lote {batch_num}: {e}")
                     consecutive_empty += 1
             
-            # 4. Finalizar con estado apropiado
+            # 4. Finalizar FASE 1 con estado apropiado
             # Si todos fallaron, marcar como 'failed', no 'completed'
             final_status = 'completed'
             if synced == 0 and failed > 0:
@@ -197,12 +202,15 @@ class FastBatchSyncService:
                 'products_updated': updated,
                 'products_skipped': skipped,
                 'progress_percentage': 100,
-                'completed_at': datetime.now(timezone.utc).isoformat()
+                'completed_at': datetime.now(timezone.utc).isoformat(),
+                'phase': 'phase_1_completed',
+                'message': 'Datos básicos sincronizados. Descripciones HTML disponibles bajo demanda.'
             })
             
             if synced > 0:
-                logger.info(f"✅ COMPLETADO - Sincronizados: {synced}/{total_to_sync}")
+                logger.info(f"✅ FASE 1 COMPLETADA - Sincronizados: {synced}/{total_to_sync}")
                 logger.info(f"   Creados: {created} | Actualizados: {updated} | Omitidos: {skipped} | Fallidos: {failed}")
+                logger.info(f"   💡 Descripciones HTML disponibles en Fase 2 (opcional)")
             else:
                 logger.error(f"❌ FALLIDO - Ningún producto sincronizado. Fallidos: {failed}")
             
@@ -212,7 +220,8 @@ class FastBatchSyncService:
                 'total': synced,
                 'created': created,
                 'updated': updated,
-                'failed': failed
+                'failed': failed,
+                'phase': 'phase_1_completed'
             }
             
         except Exception as e:
@@ -229,7 +238,7 @@ class FastBatchSyncService:
     
     async def _count_products_fast(self) -> int:
         """
-        Contar productos usando paginación por ID (más confiable que offsets)
+        Contar productos usando paginación por ID
         """
         logger.info("🔢 Contando productos...")
         
@@ -240,10 +249,10 @@ class FastBatchSyncService:
         
         while consecutive_empty < max_empty_batches:
             try:
-                # Solicitar lote con solo IDs usando batch size 200 (no 500 para evitar HTTP 500)
+                # Solicitar lote con solo IDs - lotes grandes son seguros sin HTML
                 batch = self.ps_service.get_products_by_id_range(
                     min_id=last_id,
-                    limit=200,
+                    limit=500,
                     display='[id]'
                 )
                 
@@ -262,8 +271,8 @@ class FastBatchSyncService:
                         if prod_id > last_id:
                             last_id = prod_id
                 
-                # Si recibimos menos de 200, probablemente terminamos
-                if len(batch) < 200:
+                # Si recibimos menos de 500, probablemente terminamos
+                if len(batch) < 500:
                     consecutive_empty = max_empty_batches  # Forzar salida
                 
             except Exception as e:
@@ -297,7 +306,7 @@ class FastBatchSyncService:
                 'prestashop_id': ps_id
             }, {'_id': 0, 'id': 1})
             
-            # Preparar datos básicos
+            # Preparar datos básicos (FASE 1: sin descripciones HTML)
             product_data = {
                 'account_id': self.account_id,
                 'store_id': store_id,
@@ -309,30 +318,10 @@ class FastBatchSyncService:
                 'stock': int(ps_prod.get('quantity', 0)),
                 'store': store_code,
                 'active': ps_prod.get('active') == '1',
-                'ecommerce_active': ps_prod.get('active') == '1'
+                'ecommerce_active': ps_prod.get('active') == '1',
+                'summary': '',  # Se llenará en Fase 2 si se requiere
+                'description': ''  # Se llenará en Fase 2 si se requiere
             }
-            
-            # Resumen (description_short de PrestaShop)
-            if ps_prod.get('description_short'):
-                # Limpiar HTML tags si es necesario
-                import re
-                summary = ps_prod['description_short']
-                if isinstance(summary, str):
-                    # Remover tags HTML básicos
-                    summary = re.sub(r'<[^>]+>', '', summary)
-                    summary = summary.strip()
-                    if summary:
-                        product_data['summary'] = summary[:250]  # Limitar a 250 caracteres
-            
-            # Descripción completa
-            if ps_prod.get('description'):
-                import re
-                description = ps_prod['description']
-                if isinstance(description, str):
-                    # Mantener la descripción con formato HTML
-                    description = description.strip()
-                    if description:
-                        product_data['description'] = description
             
             # Peso
             if ps_prod.get('weight'):
