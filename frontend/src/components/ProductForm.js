@@ -21,8 +21,9 @@ const ProductForm = ({ product, onClose }) => {
   const [expiryDate, setExpiryDate] = useState('');
   const [category, setCategory] = useState('');
   const [stock, setStock] = useState('');
-  const [summary, setSummary] = useState('');
-  const [description, setDescription] = useState('');
+  // DESHABILITADO TEMPORALMENTE: Campos de descripción para integración con otras plataformas en el futuro
+  // const [summary, setSummary] = useState('');
+  // const [description, setDescription] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [weight, setWeight] = useState('');
   const [loading, setLoading] = useState(false);
@@ -44,8 +45,8 @@ const ProductForm = ({ product, onClose }) => {
       setExpiryDate(product.expiry_date || '');
       setCategory(product.category || '');
       setStock(product.stock !== undefined ? product.stock.toString() : '');
-      setSummary(product.summary || '');
-      setDescription(product.description || '');
+      // setSummary(product.summary || '');
+      // setDescription(product.description || '');
       setImageUrl(product.image_url || '');
       setWeight(product.weight ? product.weight.toString() : '');
     } else if (stores && stores.length > 0) {
@@ -106,8 +107,9 @@ const ProductForm = ({ product, onClose }) => {
         expiry_date: expiryDate || null,
         category: category || null,
         stock: stock ? parseInt(stock) : 0,
-        summary: summary || null,
-        description: description || null,
+        // DESHABILITADO: summary y description
+        // summary: summary || null,
+        // description: description || null,
         image_url: imageUrl || null,
         weight: weight ? parseFloat(weight) : null
       };
@@ -119,12 +121,12 @@ const ProductForm = ({ product, onClose }) => {
         // Sincronizar con PrestaShop si el producto está vinculado
         if (product.prestashop_id && product.prestashop_integration_id) {
           try {
-            // Sincronizar todos los cambios con PrestaShop (stock, summary, description, image)
+            // Sincronizar cambios con PrestaShop (stock, price, image)
             await axios.post(
               `${API}/integrations/prestashop/${product.prestashop_integration_id}/sync-product-to-ps`,
               {
                 product_id: product.id,
-                sync_fields: ['stock', 'summary', 'description', 'image_url']
+                sync_fields: ['stock', 'price', 'image_url']  // Sin summary ni description
               }
             );
             toast.success('✓ Sincronizado con PrestaShop');
@@ -337,7 +339,8 @@ const ProductForm = ({ product, onClose }) => {
             </div>
           </div>
 
-          {/* Resumen (Descripción corta) */}
+          {/* DESHABILITADO TEMPORALMENTE: Para futuras integraciones con otras plataformas
+          Resumen (Descripción corta)
           <div>
             <label className="block text-xs font-bold tracking-widest uppercase text-slate-500 mb-2">
               Resumen (Descripción Corta)
@@ -355,8 +358,10 @@ const ProductForm = ({ product, onClose }) => {
               {summary.length}/250 caracteres
             </p>
           </div>
+          */}
 
-          {/* Descripción completa */}
+          {/* DESHABILITADO TEMPORALMENTE: Para futuras integraciones con otras plataformas
+          Descripción completa
           <div>
             <label className="block text-xs font-bold tracking-widest uppercase text-slate-500 mb-2">
               Descripción Completa
@@ -370,6 +375,7 @@ const ProductForm = ({ product, onClose }) => {
               data-testid="product-description-input"
             />
           </div>
+          */}
 
           {/* URL de Imagen y Peso */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
