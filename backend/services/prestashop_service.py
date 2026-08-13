@@ -5,8 +5,11 @@ Servicio para interactuar con la API de PrestaShop
 import requests
 import xmltodict
 import json
+import logging
 from typing import Optional, List, Dict, Any
 from requests.auth import HTTPBasicAuth
+
+logger = logging.getLogger(__name__)
 
 
 class PrestashopAPIService:
