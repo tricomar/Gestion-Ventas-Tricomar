@@ -758,7 +758,25 @@ class PrestashopAPIService:
                             elif isinstance(order_state, dict):
                                 states = [order_state]
                     elif isinstance(states_data, list):
-
+                        states = states_data
+                
+                if not states:
+                    break
+                
+                all_states.extend(states)
+                
+                # Si recibimos menos que page_size, terminamos
+                if len(states) < page_size:
+                    break
+                
+                offset += page_size
+            
+            return all_states
+            
+        except Exception as e:
+            logger.error(f"Error obteniendo estados de PrestaShop: {e}")
+            return []
+    
     def update_order_state(self, order_id: int, new_state_id: str) -> bool:
         """
         Actualizar el estado de una orden en PrestaShop
@@ -810,59 +828,6 @@ class PrestashopAPIService:
         except Exception as e:
             logger.error(f"Error actualizando estado de orden {order_id}: {e}")
             return False
-
-                        states = states_data
-                
-                if not states:
-                    break
-                
-                # Procesar estados
-                for state in states:
-                    # Extraer nombre del campo multidioma
-                    name = ""
-                    if 'name' in state:
-                        if isinstance(state['name'], dict):
-                            # Estructura multidioma: {"language": [{"id": "1", "value": "Nombre"}]}
-                            lang_data = state['name'].get('language', [])
-                            if isinstance(lang_data, list) and len(lang_data) > 0:
-                                # Obtener primer idioma
-                                first_lang = lang_data[0]
-                                if isinstance(first_lang, dict):
-                                    name = first_lang.get('value', first_lang.get('_', ''))
-                            elif isinstance(lang_data, dict):
-                                name = lang_data.get('value', lang_data.get('_', ''))
-                        elif isinstance(state['name'], str):
-                            name = state['name']
-                    
-                    processed_state = {
-                        'id': str(state.get('id', '')),
-                        'name': name,
-                        'color': state.get('color', ''),
-                        'module_name': state.get('module_name', ''),
-                        'hidden': state.get('hidden', '0'),
-                        'deleted': state.get('deleted', '0'),
-                        'send_email': state.get('send_email', '0'),
-                        'invoice': state.get('invoice', '0'),
-                        'shipped': state.get('shipped', '0'),
-                        'paid': state.get('paid', '0'),
-                        'delivery': state.get('delivery', '0'),
-                        'unremovable': state.get('unremovable', '0'),
-                        'logable': state.get('logable', '0')
-                    }
-                    all_states.append(processed_state)
-                
-                # Si obtuvimos menos estados que el tamaño de página, terminamos
-                if len(states) < page_size:
-                    break
-                
-                offset += page_size
-            
-            return all_states
-            
-        except Exception as e:
-            print(f"Error getting order states from PrestaShop: {str(e)}")
-            # En caso de error, retornar lista vacía en lugar de fallar
-            return []
     
     
     def get_customer_messages(self, limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
