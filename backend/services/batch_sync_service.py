@@ -122,10 +122,11 @@ class BatchSyncService:
                 logger.info(f"=== LOTE {batch_num}/{total_batches} (offset={offset}) ===")
                 
                 try:
-                    # Obtener lote usando offset simple
+                    # Obtener lote usando offset con campos específicos (full causa HTTP 500)
                     batch_products = self.ps_service.get_products(
                         limit=batch_size,
-                        offset=offset
+                        offset=offset,
+                        display='[id,name,reference,price,id_category_default,quantity,active,id_manufacturer,description,description_short,weight]'
                     )
                     
                     if not batch_products or len(batch_products) == 0:

@@ -107,10 +107,11 @@ class FastBatchSyncService:
                 batch_num += 1
                 
                 try:
-                    # Obtener lote usando OFFSET (más confiable que filtros por ID)
+                    # Obtener lote usando OFFSET con campos específicos (full causa HTTP 500)
                     batch = self.ps_service.get_products(
                         limit=batch_size,
-                        offset=offset
+                        offset=offset,
+                        display='[id,name,reference,price,id_category_default,quantity,active,id_manufacturer,description,description_short,weight]'
                     )
                     
                     if not batch or len(batch) == 0:
