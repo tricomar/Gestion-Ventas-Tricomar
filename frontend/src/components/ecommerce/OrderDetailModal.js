@@ -200,6 +200,54 @@ const OrderDetailModal = ({ orderId, onClose, onUpdate }) => {
           </div>
         </div>
 
+        {/* Entrega y Dirección */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          {/* Método de Entrega */}
+          <div className="border-2 border-slate-900 rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Truck className="w-5 h-5 text-orange-600" />
+              <h3 className="font-bold text-slate-900">Método de Entrega</h3>
+            </div>
+            <p className="text-slate-900 font-medium mb-2">
+              {order.shipping_method || order.carrier_name || 'No especificado'}
+            </p>
+            {order.shipping_cost > 0 && (
+              <p className="text-sm text-slate-600">
+                Costo: ${Math.round(order.shipping_cost).toLocaleString('es-CL')}
+              </p>
+            )}
+          </div>
+
+          {/* Dirección de Entrega */}
+          <div className="border-2 border-slate-900 rounded-xl p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Package className="w-5 h-5 text-purple-600" />
+              <h3 className="font-bold text-slate-900">Dirección de Entrega</h3>
+            </div>
+            {order.delivery_address ? (
+              <div className="text-sm text-slate-700 space-y-1">
+                {order.delivery_address.address1 && (
+                  <p className="font-medium">{order.delivery_address.address1}</p>
+                )}
+                {order.delivery_address.address2 && (
+                  <p>{order.delivery_address.address2}</p>
+                )}
+                {(order.delivery_address.city || order.delivery_address.postcode) && (
+                  <p>
+                    {order.delivery_address.city}
+                    {order.delivery_address.postcode && `, ${order.delivery_address.postcode}`}
+                  </p>
+                )}
+                {order.delivery_address.country && (
+                  <p className="text-slate-600">{order.delivery_address.country}</p>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-slate-500">No especificada</p>
+            )}
+          </div>
+        </div>
+
         {/* Productos */}
         <div className="border-2 border-slate-900 rounded-xl p-4 mb-6">
           <div className="flex items-center gap-2 mb-4">

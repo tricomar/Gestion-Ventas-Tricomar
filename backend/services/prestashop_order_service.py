@@ -101,6 +101,35 @@ class PrestashopOrderService:
                 'updated_at': datetime.now(timezone.utc).isoformat()
             }
             
+            # Agregar información de envío/entrega
+            if ps_order.get('id_carrier'):
+                try:
+                    carrier_id = int(ps_order['id_carrier'])
+                    carrier_info = self.ps_service._make_request(f'carriers/{carrier_id}')
+                    if carrier_info and 'carrier' in carrier_info:
+                        order_data['carrier_name'] = carrier_info['carrier'].get('name', '')
+                except Exception as e:
+                    logger.warning(f"No se pudo obtener información del carrier: {e}")
+            
+            # Agregar dirección de entrega
+            if ps_order.get('id_address_delivery'):
+                try:
+                    address_id = int(ps_order['id_address_delivery'])
+                    address_info = self.ps_service._make_request(f'addresses/{address_id}')
+                    if address_info and 'address' in address_info:
+                        addr = address_info['address']
+                        order_data['delivery_address'] = {
+                            'address1': addr.get('address1', ''),
+                            'address2': addr.get('address2', ''),
+                            'city': addr.get('city', ''),
+                            'postcode': addr.get('postcode', ''),
+                            'country': addr.get('country', ''),
+                            'phone': addr.get('phone', ''),
+                            'phone_mobile': addr.get('phone_mobile', '')
+                        }
+                except Exception as e:
+                    logger.warning(f"No se pudo obtener dirección de entrega: {e}")
+            
             # 6. Gestión de stock según estado
             stock_action = None
             previous_state = existing_order.get('current_state') if existing_order else None

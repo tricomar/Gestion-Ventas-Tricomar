@@ -328,9 +328,28 @@ async def get_order_detail(
                 
                 if customer:
                     order['customer_phone'] = customer.get('phone_mobile') or customer.get('phone') or ''
+                
+                # Si no está en ecommerce_customers, intentar desde delivery_address
+                if not order.get('customer_phone') and order.get('delivery_address'):
+                    order['customer_phone'] = order['delivery_address'].get('phone_mobile') or order['delivery_address'].get('phone') or ''
             
             if not order.get('customer_phone'):
                 order['customer_phone'] = ''
+        
+        # Agregar información de envío si no existe localmente pero está en prestashop_orders
+        if not order.get('carrier_name') or not order.get('delivery_address'):
+            prestashop_order = await db.prestashop_orders.find_one({
+                'account_id': current_user.account_id,
+                'prestashop_id': int(order.get('id_order', 0)) if order.get('id_order') else None
+            }, {'_id': 0, 'carrier_name': 1, 'delivery_address': 1, 'total_shipping': 1})
+            
+            if prestashop_order:
+                if not order.get('carrier_name'):
+                    order['carrier_name'] = prestashop_order.get('carrier_name')
+                if not order.get('delivery_address'):
+                    order['delivery_address'] = prestashop_order.get('delivery_address')
+                if not order.get('shipping_cost'):
+                    order['shipping_cost'] = prestashop_order.get('total_shipping', 0)
         
         # Si customer_name está vacío, intentar obtenerlo de ecommerce_customers o PrestaShop
         if not order.get('customer_name') or order.get('customer_name').strip() == '':
