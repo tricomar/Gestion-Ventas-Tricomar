@@ -87,6 +87,19 @@ class PrestashopAPIService:
                 raise Exception(f"Acceso denegado: La API Key no tiene permisos suficientes")
             elif response.status_code == 404:
                 raise Exception(f"Recurso no encontrado: Verifica la URL de tu tienda")
+            elif response.status_code == 500:
+                # PrestaShop a veces devuelve HTTP 500 pero con datos válidos en el body
+                # Intentar parsear el JSON de todos modos
+                try:
+                    if response.text:
+                        data = response.json()
+                        # Si tiene productos, devolver los datos a pesar del HTTP 500
+                        if 'products' in data:
+                            print(f"[PrestaShop] WARNING: HTTP 500 pero con datos válidos, procesando...")
+                            return data
+                except Exception:
+                    pass
+                raise Exception(f"Error HTTP {response.status_code}")
             else:
                 raise Exception(f"Error HTTP {response.status_code}")
         except requests.exceptions.RequestException as e:
