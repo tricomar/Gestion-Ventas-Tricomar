@@ -2843,6 +2843,19 @@ async def sync_product_to_prestashop(
         if 'stock' in sync_fields and 'stock' in product:
             updates['quantity'] = str(product['stock'])
         
+        if 'price' in sync_fields and 'sale_price' in product:
+            # PrestaShop usa 'price' para precio sin IVA
+            # El precio en NF es CON IVA, necesitamos convertirlo a SIN IVA
+            # IVA en Chile = 19%
+            price_with_tax = float(product['sale_price'])
+            price_without_tax = price_with_tax / 1.19
+            updates['price'] = f'{price_without_tax:.6f}'
+        
+        if 'category' in sync_fields and product.get('category'):
+            # Necesitamos encontrar el ID de categoría por nombre
+            # Por ahora solo actualizamos si ya existe id_category_default
+            pass  # La categoría requiere mapeo nombre -> ID
+        
         if 'summary' in sync_fields and product.get('summary'):
             # PrestaShop usa description_short para resumen
             updates['description_short'] = f'<![CDATA[{product["summary"]}]]>'

@@ -332,7 +332,8 @@ class FastBatchSyncService:
                 'prestashop_integration_id': self.integration_id,
                 'name': ps_prod.get('name', f'Producto {ps_id}'),
                 'sku': ps_prod.get('reference', ''),
-                'sale_price': int(round(float(ps_prod.get('price', 0)))),  # Convertir a entero
+                # PRECIO CON IVA (19% en Chile): PrestaShop envía precio sin IVA
+                'sale_price': int(round(float(ps_prod.get('price', 0)) * 1.19)),  
                 'stock': int(ps_prod.get('quantity', 0)),
                 'store': store_code,
                 'active': ps_prod.get('active') == '1',

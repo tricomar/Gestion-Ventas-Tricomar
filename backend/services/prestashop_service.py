@@ -345,6 +345,36 @@ class PrestashopAPIService:
         return result
 
     
+    def get_product(self, product_id: int, display: str = 'full') -> Dict[str, Any]:
+        """
+        Obtener un producto específico por ID
+        
+        Args:
+            product_id: ID del producto en PrestaShop
+            display: Campos a obtener ('full' o lista de campos específicos)
+            
+        Returns:
+            Diccionario con datos del producto o None si no existe
+        """
+        try:
+            response = self._make_request(f'products/{product_id}', params={'display': display})
+            
+            if 'product' in response:
+                return response['product']
+            elif 'products' in response:
+                # Algunas versiones devuelven 'products' en lugar de 'product'
+                products = response['products']
+                if isinstance(products, dict):
+                    return products
+                elif isinstance(products, list) and len(products) > 0:
+                    return products[0]
+            
+            return None
+        except Exception as e:
+            print(f"[PrestaShop] Error obteniendo producto {product_id}: {e}")
+            return None
+
+    
     def get_products(self, limit: int = 100, offset: int = 0, display: str = 'full') -> List[Dict[str, Any]]:
         """
         Obtener productos de PrestaShop
