@@ -126,7 +126,7 @@ const ProductForm = ({ product, onClose }) => {
               `${API}/integrations/prestashop/${product.prestashop_integration_id}/sync-product-to-ps`,
               {
                 product_id: product.id,
-                sync_fields: ['stock', 'price', 'category']  // Sincronizar stock, precio y categoría
+                sync_fields: ['stock', 'price', 'name', 'sku', 'barcode', 'weight']  // Sincronizar todos los campos
               }
             );
             toast.success('✓ Sincronizado con PrestaShop');
