@@ -2794,7 +2794,7 @@ async def sync_product_to_prestashop(
     request_data: dict,
     current_user: User = Depends(get_current_user)
 ):
-    """Sincronizar producto de NF a PrestaShop"""
+    """Sincronizar producto de NF a PrestaShop (sin campos readonly)"""
     try:
         product_id = request_data.get('product_id')
         sync_fields = request_data.get('sync_fields', ['stock'])
@@ -2820,78 +2820,171 @@ async def sync_product_to_prestashop(
         
         ps_id = product['prestashop_id']
         synced_fields = []
+        errors = []
         
         import requests
         import xmltodict
         
-        # Obtener producto de PrestaShop
-        resp = requests.get(
-            f"{integration['shop_url']}/api/products/{ps_id}",
-            auth=(integration['api_key'], ''),
-            timeout=30
-        )
-        
-        if resp.status_code != 200:
-            raise HTTPException(status_code=500, detail=f"Error obteniendo producto: HTTP {resp.status_code}")
-        
-        ps_xml = xmltodict.parse(resp.text)
-        modified = False
-        
-        # Actualizar campos
+        # === STOCK - Usar API stock_availables ===
         if 'stock' in sync_fields:
-            ps_xml['prestashop']['product']['quantity'] = str(product.get('stock', 0))
-            modified = True
-            synced_fields.append('stock')
+            try:
+                # Obtener stock_available del producto
+                stock_resp = requests.get(
+                    f"{integration['shop_url']}/api/stock_availables",
+                    params={'filter[id_product]': ps_id, 'display': 'full'},
+                    auth=(integration['api_key'], ''),
+                    timeout=30
+                )
+                
+                if stock_resp.status_code == 200:
+                    stock_data = xmltodict.parse(stock_resp.text)
+                    stock_availables = stock_data.get('prestashop', {}).get('stock_availables', {}).get('stock_available', [])
+                    
+                    if isinstance(stock_availables, dict):
+                        stock_availables = [stock_availables]
+                    
+                    # Actualizar cada stock_available
+                    for stock_av in stock_availables:
+                        stock_id = stock_av.get('id')
+                        
+                        # GET stock_available completo
+                        get_stock = requests.get(
+                            f"{integration['shop_url']}/api/stock_availables/{stock_id}",
+                            auth=(integration['api_key'], ''),
+                            timeout=30
+                        )
+                        
+                        if get_stock.status_code == 200:
+                            stock_xml = xmltodict.parse(get_stock.text)
+                            stock_xml['prestashop']['stock_available']['quantity'] = str(product.get('stock', 0))
+                            
+                            # PUT stock actualizado
+                            update_xml = xmltodict.unparse(stock_xml, pretty=False)
+                            put_stock = requests.put(
+                                f"{integration['shop_url']}/api/stock_availables/{stock_id}",
+                                auth=(integration['api_key'], ''),
+                                headers={'Content-Type': 'text/xml'},
+                                data=update_xml,
+                                timeout=30
+                            )
+                            
+                            if put_stock.status_code in [200, 201]:
+                                synced_fields.append('stock')
+                                logger.info(f"✓ Stock sincronizado: {product.get('stock', 0)}")
+                            else:
+                                errors.append(f"Stock HTTP {put_stock.status_code}")
+            except Exception as e:
+                errors.append(f"Stock error: {str(e)}")
+                logger.error(f"Error sincronizando stock: {e}")
         
-        if 'price' in sync_fields:
-            price_no_tax = float(product.get('sale_price', 0)) / 1.19
-            ps_xml['prestashop']['product']['price'] = f'{price_no_tax:.6f}'
-            modified = True
-            synced_fields.append('price')
+        # === OTROS CAMPOS - Usar API products (sin readonly) ===
+        other_fields = [f for f in sync_fields if f != 'stock']
         
-        if 'name' in sync_fields:
-            if isinstance(ps_xml['prestashop']['product']['name'], dict):
-                langs = ps_xml['prestashop']['product']['name'].get('language', [])
-                if isinstance(langs, list):
-                    for lang in langs:
-                        lang['#text'] = product.get('name', '')
-                elif isinstance(langs, dict):
-                    langs['#text'] = product.get('name', '')
-            modified = True
-            synced_fields.append('name')
-        
-        if 'sku' in sync_fields:
-            ps_xml['prestashop']['product']['reference'] = product.get('sku', '')
-            modified = True
-            synced_fields.append('sku')
-        
-        if 'barcode' in sync_fields:
-            ps_xml['prestashop']['product']['ean13'] = product.get('barcode', '')
-            modified = True
-            synced_fields.append('barcode')
-        
-        if 'weight' in sync_fields:
-            ps_xml['prestashop']['product']['weight'] = str(product.get('weight', 0))
-            modified = True
-            synced_fields.append('weight')
-        
-        if modified:
-            xml_data = xmltodict.unparse(ps_xml, pretty=False)
-            update_resp = requests.put(
-                f"{integration['shop_url']}/api/products/{ps_id}",
-                auth=(integration['api_key'], ''),
-                headers={'Content-Type': 'text/xml'},
-                data=xml_data,
-                timeout=30
-            )
+        if other_fields:
+            try:
+                # GET producto completo
+                resp = requests.get(
+                    f"{integration['shop_url']}/api/products/{ps_id}",
+                    auth=(integration['api_key'], ''),
+                    timeout=30
+                )
+                
+                if resp.status_code != 200:
+                    raise Exception(f"Error obteniendo producto: HTTP {resp.status_code}")
+                
+                ps_xml = xmltodict.parse(resp.text)
+                product_node = ps_xml['prestashop']['product']
+                
+                # === ELIMINAR CAMPOS READONLY ===
+                readonly_fields = [
+                    'manufacturer_name', 'supplier_name', 'quantity',
+                    'position_in_category', 'type', 'id_shop_default',
+                    'date_add', 'date_upd'
+                ]
+                
+                for field in readonly_fields:
+                    if field in product_node:
+                        del product_node[field]
+                
+                # Eliminar asociaciones (readonly)
+                if 'associations' in product_node:
+                    del product_node['associations']
+                
+                modified = False
+                
+                # PRECIO
+                if 'price' in other_fields:
+                    price_no_tax = float(product.get('sale_price', 0)) / 1.19
+                    product_node['price'] = f'{price_no_tax:.6f}'
+                    modified = True
+                    synced_fields.append('price')
+                
+                # NOMBRE
+                if 'name' in other_fields:
+                    if isinstance(product_node.get('name'), dict):
+                        langs = product_node['name'].get('language', [])
+                        if isinstance(langs, list):
+                            for lang in langs:
+                                if isinstance(lang, dict):
+                                    lang['#text'] = product.get('name', '')
+                        elif isinstance(langs, dict):
+                            langs['#text'] = product.get('name', '')
+                    modified = True
+                    synced_fields.append('name')
+                
+                # SKU/REFERENCIA
+                if 'sku' in other_fields:
+                    product_node['reference'] = product.get('sku', '')
+                    modified = True
+                    synced_fields.append('sku')
+                
+                # CÓDIGO DE BARRAS
+                if 'barcode' in other_fields:
+                    product_node['ean13'] = product.get('barcode', '')
+                    modified = True
+                    synced_fields.append('barcode')
+                
+                # PESO
+                if 'weight' in other_fields:
+                    product_node['weight'] = str(product.get('weight', 0))
+                    modified = True
+                    synced_fields.append('weight')
+                
+                # Enviar actualización
+                if modified:
+                    xml_data = xmltodict.unparse(ps_xml, pretty=False)
+                    
+                    update_resp = requests.put(
+                        f"{integration['shop_url']}/api/products/{ps_id}",
+                        auth=(integration['api_key'], ''),
+                        headers={'Content-Type': 'text/xml'},
+                        data=xml_data,
+                        timeout=30
+                    )
+                    
+                    if update_resp.status_code not in [200, 201]:
+                        error_text = update_resp.text[:300]
+                        errors.append(f"Product update HTTP {update_resp.status_code}: {error_text}")
+                        logger.error(f"Error actualizando producto: {error_text}")
+                        # Remover campos que no se sincronizaron
+                        synced_fields = [f for f in synced_fields if f == 'stock']
             
-            if update_resp.status_code not in [200, 201]:
-                raise HTTPException(status_code=500, detail=f"Error actualizando: HTTP {update_resp.status_code}")
+            except Exception as e:
+                errors.append(f"Product error: {str(e)}")
+                logger.error(f"Error sincronizando producto: {e}")
+        
+        if not synced_fields:
+            return {
+                'success': False,
+                'message': 'No se pudo sincronizar ningún campo',
+                'errors': errors
+            }
         
         return {
             'success': True,
-            'message': 'Sincronizado exitosamente',
-            'fields_synced': synced_fields
+            'message': f'Sincronizado: {", ".join(synced_fields)}',
+            'fields_synced': synced_fields,
+            'errors': errors if errors else None
         }
     
     except HTTPException:

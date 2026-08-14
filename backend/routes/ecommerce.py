@@ -455,9 +455,20 @@ async def update_order_status(
                             integration['api_key']
                         )
                         
+                        # Usar PrestashopOrderService para actualizar estado
+                        from services.prestashop_order_service import PrestashopOrderService
+                        order_service = PrestashopOrderService(ps_service, db)
+                        
                         # Actualizar estado en PrestaShop
-                        ps_service.update_order_state(order['id_order'], new_status)
-                        logger.info(f"✓ Estado sincronizado con PrestaShop: Order {order['id_order']} -> State {new_status}")
+                        success = await order_service.update_order_state_to_prestashop(
+                            order['id_order'],
+                            new_status
+                        )
+                        
+                        if success:
+                            logger.info(f"✓ Estado sincronizado con PrestaShop: Order {order['id_order']} -> State {new_status}")
+                        else:
+                            logger.warning(f"⚠️  No se pudo sincronizar estado con PrestaShop")
             except Exception as e:
                 import logging
                 logger = logging.getLogger(__name__)

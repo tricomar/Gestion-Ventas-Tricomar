@@ -126,7 +126,7 @@ const ProductForm = ({ product, onClose }) => {
               `${API}/integrations/prestashop/${product.prestashop_integration_id}/sync-product-to-ps`,
               {
                 product_id: product.id,
-                sync_fields: ['stock', 'price', 'name', 'sku', 'barcode', 'weight']  // Sincronizar todos los campos
+                sync_fields: ['stock', 'price', 'name', 'barcode', 'weight']  // SKU es readonly desde PrestaShop
               }
             );
             toast.success('✓ Sincronizado con PrestaShop');
@@ -243,23 +243,19 @@ const ProductForm = ({ product, onClose }) => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-bold tracking-widest uppercase text-slate-500 mb-2">
-                SKU (Código)
+                SKU (Código) - Desde PrestaShop
               </label>
               <input
                 type="text"
                 value={sku}
-                onChange={(e) => setSku(e.target.value)}
-                maxLength={15}
-                className={`w-full bg-white border-2 rounded-xl px-4 py-3 font-medium text-slate-900 focus:ring-0 focus:outline-none transition-all ${
-                  sku.length > 15 
-                    ? 'border-red-500 focus:border-red-600' 
-                    : 'border-slate-900 focus:border-indigo-500'
-                }`}
-                placeholder="Hasta 15 caracteres"
+                readOnly
+                disabled
+                className="w-full bg-slate-100 border-2 border-slate-300 rounded-xl px-4 py-3 font-medium text-slate-600 cursor-not-allowed"
+                placeholder="SKU desde PrestaShop"
                 data-testid="product-sku-input"
               />
-              <p className={`text-xs mt-1 ${sku.length > 15 ? 'text-red-600 font-bold' : 'text-slate-500'}`}>
-                {sku.length}/15 caracteres {sku.length > 15 && '⚠️ Excede el límite'}
+              <p className="text-xs mt-1 text-slate-500">
+                ℹ️ El SKU es de solo lectura desde PrestaShop
               </p>
             </div>
             <div>

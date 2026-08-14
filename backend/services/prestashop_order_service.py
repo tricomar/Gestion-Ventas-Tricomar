@@ -442,3 +442,80 @@ class PrestashopOrderService:
             True si el estado indica entrega completa
         """
         return state_id == 5
+
+    
+    async def update_order_state_to_prestashop(
+        self,
+        prestashop_order_id: int,
+        new_state_id: int
+    ) -> bool:
+        """
+        Actualizar estado de orden en PrestaShop (NF → PrestaShop)
+        
+        Args:
+            prestashop_order_id: ID de la orden en PrestaShop
+            new_state_id: ID del nuevo estado
+            
+        Returns:
+            True si se actualizó exitosamente
+        """
+        try:
+            import requests
+            import xmltodict
+            
+            # Obtener orden completa de PrestaShop
+            response = requests.get(
+                f"{self.ps_service.api_url}/orders/{prestashop_order_id}",
+                auth=(self.ps_service.api_key, ''),
+                timeout=30
+            )
+            
+            if response.status_code != 200:
+                logger.error(f"Error obteniendo orden {prestashop_order_id}: HTTP {response.status_code}")
+                return False
+            
+            order_xml = xmltodict.parse(response.text)
+            
+            # Eliminar campos readonly
+            order_node = order_xml['prestashop']['order']
+            readonly_fields = [
+                'date_add', 'date_upd', 'invoice_date', 'delivery_date',
+                'associations', 'total_discounts', 'total_discounts_tax_incl',
+                'total_discounts_tax_excl', 'total_paid', 'total_paid_tax_incl',
+                'total_paid_tax_excl', 'total_paid_real', 'total_products',
+                'total_products_wt', 'total_shipping', 'total_shipping_tax_incl',
+                'total_shipping_tax_excl', 'carrier_tax_rate', 'total_wrapping',
+                'total_wrapping_tax_incl', 'total_wrapping_tax_excl', 'round_mode',
+                'round_type', 'conversion_rate'
+            ]
+            
+            for field in readonly_fields:
+                if field in order_node:
+                    del order_node[field]
+            
+            # Actualizar estado
+            order_node['current_state'] = str(new_state_id)
+            
+            # Convertir de vuelta a XML
+            updated_xml = xmltodict.unparse(order_xml, pretty=False)
+            
+            # Enviar actualización
+            update_response = requests.put(
+                f"{self.ps_service.api_url}/orders/{prestashop_order_id}",
+                auth=(self.ps_service.api_key, ''),
+                headers={'Content-Type': 'text/xml'},
+                data=updated_xml,
+                timeout=30
+            )
+            
+            if update_response.status_code in [200, 201]:
+                logger.info(f"✓ Estado de orden {prestashop_order_id} actualizado a {new_state_id}")
+                return True
+            else:
+                logger.error(f"Error actualizando estado: HTTP {update_response.status_code}")
+                logger.error(f"Response: {update_response.text[:300]}")
+                return False
+        
+        except Exception as e:
+            logger.error(f"Error actualizando estado de orden: {e}")
+            return False
