@@ -2794,10 +2794,7 @@ async def sync_product_to_prestashop(
     request_data: dict,
     current_user: User = Depends(get_current_user)
 ):
-    """
-    Sincronizar cambios de un producto local hacia PrestaShop
-    Soporta: stock, price, name, sku, category, barcode, weight
-    """
+    """Sincronizar producto de NF a PrestaShop"""
     try:
         product_id = request_data.get('product_id')
         sync_fields = request_data.get('sync_fields', ['stock'])
@@ -2805,7 +2802,6 @@ async def sync_product_to_prestashop(
         if not product_id:
             raise HTTPException(status_code=400, detail="product_id requerido")
         
-        # Verificar integración
         integration = await db.prestashop_integrations.find_one({
             'id': integration_id,
             'account_id': current_user.account_id
@@ -2814,223 +2810,94 @@ async def sync_product_to_prestashop(
         if not integration:
             raise HTTPException(status_code=404, detail="Integración no encontrada")
         
-        # Obtener producto local
         product = await db.products.find_one({
             'id': product_id,
             'account_id': current_user.account_id
         }, {'_id': 0})
         
         if not product or not product.get('prestashop_id'):
-            raise HTTPException(
-                status_code=404,
-                detail="Producto no encontrado o no vinculado a PrestaShop"
-            )
+            raise HTTPException(status_code=404, detail="Producto no encontrado")
         
-        # Crear servicio PrestaShop
-        from services.prestashop_stock_service import PrestashopStockService
-        stock_service = PrestashopStockService(integration['shop_url'], integration['api_key'])
-        
-        ps_product_id = product['prestashop_id']
+        ps_id = product['prestashop_id']
         synced_fields = []
         
-        # Sincronizar cada campo solicitado
-        try:
-            # STOCK - usa stock_available
-            if 'stock' in sync_fields and 'stock' in product:
-                success = await stock_service.update_product_stock(
-                    ps_product_id,
-                    product['stock']
-                )
-                if success:
-                    synced_fields.append('stock')
-                    logger.info(f"✓ Stock sincronizado: {product['stock']}")
-            
-            # PRECIO - requiere actualización del producto
-            if 'price' in sync_fields and 'sale_price' in product:
-                from services.prestashop_service import PrestashopAPIService
-                ps_service = PrestashopAPIService(integration['shop_url'], integration['api_key'])
-                
-                # Obtener producto completo en XML
-                import requests
-                response = requests.get(
-                    f"{integration['shop_url']}/api/products/{ps_product_id}",
-                    auth=(integration['api_key'], ''),
-                    timeout=30
-                )
-                
-                if response.status_code == 200:
-                    import xmltodict
-                    product_xml = xmltodict.parse(response.text)
-                    
-                    # Convertir precio CON IVA a SIN IVA para PrestaShop
-                    price_with_tax = float(product['sale_price'])
-                    price_without_tax = price_with_tax / 1.19
-                    
-                    # Actualizar precio en XML
-                    product_xml['prestashop']['product']['price'] = f'{price_without_tax:.6f}'
-                    
-                    # Convertir de vuelta a XML
-                    updated_xml = xmltodict.unparse(product_xml, pretty=False)
-                    
-                    # Enviar actualización
-                    update_response = requests.put(
-                        f"{integration['shop_url']}/api/products/{ps_product_id}",
-                        auth=(integration['api_key'], ''),
-                        headers={'Content-Type': 'text/xml'},
-                        data=updated_xml,
-                        timeout=30
-                    )
-                    
-                    if update_response.status_code in [200, 201]:
-                        synced_fields.append('price')
-                        logger.info(f"✓ Precio sincronizado: {price_without_tax:.2f} (sin IVA)")
-            
-            # NOMBRE - requiere actualización del producto
-            if 'name' in sync_fields and 'name' in product:
-                from services.prestashop_service import PrestashopAPIService
-                ps_service = PrestashopAPIService(integration['shop_url'], integration['api_key'])
-                
-                import requests
-                response = requests.get(
-                    f"{integration['shop_url']}/api/products/{ps_product_id}",
-                    auth=(integration['api_key'], ''),
-                    timeout=30
-                )
-                
-                if response.status_code == 200:
-                    import xmltodict
-                    product_xml = xmltodict.parse(response.text)
-                    
-                    # Actualizar nombre (multilang)
-                    if isinstance(product_xml['prestashop']['product']['name'], dict):
-                        if 'language' in product_xml['prestashop']['product']['name']:
-                            langs = product_xml['prestashop']['product']['name']['language']
-                            if isinstance(langs, list):
-                                for lang in langs:
-                                    lang['#text'] = product['name']
-                            else:
-                                langs['#text'] = product['name']
-                    
-                    updated_xml = xmltodict.unparse(product_xml, pretty=False)
-                    
-                    update_response = requests.put(
-                        f"{integration['shop_url']}/api/products/{ps_product_id}",
-                        auth=(integration['api_key'], ''),
-                        headers={'Content-Type': 'text/xml'},
-                        data=updated_xml,
-                        timeout=30
-                    )
-                    
-                    if update_response.status_code in [200, 201]:
-                        synced_fields.append('name')
-                        logger.info(f"✓ Nombre sincronizado")
-            
-            # SKU/REFERENCIA
-            if 'sku' in sync_fields and 'sku' in product:
-                import requests
-                response = requests.get(
-                    f"{integration['shop_url']}/api/products/{ps_product_id}",
-                    auth=(integration['api_key'], ''),
-                    timeout=30
-                )
-                
-                if response.status_code == 200:
-                    import xmltodict
-                    product_xml = xmltodict.parse(response.text)
-                    product_xml['prestashop']['product']['reference'] = product['sku']
-                    
-                    updated_xml = xmltodict.unparse(product_xml, pretty=False)
-                    
-                    update_response = requests.put(
-                        f"{integration['shop_url']}/api/products/{ps_product_id}",
-                        auth=(integration['api_key'], ''),
-                        headers={'Content-Type': 'text/xml'},
-                        data=updated_xml,
-                        timeout=30
-                    )
-                    
-                    if update_response.status_code in [200, 201]:
-                        synced_fields.append('sku')
-                        logger.info(f"✓ SKU sincronizado")
-            
-            # CÓDIGO DE BARRAS (EAN13)
-            if 'barcode' in sync_fields and 'barcode' in product:
-                import requests
-                response = requests.get(
-                    f"{integration['shop_url']}/api/products/{ps_product_id}",
-                    auth=(integration['api_key'], ''),
-                    timeout=30
-                )
-                
-                if response.status_code == 200:
-                    import xmltodict
-                    product_xml = xmltodict.parse(response.text)
-                    product_xml['prestashop']['product']['ean13'] = product['barcode'] or ''
-                    
-                    updated_xml = xmltodict.unparse(product_xml, pretty=False)
-                    
-                    update_response = requests.put(
-                        f"{integration['shop_url']}/api/products/{ps_product_id}",
-                        auth=(integration['api_key'], ''),
-                        headers={'Content-Type': 'text/xml'},
-                        data=updated_xml,
-                        timeout=30
-                    )
-                    
-                    if update_response.status_code in [200, 201]:
-                        synced_fields.append('barcode')
-                        logger.info(f"✓ Código de barras sincronizado")
-            
-            # PESO
-            if 'weight' in sync_fields and 'weight' in product:
-                import requests
-                response = requests.get(
-                    f"{integration['shop_url']}/api/products/{ps_product_id}",
-                    auth=(integration['api_key'], ''),
-                    timeout=30
-                )
-                
-                if response.status_code == 200:
-                    import xmltodict
-                    product_xml = xmltodict.parse(response.text)
-                    product_xml['prestashop']['product']['weight'] = str(product.get('weight', 0))
-                    
-                    updated_xml = xmltodict.unparse(product_xml, pretty=False)
-                    
-                    update_response = requests.put(
-                        f"{integration['shop_url']}/api/products/{ps_product_id}",
-                        auth=(integration['api_key'], ''),
-                        headers={'Content-Type': 'text/xml'},
-                        data=updated_xml,
-                        timeout=30
-                    )
-                    
-                    if update_response.status_code in [200, 201]:
-                        synced_fields.append('weight')
-                        logger.info(f"✓ Peso sincronizado")
-            
-        except Exception as e:
-            logger.error(f"Error en sincronización: {e}")
-            # Continuar con otros campos
+        import requests
+        import xmltodict
         
-        if not synced_fields:
-            return {
-                'success': False,
-                'message': 'No se pudo sincronizar ningún campo',
-                'fields_attempted': sync_fields
-            }
+        # Obtener producto de PrestaShop
+        resp = requests.get(
+            f"{integration['shop_url']}/api/products/{ps_id}",
+            auth=(integration['api_key'], ''),
+            timeout=30
+        )
+        
+        if resp.status_code != 200:
+            raise HTTPException(status_code=500, detail=f"Error obteniendo producto: HTTP {resp.status_code}")
+        
+        ps_xml = xmltodict.parse(resp.text)
+        modified = False
+        
+        # Actualizar campos
+        if 'stock' in sync_fields:
+            ps_xml['prestashop']['product']['quantity'] = str(product.get('stock', 0))
+            modified = True
+            synced_fields.append('stock')
+        
+        if 'price' in sync_fields:
+            price_no_tax = float(product.get('sale_price', 0)) / 1.19
+            ps_xml['prestashop']['product']['price'] = f'{price_no_tax:.6f}'
+            modified = True
+            synced_fields.append('price')
+        
+        if 'name' in sync_fields:
+            if isinstance(ps_xml['prestashop']['product']['name'], dict):
+                langs = ps_xml['prestashop']['product']['name'].get('language', [])
+                if isinstance(langs, list):
+                    for lang in langs:
+                        lang['#text'] = product.get('name', '')
+                elif isinstance(langs, dict):
+                    langs['#text'] = product.get('name', '')
+            modified = True
+            synced_fields.append('name')
+        
+        if 'sku' in sync_fields:
+            ps_xml['prestashop']['product']['reference'] = product.get('sku', '')
+            modified = True
+            synced_fields.append('sku')
+        
+        if 'barcode' in sync_fields:
+            ps_xml['prestashop']['product']['ean13'] = product.get('barcode', '')
+            modified = True
+            synced_fields.append('barcode')
+        
+        if 'weight' in sync_fields:
+            ps_xml['prestashop']['product']['weight'] = str(product.get('weight', 0))
+            modified = True
+            synced_fields.append('weight')
+        
+        if modified:
+            xml_data = xmltodict.unparse(ps_xml, pretty=False)
+            update_resp = requests.put(
+                f"{integration['shop_url']}/api/products/{ps_id}",
+                auth=(integration['api_key'], ''),
+                headers={'Content-Type': 'text/xml'},
+                data=xml_data,
+                timeout=30
+            )
+            
+            if update_resp.status_code not in [200, 201]:
+                raise HTTPException(status_code=500, detail=f"Error actualizando: HTTP {update_resp.status_code}")
         
         return {
             'success': True,
-            'message': f'Producto sincronizado con PrestaShop',
-            'fields_synced': synced_fields,
-            'fields_attempted': sync_fields
+            'message': 'Sincronizado exitosamente',
+            'fields_synced': synced_fields
         }
-        
+    
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error sincronizando producto a PrestaShop: {e}")
+        logger.error(f"Error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
